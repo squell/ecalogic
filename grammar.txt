@@ -1,0 +1,53 @@
+(* this is a comment *)
+
+const: 
+   [0-9]+
+
+ident:
+   [:alpha:] [:alnum:]*
+
+var:
+   ident
+
+rf: 
+   expr
+
+primary-expr: const 
+    | var
+    | fun-call
+    | "(" expr ")"
+
+mult-expr: primary-expr [ "*" mult-expr ]
+add-expr: mult-expr [ addop mult-expr ]
+addop: "+" | "-"
+
+rel-expr: expr rel-op expr
+rel-op: ">" | ">=" | "<" | "<=" | "<>" | "=" 
+
+bool-expr: rel-expr [ bool-op bool-expr ]
+bool-op: "and" | "or"
+
+stm-list: stm [ ";" stm-list]
+
+stm: "skip"
+   | "if" bool-expr "then" stm-list "else" stm-list "end" "if"
+   | "while" bool-expr "upto" expr "do" stm-list "end" "do" 
+   | var ":=" expr
+   | fun-call
+
+fun-call: | ident "(" arg-list ")"
+          | ident "::" ident "(" arg-list ")" 
+     
+
+fundef: "function" ident "(" parm-ety ")" stm-list "return" var "end" "function"
+
+parm-ety: $ | parm
+parm: var ["," parm]
+arg-ety: $ | arg
+arg: expr ["," expr]
+
+def-list: $ | fundef def-list
+
+prog: def-list
+
+
