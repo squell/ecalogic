@@ -1,0 +1,44 @@
+
+(* Er bestaat de mogelijkheid dat runtime-kennis zich een weg in het statische typering gedeelte baant;
+bijvoorbeeld: *)
+
+function foo(X)
+  Y = X
+  A = 0
+  while (Y>0) limit X do
+    Y = Y-1
+    A = A+1
+  end while
+
+  // A == X, maar moet de tool dit weten?
+
+  while component::f() = 0 upto A do
+    component::do()  // energie-verbruik 1
+  end while
+
+  return X 
+end function
+
+(* Maar ook als je de ranking functions beperkt tot constanten (of alleen functie-parameters mogen bevatten) kan
+je in situaties als dit komen: *)
+
+function bar(X) 
+  while X > 0 limit X do 
+    component::do() // energie-verbruik 1
+  end while  
+
+  return X
+end function
+
+function expo(X)
+  A = 1
+  Y = 0
+  while Y < X limit X do  
+    bar(A)   // A == 2^Y, maar moet de tool dit weten?
+    A = 2*A
+    Y = Y+1
+  end while
+  return X
+end function
+
+
