@@ -1,0 +1,43 @@
+
+function pow(X,Y)
+  Z := 1;
+  while Y > 0 upto Y do
+    Z := Z * X;
+    Y := Y-1
+  end while;
+  return Z
+end function
+
+function log(G,X)
+  A := 1;
+  N := 0;
+  while A < X upto X do
+    A := A*G;
+    N := N+1
+  end while;
+  N := N-1;
+  return N
+end function
+
+function sqrt(X)
+  A := 1;
+  while A*A < X upto X do
+    A := A+1
+  end while;
+  A := A-1;
+  return A
+end function
+
+function div(X,Y)
+  N := 0;
+  while X >= Y upto X do
+    X := X-Y;
+    N := N+1
+  end while;
+  return N
+end function
+
+function mod(X,Y)
+  N := X-Y*div(X,Y);
+  return N
+end function
