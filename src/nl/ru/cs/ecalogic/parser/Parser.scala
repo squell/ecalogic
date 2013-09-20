@@ -105,7 +105,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     val pos = currentPos
     val first = statement()
 
-    if (current(Tokens.Semicolon)) {
+    if (current(Tokens.Semicolon) && !lookahead(Tokens.Return)) {
       var statements = mutable.Queue(first)
 
       do {
@@ -263,7 +263,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 object Parser {
 
   def main(args: Array[String]) {
-    val source = Source.fromFile(args.headOption.getOrElse("test.eca")).mkString
+    val source = Source.fromFile(args.headOption.getOrElse("zooi/stress.eca")).mkString
     val parser = new Parser(source, new DefaultErrorHandler(source = Some(source)))
     println(parser.program())
   }

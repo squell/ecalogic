@@ -104,7 +104,7 @@ class Lexer(private var input: String,
 object Lexer {
 
   def main(args: Array[String]) {
-    val source = Source.fromFile(args.headOption.getOrElse("test.eca")).mkString
+    val source = Source.fromFile(args.headOption.getOrElse("zooi/test.eca")).mkString
     val lexer = new Lexer(source, new DefaultErrorHandler(source = Some(source)))
     var (token, _) = lexer.next()
     while (token != EndOfFile) {

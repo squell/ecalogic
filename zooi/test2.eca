@@ -2,6 +2,6 @@ function kaas(a, b)
     a := a;
 	fun::call(a);
 	func(b);
-    if 5 + b <> 10 * 5  or 0 then skip; while 1 upto 5 do skip end while else skip end if
+    if 5 + b <> 10 * 5  or 0 then skip; while 1 upto 5 do skip end while else skip end if;
     return a
 end function

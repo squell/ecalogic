@@ -11,7 +11,7 @@ y := (compo::f((1),2,3))
 x upto y*f(y)
 do y := isthis_allowed(2,3);
 		skip end while
-end if
+end if;
 (* this declarion will be made illegal in the next compilation phase *)
 return x
 end function
