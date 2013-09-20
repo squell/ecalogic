@@ -56,9 +56,15 @@ function horror(X,P)
 
   (* >:) *)
   Y := 1;
-  while Y <= Xinv upto Xinv do 
-    bar(Y)
-  end while;
+  if mod(Xinv,2) = 0 then
+    A := X
+  else
+    A := P
+  end if;
+
+  while Y <= A upto A do 
+    component::do()
+  end while
 
   return X
 end fuction
