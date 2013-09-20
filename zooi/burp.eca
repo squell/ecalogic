@@ -1,5 +1,5 @@
 
-function name(x)
+function koetjoeboe(x)
   skip;
 return x
 end function
