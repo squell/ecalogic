@@ -1,0 +1,18 @@
+// blah
+
+function(**)main(x) // should not paste tokens together!
+    if((0<=x) * 3) then
+      if (0 - (0-(1*0))-(2*0-3*0)-4*0*(0-5)) - (1*0)-(2+0)-3*(4+0) then
+x := 1+2 (* an unhelpful comment *)
+else
+y := (compo::f((1),2,3))
+      end if
+    else while//
+x upto y*f(y)
+do y := isthis_allowed(2,3);
+		skip end while
+end if
+(* this declarion will be made illegal in the next compilation phase *)
+return x
+end function
+
