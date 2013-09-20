@@ -40,5 +40,3 @@ function expo(X) // energie-verbruik 2^(X+1)-1 ??
   end while
   return X
 end function
-
-
