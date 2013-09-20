@@ -41,3 +41,25 @@ function mod(X,Y)
   N := X-Y*div(X,Y);
   return N
 end function
+
+function horror(X,P)
+  Y := 1;
+  (* find the inverse of X mod P, if it exists at all *)
+  while Y <= P upto P do
+    if mod(Y*X, 1709) = 1 then
+      Xinv := Y
+    else
+      skip
+    end if;
+    Y := Y + 1
+  end while;
+
+  (* >:) *)
+  Y := 1;
+  while Y <= Xinv upto Xinv do 
+    bar(Y)
+  end while;
+
+  return X
+end fuction
+
