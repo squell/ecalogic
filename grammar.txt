@@ -1,6 +1,7 @@
-(* this is a comment *)
+(* this is a multiline comment *)
+// this is also a comment, but single line
 
-const: 
+const:
    [0-9]+
 
 ident:
@@ -9,9 +10,12 @@ ident:
 var:
    ident
 
-rf: 
+rf:
    expr
 
+expr:
+   add-expr
+  
 primary-expr: const 
     | var
     | fun-call
@@ -31,12 +35,12 @@ stm-list: stm [ ";" stm-list]
 
 stm: "skip"
    | "if" bool-expr "then" stm-list "else" stm-list "end" "if"
-   | "while" bool-expr "upto" expr "do" stm-list "end" "do" 
+   | "while" bool-expr "upto" expr "do" stm-list "end" "while" 
    | var ":=" expr
    | fun-call
 
 fun-call: | ident "(" arg-list ")"
-          | ident "::" ident "(" arg-list ")" 
+          | ident "::" ident "(" arg-list ")"
      
 
 fundef: "function" ident "(" parm-ety ")" stm-list "return" var "end" "function"
@@ -49,7 +53,3 @@ arg: expr ["," expr]
 def-list: $ | fundef def-list
 
 prog: def-list
-
-
-
-
