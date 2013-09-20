@@ -22,7 +22,7 @@ end function
 (* Maar ook als je de ranking functions beperkt tot constanten (of alleen functie-parameters mogen bevatten) kan
 je in situaties als dit komen: *)
 
-function bar(X) 
+function bar(X)  // energie-verbruik X
   while X > 0 limit X do 
     component::do() // energie-verbruik 1
   end while  
@@ -30,7 +30,7 @@ function bar(X)
   return X
 end function
 
-function expo(X)
+function expo(X) // energie-verbruik 2^(X+1)-1 ??
   A = 1
   Y = 0
   while Y < X limit X do  
