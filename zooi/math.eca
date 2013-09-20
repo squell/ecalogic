@@ -56,6 +56,12 @@ function horror(X,P)
 
   (* >:) *)
   Y := 1;
+  while Y <= Xinv upto Xinv do
+    Y := Y+1
+  end while;
+
+  (* >:) *)
+  Y := 1;
   if mod(Xinv,2) = 0 then
     A := X
   else
