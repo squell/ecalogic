@@ -2,7 +2,7 @@ package nl.ru.cs.ecalogic.parser
 
 import nl.ru.cs.ecalogic.util.{DefaultErrorHandler, ErrorHandler}
 import nl.ru.cs.ecalogic.SPLException
-import nl.ru.cs.ecalogic.parser.tokens._
+import nl.ru.cs.ecalogic.parser.Tokens._
 import scala.io.Source
 
 class Lexer(private var input: String,
@@ -105,7 +105,7 @@ object Lexer {
 
   def main(args: Array[String]) {
     val source = Source.fromFile(args.headOption.getOrElse("test.eca")).mkString
-    val lexer = new Lexer(source)
+    val lexer = new Lexer(source, new DefaultErrorHandler(source = Some(source)))
     var (token, _) = lexer.next()
     while (token != EndOfFile) {
       if (!token.ignorable) println(token)

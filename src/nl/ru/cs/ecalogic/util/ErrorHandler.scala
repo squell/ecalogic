@@ -8,7 +8,7 @@ import scala.collection.mutable
 trait ErrorHandler {
   def reset()
   
-  def fatalError(exception: SPLException);
+  def fatalError(exception: SPLException)
   def error(exception: SPLException)
   def warning(exception: SPLException)
   def errorOccurred: Boolean
@@ -57,7 +57,7 @@ class DefaultErrorHandler(maxErrorCount: Int = 10,
 
   def fatalError(exception: SPLException) {
     printMessage("Fatal error", exception.message, exception.position)
-    throw new SPLException("Fatal error occurred", exception);
+    throw new SPLException("Fatal error occurred", exception)
   }
   
   def error(exception: SPLException) {

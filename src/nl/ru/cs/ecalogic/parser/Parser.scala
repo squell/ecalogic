@@ -3,7 +3,7 @@ package nl.ru.cs.ecalogic.parser
 import scala.annotation.tailrec
 import scala.collection.mutable
 
-import nl.ru.cs.ecalogic.util.{CachingErrorHandler, DefaultErrorHandler, ErrorHandler}
+import nl.ru.cs.ecalogic.util.{DefaultErrorHandler, ErrorHandler}
 import nl.ru.cs.ecalogic.ast._
 import nl.ru.cs.ecalogic.SPLException
 import scala.io.Source
@@ -19,9 +19,9 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 
   private def fillBuffer() {
     while (buffer.size < 2) next() match {
-      case (tokens.Comment(_), _)    =>
-      case (tokens.Whitespace(_), _) =>
-      case (tokens.Unknown(t), p)    => errorHandler.error(new SPLException("Unrecognized token: '"+t+"'", p))
+      case (Tokens.Comment(_), _)    =>
+      case (Tokens.Whitespace(_), _) =>
+      case (Tokens.Unknown(t), p)    => errorHandler.error(new SPLException("Unrecognized token: '"+t+"'", p))
       case tp                        => buffer += tp
     }
   }
@@ -32,7 +32,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
   }
 
   private def unexpected(expected: TokenTemplate*) {
-    if (current(tokens.EndOfFile))
+    if (current(Tokens.EndOfFile))
       errorHandler.fatalError(new SPLException("Unexpected end of file", currentPos))
 
     val exception = expected match {
@@ -50,16 +50,16 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
   }
 
   def identifier(): String = current match {
-    case tokens.Identifier(n) => nextToken(); n
-    case t => unexpected(wildcards.Identifier); "<error>"
+    case Tokens.Identifier(n) => nextToken(); n
+    case t => unexpected(Wildcards.Identifier); "<error>"
   }
 
 
 
   def program(): Program = {
     val pos = currentPos
-    val definitions = mutable.Buffer[Definition]()
-    while (!current(tokens.EndOfFile)) {
+    val definitions = mutable.Queue[Definition]()
+    while (!current(Tokens.EndOfFile)) {
       definitions += definition()
     }
     Program(definitions).withPosition(pos)
@@ -68,13 +68,13 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
   def definition(): FunDef = {    
     val pos = currentPos
     
-    expect(tokens.Function)
+    expect(Tokens.Function)
     
     val name = identifier()
                       
-    val params = mutable.Buffer[Param]()
-    expect(tokens.LParen)
-    if (!current(tokens.RParen)) {
+    val params = mutable.Queue[Param]()
+    expect(Tokens.LParen)
+    if (!current(Tokens.RParen)) {
       var halt = false
       do {
         val paramPos = currentPos
@@ -82,20 +82,21 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 
         params += Param(paramName).withPosition(paramPos)
 
-        if (current(tokens.Comma)) nextToken()
+        if (current(Tokens.Comma)) nextToken()
         else halt = true
       } while (!halt)
     }
-    expect(tokens.RParen)
+    expect(Tokens.RParen)
 
     val body = statementList()
 
-    expect(tokens.Return)
+    expect(Tokens.Semicolon)
+    expect(Tokens.Return)
     val resultPos = currentPos
     val result = VarRef(Left(identifier())).withPosition(resultPos)
     
-    expect(tokens.End)
-    expect(tokens.Function)
+    expect(Tokens.End)
+    expect(Tokens.Function)
 
     FunDef(name, params, body, result).withPosition(pos)
   }
@@ -104,14 +105,13 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     val pos = currentPos
     val first = statement()
 
-    if (current(tokens.Semicolon)) {
-      var statements = mutable.Buffer(first)
+    if (current(Tokens.Semicolon)) {
+      var statements = mutable.Queue(first)
 
       do {
         nextToken()
-        if (!current(tokens.Return))
-          statements += statement()
-      } while (current(tokens.Semicolon))
+        statements += statement()
+      } while (current(Tokens.Semicolon) && !lookahead(Tokens.Return))
 
       StatementList(statements).withPosition(pos)
     } else
@@ -121,51 +121,51 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
   def statement(): Statement = {
     val pos = currentPos
     val res = current match {
-      case tokens.Skip =>
+      case Tokens.Skip =>
         nextToken()
         
         Skip()      
-      case tokens.If =>
+      case Tokens.If =>
         nextToken()
         val predicate = expression()
         
-        expect(tokens.Then)
+        expect(Tokens.Then)
         val consequent = statementList()
         
-        expect(tokens.Else)        
+        expect(Tokens.Else)        
         val alternative = statementList()
 
-        expect(tokens.End)
-        expect(tokens.If)
+        expect(Tokens.End)
+        expect(Tokens.If)
 
         If(predicate, consequent, alternative)
-      case tokens.While =>
+      case Tokens.While =>
         nextToken()
         val predicate = expression()
 
-        expect(tokens.Upto)
+        expect(Tokens.Upto)
         val rankingFunction = expression()
 
-        expect(tokens.Do)
+        expect(Tokens.Do)
         val consequent = statementList()
 
-        expect(tokens.End)
-        expect(tokens.While)
+        expect(Tokens.End)
+        expect(Tokens.While)
 
         While(predicate, rankingFunction, consequent)
-      case tokens.Identifier(n) =>
-        if (lookahead(tokens.LParen) || lookahead(tokens.ColonColon)) {
+      case Tokens.Identifier(n) =>
+        if (lookahead(Tokens.LParen) || lookahead(Tokens.ColonColon)) {
           funCall()
         } else {
           nextToken()
-          expect(tokens.Assign)
+          expect(Tokens.Assign)
           val expr = expression()
 
           Assignment(VarRef(Left(n)), expr)
         }
       case _ =>
-        unexpected(tokens.Skip, tokens.If, tokens.While, wildcards.Identifier)
-        if (current(tokens.Semicolon)) nextToken()
+        unexpected(Tokens.Skip, Tokens.If, Tokens.While, Wildcards.Identifier)
+        if (current(Tokens.Semicolon)) nextToken()
         ErrorNode()
     }
     res.withPosition(pos)
@@ -174,7 +174,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
   def funCall(): FunCall = {
     val compOrNamePart = identifier()
 
-    val name = if (current(tokens.ColonColon)) {
+    val name = if (current(Tokens.ColonColon)) {
       nextToken()
       val namePart = identifier()
 
@@ -182,18 +182,18 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     } else
       FunName(compOrNamePart)
 
-    expect(tokens.LParen)
-    val arguments = mutable.Buffer[Expression]()
-    if (!current(tokens.RParen)) {
+    expect(Tokens.LParen)
+    val arguments = mutable.Queue[Expression]()
+    if (!current(Tokens.RParen)) {
       var halt = false
       do {
         arguments += expression()
 
-        if (current(tokens.Comma)) nextToken()
+        if (current(Tokens.Comma)) nextToken()
         else halt = true
       } while(!halt)
     }
-    expect(tokens.RParen)
+    expect(Tokens.RParen)
 
     FunCall(Left(name), arguments)
   }
@@ -203,18 +203,18 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
   def primary(): Expression = {
     val pos = currentPos
     val res = current match {
-      case tokens.Identifier(n) if lookahead(tokens.LParen) || lookahead(tokens.ColonColon) => funCall()
-      case tokens.Identifier(n) => nextToken(); VarRef(Left(n))
-      case tokens.IntLiteral(v) => nextToken(); Literal(v)
-      case tokens.LParen =>
+      case Tokens.Identifier(n) if lookahead(Tokens.LParen) || lookahead(Tokens.ColonColon) => funCall()
+      case Tokens.Identifier(n) => nextToken(); VarRef(Left(n))
+      case Tokens.IntLiteral(v) => nextToken(); Literal(v)
+      case Tokens.LParen =>
         nextToken()
 
         val expr = expression()
-        expect(tokens.RParen)
+        expect(Tokens.RParen)
 
         expr
       case _ =>
-        unexpected(wildcards.Identifier, wildcards.IntLiteral, tokens.LParen)
+        unexpected(Wildcards.Identifier, Wildcards.IntLiteral, Tokens.LParen)
         ErrorNode()
     }
     res.withPosition(pos)
@@ -222,39 +222,39 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 
   @tailrec
   def multExpr(acc: Expression = primary()): Expression = current match {
-    case tokens.Multiply => nextToken(); multExpr(Multiply(acc, primary()).withPosition(acc))
+    case Tokens.Multiply => nextToken(); multExpr(Multiply(acc, primary()).withPosition(acc))
     case _               => acc
   }
 
   @tailrec
   def addExpr(acc: Expression = multExpr()): Expression = current match {
-    case tokens.Plus  => nextToken(); addExpr(Add     (acc, multExpr()).withPosition(acc))
-    case tokens.Minus => nextToken(); addExpr(Subtract(acc, multExpr()).withPosition(acc))
+    case Tokens.Plus  => nextToken(); addExpr(Add     (acc, multExpr()).withPosition(acc))
+    case Tokens.Minus => nextToken(); addExpr(Subtract(acc, multExpr()).withPosition(acc))
     case _            => acc
   }
 
   def relExpr(): Expression = {
     val left = addExpr()
     current match {
-      case tokens.LT => nextToken(); LT(left, addExpr()).withPosition(left)
-      case tokens.LE => nextToken(); LE(left, addExpr()).withPosition(left)
-      case tokens.GT => nextToken(); GT(left, addExpr()).withPosition(left)
-      case tokens.GE => nextToken(); GE(left, addExpr()).withPosition(left)
-      case tokens.EQ => nextToken(); EQ(left, addExpr()).withPosition(left)
-      case tokens.NE => nextToken(); NE(left, addExpr()).withPosition(left)
+      case Tokens.LT => nextToken(); LT(left, addExpr()).withPosition(left)
+      case Tokens.LE => nextToken(); LE(left, addExpr()).withPosition(left)
+      case Tokens.GT => nextToken(); GT(left, addExpr()).withPosition(left)
+      case Tokens.GE => nextToken(); GE(left, addExpr()).withPosition(left)
+      case Tokens.EQ => nextToken(); EQ(left, addExpr()).withPosition(left)
+      case Tokens.NE => nextToken(); NE(left, addExpr()).withPosition(left)
       case _         => left
     }
   }
 
   @tailrec
   def andExpr(acc: Expression = relExpr()): Expression = current match {
-    case tokens.And => nextToken(); andExpr(And(acc, relExpr()).withPosition(acc))
+    case Tokens.And => nextToken(); andExpr(And(acc, relExpr()).withPosition(acc))
     case _          => acc
   }
 
   @tailrec
   def orExpr(acc: Expression = andExpr()): Expression = current match {
-    case tokens.Or => nextToken(); orExpr(Or(acc, andExpr()).withPosition(acc))
+    case Tokens.Or => nextToken(); orExpr(Or(acc, andExpr()).withPosition(acc))
     case _         => acc
   }
 
@@ -264,12 +264,8 @@ object Parser {
 
   def main(args: Array[String]) {
     val source = Source.fromFile(args.headOption.getOrElse("test.eca")).mkString
-    val parser = new Parser(source)
-    try {
-      println(parser.program())
-    } finally {
-      Console.err.flush()
-    }
+    val parser = new Parser(source, new DefaultErrorHandler(source = Some(source)))
+    println(parser.program())
   }
 
 }

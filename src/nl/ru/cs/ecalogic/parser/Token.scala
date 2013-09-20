@@ -26,7 +26,7 @@ sealed abstract class VariableToken[T](wildcard: WildcardTemplate) extends Token
   override def toString = "<" + wildcard.name + " : '" + value + "'>"
 }
 
-package wildcards {
+object Wildcards {
 
   case object IntLiteral                     extends WildcardTemplate("integer-literal")
   case object Identifier                     extends WildcardTemplate("identifier")
@@ -36,7 +36,7 @@ package wildcards {
 
 }
 
-package tokens {
+object Tokens {
 
   case object Function                       extends FixedToken("function")
   case object Return                         extends FixedToken("return")
@@ -52,8 +52,8 @@ package tokens {
   
   case object Skip                           extends FixedToken("skip")
 
-  final case class IntLiteral(value: BigInt) extends VariableToken[BigInt](wildcards.IntLiteral)
-  final case class Identifier(value: String) extends VariableToken[String](wildcards.Identifier)
+  final case class IntLiteral(value: BigInt) extends VariableToken[BigInt](Wildcards.IntLiteral)
+  final case class Identifier(value: String) extends VariableToken[String](Wildcards.Identifier)
 
   case object Assign                         extends FixedToken(":=")
 
@@ -79,11 +79,11 @@ package tokens {
   
   case object ColonColon                     extends FixedToken("::")
 
-  final case class Comment(value: String)    extends VariableToken[String](wildcards.Comment)    { override def ignorable = true }
-  final case class Whitespace(value: String) extends VariableToken[String](wildcards.Whitespace) { override def ignorable = true }
+  final case class Comment(value: String)    extends VariableToken[String](Wildcards.Comment)    { override def ignorable = true }
+  final case class Whitespace(value: String) extends VariableToken[String](Wildcards.Whitespace) { override def ignorable = true }
   case object EndOfFile                      extends FixedToken("")  { override def toString = "<end-of-file>" }
 
-  final case class Unknown(value: Char)      extends VariableToken[Char](wildcards.Unknown)
+  final case class Unknown(value: Char)      extends VariableToken[Char](Wildcards.Unknown)
 
 }
 
