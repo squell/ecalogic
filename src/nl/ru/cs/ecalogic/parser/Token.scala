@@ -1,6 +1,8 @@
 package nl.ru.cs.ecalogic.parser
 
-sealed abstract class Token
+sealed abstract class Token {
+  def matches(that: Token) = this == that
+}
 
 sealed abstract class FixedToken(fixedValue: String) extends Token {
   override def toString = "'" + fixedValue + "'"
@@ -63,7 +65,27 @@ object Tokens {
 
   case class Unknown(value: Char)      extends VariableToken[Char]("unknown")
 
-  object KeywordOrIdentifier {
+  object Identifier                    extends Token {
+    override def matches(that: Token) = super.matches(that) || (that match  {
+      case Identifier(_) => true
+      case _             => false
+    })
+  }
+
+  object Numeral                       extends Token {
+    override def matches(that: Token) = super.matches(that) || (that match  {
+      case Numeral(_) => true
+      case _          => false
+    })
+  }
+
+  object KeywordOrIdentifier           extends Token {
+    override def matches(that: Token) = super.matches(that) || (that match  {
+      case Identifier(_) => true
+      case _: Keyword    => true
+      case _             => false
+    })
+
     def unapply(t: Token): Option[String] = t match {
       case Tokens.Identifier(n) => Some(n)
       case k: Keyword           => Some(k.keyword)
