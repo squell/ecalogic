@@ -198,7 +198,6 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
       nextToken()
 
       Skip()
-
   }
 
 
