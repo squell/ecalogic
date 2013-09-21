@@ -14,8 +14,8 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 
   private def currentPos: Position         = buffer(0)._2
   private def current: Token               = buffer(0)._1
-  private def current(t: TokenTemplate)    = buffer(0)._1.matches(t)
-  private def lookahead(t: TokenTemplate)  = buffer(1)._1.matches(t)
+  private def current(t: TokenTemplate*)   = t.exists(buffer(0)._1.matches)
+  private def lookahead(t: TokenTemplate*) = t.exists(buffer(1)._1.matches)
 
   private def fillBuffer() {
     while (buffer.size < 2) next() match {
@@ -44,9 +44,13 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     nextToken()
   }
 
-  private def expect(template: TokenTemplate) {
-    if (current.matches(template)) nextToken()
-    else unexpected(template)
+  private def expect(expected: TokenTemplate*) {
+    if (expected.exists(current.matches)) nextToken()
+    else unexpected(expected:_*)
+  }
+
+  private def optional(expected: TokenTemplate*) {
+    if (expected.exists(current.matches)) nextToken()
   }
 
   def identifier(): String = current match {
@@ -91,9 +95,11 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     val body = composition()
 
     expect(Tokens.Semicolon)
+
     expect(Tokens.Return)
     val resultPos = currentPos
     val result = VarRef(Left(identifier())).withPosition(resultPos)
+    optional(Tokens.Semicolon)
     
     expect(Tokens.End)
     expect(Tokens.Function)
@@ -105,13 +111,13 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     val pos = currentPos
     val first = statement()
 
-    if (current(Tokens.Semicolon) && !lookahead(Tokens.Return)) {
+    if (current(Tokens.Semicolon) && !lookahead(Tokens.Return, Tokens.End, Tokens.Else)) {
       var statements = mutable.Queue(first)
 
       do {
         nextToken()
         statements += statement()
-      } while (current(Tokens.Semicolon) && !lookahead(Tokens.Return))
+      } while (current(Tokens.Semicolon) && !lookahead(Tokens.Return, Tokens.End, Tokens.Else))
 
       Composition(statements).withPosition(pos)
     } else
@@ -131,9 +137,11 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
         
         expect(Tokens.Then)
         val consequent = composition()
+        optional(Tokens.Semicolon)
         
         expect(Tokens.Else)        
         val alternative = composition()
+        optional(Tokens.Semicolon)
 
         expect(Tokens.End)
         expect(Tokens.If)
@@ -148,6 +156,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 
         expect(Tokens.Do)
         val consequent = composition()
+        optional(Tokens.Semicolon)
 
         expect(Tokens.End)
         expect(Tokens.While)
