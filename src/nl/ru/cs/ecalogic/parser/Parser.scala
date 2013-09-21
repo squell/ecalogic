@@ -228,7 +228,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 
         expr
       case _ =>
-        unexpected("<numeral>", "<function call>", "<variable reference>", "<parenthesized expression>")
+        unexpected("<natural number>", "<function call>", "<variable reference>", "<parenthesized expression>")
 
         ErrorNode()
     }
