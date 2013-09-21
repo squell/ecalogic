@@ -5,8 +5,7 @@ import nl.ru.cs.ecalogic.SPLException
 import nl.ru.cs.ecalogic.parser.Tokens._
 import scala.io.Source
 
-class Lexer(private var input: String,
-            protected val errorHandler: ErrorHandler = new DefaultErrorHandler()) {
+class Lexer(private var input: String, errorHandler: ErrorHandler = new DefaultErrorHandler()) {
 
   private var line = 1
   private var column = 1
@@ -33,8 +32,7 @@ class Lexer(private var input: String,
     def lookahead(c: Char) = input.length() > 1 && input.charAt(1) == c
 
     val pos = position
-    val character = if (input.isEmpty) None else Some(input.head)
-    val (token: Token, length: Int) = character match {
+    val (token, length) = input.headOption match {
       case None => (EndOfFile, 0)
       case Some(ch) => ch match {
         case '+'                   => (Plus, 1)
@@ -55,10 +53,10 @@ class Lexer(private var input: String,
           (Comment(value.trim), value.length + 3)
 
         case '(' if lookahead('*') =>
-	        if (input.indexOf("*)", 2) < 0) errorHandler.fatalError(new SPLException("Unterminated comment.", pos))
-	        val (value, _) = input.drop(2).zip(input.drop(3)).takeWhile(_ != ('*', ')')).unzip
-	
-	        (Comment(value.mkString.trim), value.length + 4)
+          if (input.indexOf("*)", 2) < 0) errorHandler.fatalError(new SPLException("Unterminated comment.", pos))
+          val (value, _) = input.drop(2).zip(input.drop(3)).takeWhile(_ != ('*', ')')).unzip
+
+          (Comment(value.mkString.trim), value.length + 4)
 
         case '('                   => (LParen, 1)
         case ')'                   => (RParen, 1)

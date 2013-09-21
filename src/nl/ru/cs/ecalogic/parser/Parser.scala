@@ -88,7 +88,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     }
     expect(Tokens.RParen)
 
-    val body = statementList()
+    val body = composition()
 
     expect(Tokens.Semicolon)
     expect(Tokens.Return)
@@ -101,7 +101,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     FunDef(name, params, body, result).withPosition(pos)
   }
 
-  def statementList(): Statement = {
+  def composition(): Statement = {
     val pos = currentPos
     val first = statement()
 
@@ -113,7 +113,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
         statements += statement()
       } while (current(Tokens.Semicolon) && !lookahead(Tokens.Return))
 
-      StatementList(statements).withPosition(pos)
+      Composition(statements).withPosition(pos)
     } else
       first
   }
@@ -130,10 +130,10 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
         val predicate = expression()
         
         expect(Tokens.Then)
-        val consequent = statementList()
+        val consequent = composition()
         
         expect(Tokens.Else)        
-        val alternative = statementList()
+        val alternative = composition()
 
         expect(Tokens.End)
         expect(Tokens.If)
@@ -147,7 +147,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
         val rankingFunction = expression()
 
         expect(Tokens.Do)
-        val consequent = statementList()
+        val consequent = composition()
 
         expect(Tokens.End)
         expect(Tokens.While)

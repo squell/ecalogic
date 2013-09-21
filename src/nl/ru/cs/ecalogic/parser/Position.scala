@@ -6,6 +6,8 @@ case class Position(line: Int, column: Int) extends Ordered[Position] {
     if (lineDiff == 0) column - that.column
     else lineDiff
   }
+
+  override def toString = s"$line:$column"
 }
 
 trait Positional {

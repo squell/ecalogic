@@ -6,7 +6,6 @@ import nl.ru.cs.ecalogic.parser.{Position, Positional}
 sealed abstract class ASTNode extends Positional {
   private var pos: Option[Position] = None
 
-  def children: Seq[ASTNode]
   def position = pos
 
   def withPosition(p: Position): this.type = {
@@ -19,59 +18,36 @@ sealed abstract class ASTNode extends Positional {
     case Some(position) => withPosition(position)
     case _ => this
   }
-
-  def foreach[U](f: ASTNode => U) {
-    children.foreach(f)
-  }
-}
-
-trait LeafNode extends ASTNode {
-  final def children = Seq()
-
-  override def foreach[U](f: ASTNode => U) {}
 }
 
 case class ErrorNode(message: Option[SPLException] = None) extends PrimaryExpression
                                                            with Definition
                                                            with Statement
-                                                           with Expression {
-  def resultType = sys.error("Not implemented")
-  def declaration = sys.error("Not implemented")
-  def optimize(operands: Seq[Expression]) = sys.error("Not implemented")
-}
 
-case class Program(definitions: Seq[Definition]) extends ASTNode {
-  def children = definitions
-}
+
+
+case class Program(definitions: Seq[Definition]) extends ASTNode
 
 trait Definition extends ASTNode
 
-case class Param(name: String) extends LeafNode
+case class Param(name: String) extends ASTNode
 
-case class FunDef(name: String, parameters: Seq[Param], body: Statement, result: VarRef) extends Definition  {
-  def children = parameters ++ Seq(body, result)
-}
+case class FunDef(name: String, parameters: Seq[Param], body: Statement, result: VarRef) extends Definition
+
 
 
 trait Statement extends ASTNode
 
-case class If(predicate: Expression, consequent: Statement, alternative: Statement) extends Statement {
-  def children = Seq(predicate, consequent, alternative)
-}
+case class If(predicate: Expression, consequent: Statement, alternative: Statement) extends Statement
 
-case class While(predicate: Expression, rankingFunction: Expression, consequent: Statement) extends Statement {
-  def children = Seq(predicate, rankingFunction, consequent)
-}
+case class While(predicate: Expression, rankingFunction: Expression, consequent: Statement) extends Statement
 
-case class Assignment(variable: VarRef, expression: Expression) extends Statement {
-  def children = Seq(expression)
-}
+case class Assignment(variable: VarRef, expression: Expression) extends Statement
 
-case class StatementList(statements: Seq[Statement]) extends Statement {
-  def children = statements
-}
+case class Composition(statements: Seq[Statement]) extends Statement
 
-case class Skip() extends Statement with LeafNode
+case class Skip() extends Statement
+
 
 
 trait Expression extends ASTNode {
@@ -83,10 +59,10 @@ trait Expression extends ASTNode {
 }
 
 
-trait PrimaryExpression extends Expression with LeafNode {
+trait PrimaryExpression extends Expression {
   def arity = 0
   def operands = Seq()
-  def operandTypes = Seq()
+
   def rewrite(ops: Seq[Expression]) = this
 }
 
@@ -96,9 +72,9 @@ case class VarRef(variable: Either[String, VarDecl]) extends PrimaryExpression {
   def name = variable.fold(identity, _.name)
 }
 
+
 trait NAryExpression extends Expression {
   def operator: String
-  def children = operands
 }
 
 trait BinaryExpression extends NAryExpression {
