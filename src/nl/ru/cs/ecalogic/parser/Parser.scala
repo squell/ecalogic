@@ -15,8 +15,8 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 
   private def currentPos: Position = buffer(0)._2
   private def current: Token       = buffer(0)._1
-  private def current(t: Token*)   = t.exists(buffer(0)._1.matches)
-  private def lookahead(t: Token*) = t.exists(buffer(1)._1.matches)
+  private def current(t: Token*)   = t.exists(_.matches(buffer(0)._1))
+  private def lookahead(t: Token*) = t.exists(_.matches(buffer(1)._1))
 
   private def fillBuffer() {
     while (buffer.size < 2) next() match {
@@ -73,12 +73,12 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 
   private def expect(expected: Token*)(follows: Set[Token]) {
     parse[Unit, Unit](_ => unexpected(expected:_*))(follows) {
-      case t if expected.exists(t.matches) => nextToken()
+      case t if expected.exists(_.matches(t)) => nextToken()
     }
   }
 
   private def optional(expected: Token*) {
-    if (expected.contains(current)) nextToken()
+    if (expected.exists(_.matches(current))) nextToken()
   }
 
 
@@ -94,7 +94,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     val pos = currentPos
     val definitions = mutable.Queue[Definition]()
     while (!current(Tokens.EndOfFile)) {
-      definitions += definition(Set())
+      definitions += definition(Set.empty)
     }
     Program(definitions).withPosition(pos)
   }
