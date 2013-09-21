@@ -70,8 +70,8 @@ function horror(X,P)
 
   while Y <= A upto A do 
     component::do()
-  end while
+  end while;
 
   return X
-end fuction
+end function
 

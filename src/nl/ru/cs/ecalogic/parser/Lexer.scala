@@ -65,7 +65,7 @@ class Lexer(private var input: String, errorHandler: ErrorHandler = new DefaultE
 
         case d if isDigit(d)       =>
           val value = input.takeWhile(isDigit)
-          (IntLiteral(BigInt(value)), value.length)
+          (Numeral(BigInt(value)), value.length)
 
         case h if isIdHead(h)      =>
           val value = input.takeWhile(isIdTail)
@@ -106,7 +106,10 @@ object Lexer {
     val lexer = new Lexer(source, new DefaultErrorHandler(source = Some(source)))
     var (token, _) = lexer.next()
     while (token != EndOfFile) {
-      if (!token.ignorable) println(token)
+      token match {
+        case Whitespace(_) | Comment(_) =>
+        case t                          => println(t)
+      }
       token = lexer.next()._1
     }
   }

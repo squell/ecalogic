@@ -12,10 +12,10 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
   private val buffer = mutable.Queue[(Token, Position)]()
   fillBuffer()
 
-  private def currentPos: Position         = buffer(0)._2
-  private def current: Token               = buffer(0)._1
-  private def current(t: TokenTemplate*)   = t.exists(buffer(0)._1.matches)
-  private def lookahead(t: TokenTemplate*) = t.exists(buffer(1)._1.matches)
+  private def currentPos: Position = buffer(0)._2
+  private def current: Token       = buffer(0)._1
+  private def current(t: Token*)   = t.contains(buffer(0)._1)
+  private def lookahead(t: Token*) = t.contains(buffer(1)._1)
 
   private def fillBuffer() {
     while (buffer.size < 2) next() match {
@@ -31,7 +31,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     fillBuffer()
   }
 
-  private def unexpected(expected: TokenTemplate*) {
+  private def unexpected(expected: Any*) {
     if (current(Tokens.EndOfFile))
       errorHandler.fatalError(new SPLException("Unexpected end of file", currentPos))
 
@@ -44,18 +44,18 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     nextToken()
   }
 
-  private def expect(expected: TokenTemplate*) {
-    if (expected.exists(current.matches)) nextToken()
+  private def expect(expected: Token*) {
+    if (expected.contains(current)) nextToken()
     else unexpected(expected:_*)
   }
 
-  private def optional(expected: TokenTemplate*) {
-    if (expected.exists(current.matches)) nextToken()
+  private def optional(expected: Token*) {
+    if (expected.contains(current)) nextToken()
   }
 
   def identifier(): String = current match {
-    case Tokens.Identifier(n) => nextToken(); n
-    case t => unexpected(Wildcards.Identifier); "<error>"
+    case Tokens.KeywordOrIdentifier(n) => nextToken(); n
+    case t => unexpected("<identifier>"); "<error>"
   }
 
 
@@ -127,6 +127,14 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
   def statement(): Statement = {
     val pos = currentPos
     val res = current match {
+      case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.LParen, Tokens.ColonColon) =>
+        funCall()
+      case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.Assign) =>
+        nextToken()
+        nextToken()
+        val expr = expression()
+
+        Assignment(VarRef(Left(n)), expr)
       case Tokens.Skip =>
         nextToken()
         
@@ -162,19 +170,9 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
         expect(Tokens.While)
 
         While(predicate, rankingFunction, consequent)
-      case Tokens.Identifier(n) =>
-        if (lookahead(Tokens.LParen) || lookahead(Tokens.ColonColon)) {
-          funCall()
-        } else {
-          nextToken()
-          expect(Tokens.Assign)
-          val expr = expression()
-
-          Assignment(VarRef(Left(n)), expr)
-        }
       case _ =>
-        unexpected(Tokens.Skip, Tokens.If, Tokens.While, Wildcards.Identifier)
-        if (current(Tokens.Semicolon)) nextToken()
+        unexpected("<skip statement>", "<if statement>", "<while statement>", "<assignment>", "<function call>")
+
         ErrorNode()
     }
     res.withPosition(pos)
@@ -212,9 +210,16 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
   def primary(): Expression = {
     val pos = currentPos
     val res = current match {
-      case Tokens.Identifier(n) if lookahead(Tokens.LParen) || lookahead(Tokens.ColonColon) => funCall()
-      case Tokens.Identifier(n) => nextToken(); VarRef(Left(n))
-      case Tokens.IntLiteral(v) => nextToken(); Literal(v)
+      case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.LParen) || lookahead(Tokens.ColonColon) =>
+        funCall()
+      case Tokens.KeywordOrIdentifier(n) =>
+        nextToken()
+
+        VarRef(Left(n))
+      case Tokens.Numeral(v) =>
+        nextToken()
+
+        Literal(v)
       case Tokens.LParen =>
         nextToken()
 
@@ -223,7 +228,8 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 
         expr
       case _ =>
-        unexpected(Wildcards.Identifier, Wildcards.IntLiteral, Tokens.LParen)
+        unexpected("<numeral>", "<function call>", "<variable reference>", "<parenthesized expression>")
+
         ErrorNode()
     }
     res.withPosition(pos)
