@@ -1,6 +1,7 @@
 *.class
 *.log
 .idea
+ecalogic.iml
 
 # sbt specific
 dist/*
