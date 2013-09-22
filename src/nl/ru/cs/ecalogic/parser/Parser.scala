@@ -154,51 +154,52 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
       first
   }
 
-  def statement(follows: Set[Token]) = parse[Statement]("<skip statement>", "<if statement>", "<while statement>", "<assignment>", "<function call>")(follows) {
-    case Tokens.If =>
-      nextToken()
-      val predicate = expression(follows + Tokens.Then)
+  def statement(follows: Set[Token]) =
+    parse[Statement]("<skip statement>", "<if statement>", "<while statement>", "<assignment>", "<function call>")(follows) {
+      case Tokens.If =>
+        nextToken()
+        val predicate = expression(follows + Tokens.Then)
 
-      expect(Tokens.Then)(follows + Tokens.KeywordOrIdentifier + Tokens.Skip + Tokens.If + Tokens.While)
-      val consequent = composition(follows + Tokens.Then + Tokens.Semicolon)
-      optional(Tokens.Semicolon)
+        expect(Tokens.Then)(follows + Tokens.KeywordOrIdentifier + Tokens.Skip + Tokens.If + Tokens.While)
+        val consequent = composition(follows + Tokens.Then + Tokens.Semicolon)
+        optional(Tokens.Semicolon)
 
-      expect(Tokens.Else)(follows + Tokens.KeywordOrIdentifier + Tokens.Skip + Tokens.If + Tokens.While)
-      val alternative = composition(follows + Tokens.End + Tokens.Semicolon)
-      optional(Tokens.Semicolon)
+        expect(Tokens.Else)(follows + Tokens.KeywordOrIdentifier + Tokens.Skip + Tokens.If + Tokens.While)
+        val alternative = composition(follows + Tokens.End + Tokens.Semicolon)
+        optional(Tokens.Semicolon)
 
-      expect(Tokens.End)(follows + Tokens.If)
-      expect(Tokens.If)(follows)
+        expect(Tokens.End)(follows + Tokens.If)
+        expect(Tokens.If)(follows)
 
-      If(predicate, consequent, alternative)
-    case Tokens.While =>
-      nextToken()
-      val predicate = expression(follows + Tokens.Upto)
+        If(predicate, consequent, alternative)
+      case Tokens.While =>
+        nextToken()
+        val predicate = expression(follows + Tokens.Upto)
 
-      expect(Tokens.Upto)(follows + Tokens.KeywordOrIdentifier + Tokens.Numeral + Tokens.LParen)
-      val rankingFunction = expression(follows + Tokens.Do)
+        expect(Tokens.Upto)(follows + Tokens.KeywordOrIdentifier + Tokens.Numeral + Tokens.LParen)
+        val rankingFunction = expression(follows + Tokens.Do)
 
-      expect(Tokens.Do)(follows + Tokens.KeywordOrIdentifier + Tokens.Skip + Tokens.If + Tokens.While)
-      val consequent = composition(follows + Tokens.End + Tokens.Semicolon)
-      optional(Tokens.Semicolon)
+        expect(Tokens.Do)(follows + Tokens.KeywordOrIdentifier + Tokens.Skip + Tokens.If + Tokens.While)
+        val consequent = composition(follows + Tokens.End + Tokens.Semicolon)
+        optional(Tokens.Semicolon)
 
-      expect(Tokens.End)(follows + Tokens.While)
-      expect(Tokens.While)(follows)
+        expect(Tokens.End)(follows + Tokens.While)
+        expect(Tokens.While)(follows)
 
-      While(predicate, rankingFunction, consequent)
-    case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.LParen, Tokens.ColonColon) =>
-      funCall(follows)
-    case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.Assign) =>
-      nextToken()
-      nextToken()
-      val expr = expression(follows)
+        While(predicate, rankingFunction, consequent)
+      case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.LParen, Tokens.ColonColon) =>
+        funCall(follows)
+      case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.Assign) =>
+        nextToken()
+        nextToken()
+        val expr = expression(follows)
 
-      Assignment(VarRef(Left(n)), expr)
-    case Tokens.Skip =>
-      nextToken()
+        Assignment(VarRef(Left(n)), expr)
+      case Tokens.Skip =>
+        nextToken()
 
-      Skip()
-  }
+        Skip()
+    }
 
 
   def funCall(follows: Set[Token]): FunCall = {
@@ -230,25 +231,26 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 
   def expression(follows: Set[Token]): Expression = orExpr(follows)()
 
-  def primary(follows: Set[Token]): Expression = parse[Expression]("<natural number>", "<function call>", "<variable reference>", "<parenthesized expression>")(follows) {
-    case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.LParen, Tokens.ColonColon) =>
-      funCall(follows)
-    case Tokens.KeywordOrIdentifier(n) =>
-      nextToken()
+  def primary(follows: Set[Token]): Expression =
+    parse[Expression]("<natural number>", "<function call>", "<variable reference>", "<parenthesized expression>")(follows) {
+      case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.LParen, Tokens.ColonColon) =>
+        funCall(follows)
+      case Tokens.KeywordOrIdentifier(n) =>
+        nextToken()
 
-      VarRef(Left(n))
-    case Tokens.Numeral(v) =>
-      nextToken()
+        VarRef(Left(n))
+      case Tokens.Numeral(v) =>
+        nextToken()
 
-      Literal(v)
-    case Tokens.LParen =>
-      nextToken()
+        Literal(v)
+      case Tokens.LParen =>
+        nextToken()
 
-      val expr = expression(follows + Tokens.RParen)
-      expect(Tokens.RParen)(follows)
+        val expr = expression(follows + Tokens.RParen)
+        expect(Tokens.RParen)(follows)
 
-      expr
-  }
+        expr
+    }
 
   @tailrec
   def multExpr(follows: Set[Token])(acc: Expression = primary(follows)): Expression = current match {
