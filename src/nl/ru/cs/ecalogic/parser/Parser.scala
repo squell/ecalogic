@@ -9,20 +9,24 @@ import nl.ru.cs.ecalogic.SPLException
 import scala.io.Source
 
 final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorHandler()) extends Lexer(input, errorHandler) {
+  private implicit class MultiPattern(patterns: TraversableOnce[Pattern]) extends Pattern {
+    def matches(token: Token) = patterns.exists(_.matches(token))
+  }
+
   private var recovering = false
   private val buffer = mutable.Queue[(Token, Position)]()
   fillBuffer()
 
-  private def currentPos: Position = buffer(0)._2
-  private def current: Token       = buffer(0)._1
-  private def current(t: Token*)   = t.exists(_.matches(buffer(0)._1))
-  private def lookahead(t: Token*) = t.exists(_.matches(buffer(1)._1))
+  private def currentPos: Position            = buffer(0)._2
+  private def current: Token                  = buffer(0)._1
+  private def current(t: Pattern*): Boolean   = t.matches(buffer(0)._1)
+  private def lookahead(t: Pattern*): Boolean = t.matches(buffer(1)._1)
 
   private def fillBuffer() {
     while (buffer.size < 2) next() match {
       case (Tokens.Comment(_), _)    =>
       case (Tokens.Whitespace(_), _) =>
-      case (Tokens.Unknown(t), p)    => errorHandler.error(new SPLException("Unrecognized token: '"+t+"'", p))
+      case (Tokens.Unknown(t), p)    => errorHandler.error(new SPLException(s"Unrecognized token: '$t'", p))
       case tp                        => buffer += tp
     }
   }
@@ -37,9 +41,9 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
       errorHandler.fatalError(new SPLException("Unexpected end of file", currentPos))
 
     val exception = expected match {
-      case Seq()  => new SPLException("Unexpected token: " + current, currentPos)
-      case Seq(x) => new SPLException("Expected " + x + "; found: " + current, currentPos)
-      case xs     => new SPLException("Expected any of " + xs.mkString(", ") + "; found: " + current, currentPos)
+      case Seq()  => new SPLException(s"Unexpected token: $current", currentPos)
+      case Seq(x) => new SPLException(s"Expected $x; found: $current", currentPos)
+      case xs     => new SPLException(s"Expected any of ${xs.mkString(", ")}; found: $current", currentPos)
     }
     if (!recovering)
       errorHandler.error(exception)
@@ -47,7 +51,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     ErrorNode(Some(exception))
   }
 
-  private def parse[A >: B, B](default: Token => B)(follows: Token => Boolean)(f: PartialFunction[Token, A]): A = {
+  private def parse[A >: B, B](default: Token => B)(follows: Pattern => Boolean)(f: PartialFunction[Token, A]): A = {
     if (f.isDefinedAt(current)) {
       recovering = false
       f(current)
@@ -65,25 +69,25 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     }
   }
 
-  private def parse[A >: ErrorNode <: ASTNode](expected: Any*)(follows: Token => Boolean)(f: PartialFunction[Token, A]): A = {
+  private def parse[A >: ErrorNode <: ASTNode](expected: Any*)(follows: Pattern => Boolean)(f: PartialFunction[Token, A]): A = {
     val pos = currentPos
     val res = parse[A, ErrorNode](_ => unexpected(expected:_*))(follows)(f)
     res.withPosition(pos)
   }
 
-  private def expect(expected: Token*)(follows: Set[Token]) {
+  private def expect(expected: Pattern*)(follows: Set[Pattern]) {
     parse[Unit, Unit](_ => unexpected(expected:_*))(follows) {
-      case t if expected.exists(_.matches(t)) => nextToken()
+      case t if expected.matches(t) => nextToken()
     }
   }
 
-  private def optional(expected: Token*) {
-    if (expected.exists(_.matches(current))) nextToken()
+  private def optional(expected: Pattern*) {
+    if (expected.matches(current)) nextToken()
   }
 
 
 
-  def identifier(follows: Set[Token]): String =
+  def identifier(follows: Set[Pattern]): String =
     parse[String, String] {_ => unexpected("<identifier>"); "<error>"} (follows) {
       case Tokens.KeywordOrIdentifier(n) => nextToken(); n
     }
@@ -99,7 +103,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     Program(definitions).withPosition(pos)
   }
 
-  def definition(follows: Set[Token]): FunDef = {
+  def definition(follows: Set[Pattern]): FunDef = {
     val pos = currentPos
     
     expect(Tokens.Function)(follows)
@@ -137,7 +141,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     FunDef(name, params, body, result).withPosition(pos)
   }
 
-  def composition(follows: Set[Token]): Statement = {
+  def composition(follows: Set[Pattern]): Statement = {
     val pos = currentPos
     val first = statement(follows + Tokens.Semicolon)
 
@@ -154,7 +158,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
       first
   }
 
-  def statement(follows: Set[Token]) =
+  def statement(follows: Set[Pattern]) =
     parse[Statement]("<skip statement>", "<if statement>", "<while statement>", "<assignment>", "<function call>")(follows) {
       case Tokens.If =>
         nextToken()
@@ -202,7 +206,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     }
 
 
-  def funCall(follows: Set[Token]): FunCall = {
+  def funCall(follows: Set[Pattern]): FunCall = {
     val compOrNamePart = identifier(follows + Tokens.ColonColon + Tokens.LParen)
 
     val name = if (current(Tokens.ColonColon)) {
@@ -229,9 +233,9 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     FunCall(Left(name), arguments)
   }
 
-  def expression(follows: Set[Token]): Expression = orExpr(follows)()
+  def expression(follows: Set[Pattern]): Expression = orExpr(follows)()
 
-  def primary(follows: Set[Token]): Expression =
+  def primary(follows: Set[Pattern]): Expression =
     parse[Expression]("<natural number>", "<function call>", "<variable reference>", "<parenthesized expression>")(follows) {
       case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.LParen, Tokens.ColonColon) =>
         funCall(follows)
@@ -253,19 +257,19 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     }
 
   @tailrec
-  def multExpr(follows: Set[Token])(acc: Expression = primary(follows)): Expression = current match {
+  def multExpr(follows: Set[Pattern])(acc: Expression = primary(follows)): Expression = current match {
     case Tokens.Multiply => nextToken(); multExpr(follows)(Multiply(acc, primary(follows)).withPosition(acc))
     case _               => acc
   }
 
   @tailrec
-  def addExpr(follows: Set[Token])(acc: Expression = multExpr(follows)()): Expression = current match {
+  def addExpr(follows: Set[Pattern])(acc: Expression = multExpr(follows)()): Expression = current match {
     case Tokens.Plus  => nextToken(); addExpr(follows)(Add     (acc, multExpr(follows)()).withPosition(acc))
     case Tokens.Minus => nextToken(); addExpr(follows)(Subtract(acc, multExpr(follows)()).withPosition(acc))
     case _            => acc
   }
 
-  def relExpr(follows: Set[Token]): Expression = {
+  def relExpr(follows: Set[Pattern]): Expression = {
     val left = addExpr(follows)()
     current match {
       case Tokens.LT => nextToken(); LT(left, addExpr(follows)()).withPosition(left)
@@ -279,13 +283,13 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
   }
 
   @tailrec
-  def andExpr(follows: Set[Token])(acc: Expression = relExpr(follows)): Expression = current match {
+  def andExpr(follows: Set[Pattern])(acc: Expression = relExpr(follows)): Expression = current match {
     case Tokens.And => nextToken(); andExpr(follows)(And(acc, relExpr(follows)).withPosition(acc))
     case _          => acc
   }
 
   @tailrec
-  def orExpr(follows: Set[Token])(acc: Expression = andExpr(follows)()): Expression = current match {
+  def orExpr(follows: Set[Pattern])(acc: Expression = andExpr(follows)()): Expression = current match {
     case Tokens.Or => nextToken(); orExpr(follows)(Or(acc, andExpr(follows)()).withPosition(acc))
     case _         => acc
   }

@@ -1,7 +1,11 @@
 package nl.ru.cs.ecalogic.parser
 
-sealed abstract class Token {
-  def matches(that: Token) = this == that
+trait Pattern {
+  def matches(token: Token): Boolean
+}
+
+sealed trait Token extends Pattern {
+  def matches(token: Token) = this == token
 }
 
 sealed abstract class FixedToken(fixedValue: String) extends Token {
@@ -61,30 +65,32 @@ object Tokens {
 
   case class Comment(value: String)    extends VariableToken[String]("comment")
   case class Whitespace(value: String) extends VariableToken[String]("whitespace")
-  case object EndOfFile                extends Token { override def toString = "<end-of-file>" }
+  case object EndOfFile                extends Token {
+    override def toString = "<end-of-file>"
+  }
 
   case class Unknown(value: Char)      extends VariableToken[Char]("unknown")
 
-  object Identifier                    extends Token {
-    override def matches(that: Token) = super.matches(that) || (that match  {
+  object Identifier                    extends Pattern {
+    def matches(that: Token) = that match {
       case Identifier(_) => true
       case _             => false
-    })
+    }
+
+    override def toString = "<identifier>"
   }
 
-  object Numeral                       extends Token {
-    override def matches(that: Token) = super.matches(that) || (that match  {
+  object Numeral                       extends Pattern {
+    def matches(that: Token) = that match {
       case Numeral(_) => true
       case _          => false
-    })
+    }
+
+    override def toString = "<natural number>"
   }
 
-  object KeywordOrIdentifier           extends Token {
-    override def matches(that: Token) = super.matches(that) || (that match  {
-      case Identifier(_) => true
-      case _: Keyword    => true
-      case _             => false
-    })
+  object KeywordOrIdentifier           extends Pattern {
+    def matches(that: Token) = unapply(that).isDefined
 
     def unapply(t: Token): Option[String] = t match {
       case Tokens.Identifier(n) => Some(n)

@@ -33,7 +33,7 @@ class DefaultErrorHandler(maxErrorCount: Int = 10,
 
   private def printMessage(tpe: String, message: String, position: Option[Position]) {
     writer.print(tpe)
-    writer.print(position.map(p => " at line %d, column %d".format(p.line, p.column)).mkString)
+    writer.print(position.fold("")(p => s" at line ${p.line}, column ${p.column}"))
     writer.printf(":%n    %s%n", message)
     source.map(_ + "\n").zip(position).foreach { case (s, Position(l, c)) =>
       val line = s.lines.drop(l - 1).next()

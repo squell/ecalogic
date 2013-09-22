@@ -9,7 +9,7 @@
     <property name="build.dist" location="dist"/>
     <property name="scala.home" location="${env.SCALA_HOME}"/>
 
-    <path id="test.cp">
+    <path id="test.classpath">
         <pathelement location="${build.lib}/scalatest_2.10-1.9.2.jar"/>
         <pathelement location="${scala.home}/lib/scala-library.jar"/>
         <pathelement location="${build.bin}"/>
@@ -24,7 +24,7 @@
     </taskdef>
 
     <taskdef name="scalatest" classname="org.scalatest.tools.ScalaTestAntTask">
-        <classpath refid="test.cp"/>
+        <classpath refid="test.classpath"/>
     </taskdef>
 
     <target name="init">
@@ -44,7 +44,7 @@
 
     <target name="compile-tests" depends="compile, init" description="compile the test files">
         <scalac srcdir="${test.src}" destdir="${test.bin}">
-            <classpath refid="test.cp"/>
+            <classpath refid="test.classpath"/>
         </scalac>
     </target>
 

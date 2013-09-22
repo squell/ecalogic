@@ -53,7 +53,7 @@ class Lexer(private var input: String, errorHandler: ErrorHandler = new DefaultE
           (Comment(value.trim), value.length + 3)
 
         case '(' if lookahead('*') =>
-          if (input.indexOf("*)", 2) < 0) errorHandler.fatalError(new SPLException("Unterminated comment.", pos))
+          if (input.indexOf("*)", 2) < 0) errorHandler.fatalError(new SPLException("Unterminated comment", pos))
           val (value, _) = input.drop(2).zip(input.drop(3)).takeWhile(_ != ('*', ')')).unzip
 
           (Comment(value.mkString.trim), value.length + 4)
