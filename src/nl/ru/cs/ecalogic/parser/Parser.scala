@@ -41,18 +41,14 @@ import nl.ru.cs.ecalogic.SPLException
 import scala.io.Source
 
 final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorHandler()) extends Lexer(input, errorHandler) {
-  private implicit class MultiPattern(patterns: TraversableOnce[Pattern]) extends Pattern {
-    def matches(token: Token) = patterns.exists(_.matches(token))
-  }
-
   private var recovering = false
   private val buffer = mutable.Queue[(Token, Position)]()
   fillBuffer()
 
   private def currentPos: Position            = buffer(0)._2
   private def current: Token                  = buffer(0)._1
-  private def current(t: Pattern*): Boolean   = t.matches(buffer(0)._1)
-  private def lookahead(t: Pattern*): Boolean = t.matches(buffer(1)._1)
+  private def current(p: Pattern): Boolean    = p.matches(buffer(0)._1)
+  private def lookahead(p: Pattern): Boolean  = p.matches(buffer(1)._1)
 
   private def fillBuffer() {
     while (buffer.size < 2) next() match {
@@ -77,78 +73,77 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
       case Seq(x) => new SPLException(s"Expected $x; found: $current", currentPos)
       case xs     => new SPLException(s"Expected any of ${xs.mkString(", ")}; found: $current", currentPos)
     }
+
     if (!recovering)
       errorHandler.error(exception)
-    nextToken()
+
     ErrorNode(Some(exception))
   }
 
-  private def parse[A >: B, B](default: Token => B)(follows: Pattern => Boolean)(f: PartialFunction[Token, A]): A = {
-    if (f.isDefinedAt(current)) {
+  private def parse[A, B <: A](default: Token => B)(follows: Pattern)(f: PartialFunction[Token, A]): A = {
+    if (recovering && f.isDefinedAt(current)) // Kan beter?
       recovering = false
-      f(current)
-    } else {
+
+    f.applyOrElse(current, { _: Token =>
       val defaultValue = default(current)
-      while (!follows(current) && !f.isDefinedAt(current) && !current(Tokens.EndOfFile)) {
+      while (!follows.matches(current) && !f.isDefinedAt(current) && !current(Tokens.EndOfFile)) {
         nextToken()
       }
-      if (f.isDefinedAt(current))
-        f(current)
-      else {
+      f.applyOrElse(current, { _: Token =>
         recovering = true
         defaultValue
-      }
-    }
+      })
+    })
   }
 
-  private def parse[A >: ErrorNode <: ASTNode](expected: Any*)(follows: Pattern => Boolean)(f: PartialFunction[Token, A]): A = {
+  private def parse[A >: ErrorNode <: ASTNode](expected: Any*)(follows: Pattern)(f: PartialFunction[Token, A]): A = {
     val pos = currentPos
     val res = parse[A, ErrorNode](_ => unexpected(expected:_*))(follows)(f)
     res.withPosition(pos)
   }
 
-  private def expect(expected: Pattern*)(follows: Set[Pattern]) {
-    parse[Unit, Unit](_ => unexpected(expected:_*))(follows) {
+  private def expect(expected: Pattern)(follows: Pattern) {
+    parse[Unit, Unit](_ => unexpected(expected))(follows) {
       case t if expected.matches(t) => nextToken()
     }
   }
 
-  private def optional(expected: Pattern*) {
+  private def optional(expected: Pattern) {
     if (expected.matches(current)) nextToken()
   }
 
 
 
-  def identifier(follows: Set[Pattern]): String =
+  def identifier(follows: Pattern): String =
     parse[String, String] {_ => unexpected("<identifier>"); "<error>"} (follows) {
-      case Tokens.KeywordOrIdentifier(n) => nextToken(); n
+      case Tokens.Identifier(n) => nextToken(); n
     }
 
 
 
   def program(): Program = {
     val pos = currentPos
-    val definitions = mutable.Queue[Definition]()
+    val definitions = Seq.newBuilder[Definition]
     while (!current(Tokens.EndOfFile)) {
-      definitions += definition(Set.empty)
+      definitions += definition(Pattern.empty)
     }
-    Program(definitions).withPosition(pos)
+    Program(definitions.result()).withPosition(pos)
   }
 
-  def definition(follows: Set[Pattern]): FunDef = {
+  def definition(follows: Pattern): FunDef = {
     val pos = currentPos
 
     expect(Tokens.Function)(follows)
 
-    val name = identifier(follows + Tokens.LParen)
+    val name = identifier(follows | Tokens.LParen)
 
-    val params = mutable.Queue[Param]()
-    expect(Tokens.LParen)(follows + Tokens.KeywordOrIdentifier + Tokens.RParen)
+    val params = Seq.newBuilder[Param]
+    expect(Tokens.LParen)(follows | Tokens.Identifier | Tokens.RParen)
     if (!current(Tokens.RParen)) {
       var halt = false
       do {
         val paramPos = currentPos
-        val paramName = identifier(follows + Tokens.Comma + Tokens.RParen)
+        val paramName = identifier(follows | Tokens.Comma | Tokens.RParen)
 
         params += Param(paramName).withPosition(paramPos)
 
@@ -156,76 +151,76 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
         else halt = true
       } while (!halt)
     }
-    expect(Tokens.RParen)(follows + Tokens.KeywordOrIdentifier + Tokens.Skip + Tokens.If + Tokens.While)
+    expect(Tokens.RParen)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
 
-    val body = composition(follows + Tokens.Semicolon)
+    val body = composition(follows | Tokens.Semicolon)
 
-    expect(Tokens.Semicolon)(follows + Tokens.Return)
+    expect(Tokens.Semicolon)(follows | Tokens.Return)
 
-    expect(Tokens.Return)(follows + Tokens.KeywordOrIdentifier)
+    expect(Tokens.Return)(follows | Tokens.Identifier)
     val resultPos = currentPos
-    val result = VarRef(Left(identifier(follows + Tokens.Semicolon + Tokens.End))).withPosition(resultPos)
+    val result = VarRef(Left(identifier(follows | Tokens.Semicolon | Tokens.End))).withPosition(resultPos)
     optional(Tokens.Semicolon)
 
-    expect(Tokens.End)(follows + Tokens.Function)
+    expect(Tokens.End)(follows | Tokens.Function)
     expect(Tokens.Function)(follows)
 
-    FunDef(name, params, body, result).withPosition(pos)
+    FunDef(name, params.result(), body, result).withPosition(pos)
   }
 
-  def composition(follows: Set[Pattern]): Statement = {
+  def composition(follows: Pattern): Statement = {
     val pos = currentPos
-    val first = statement(follows + Tokens.Semicolon)
+    val first = statement(follows | Tokens.Semicolon)
 
-    if (current(Tokens.Semicolon) && !lookahead(Tokens.Return, Tokens.End, Tokens.Else)) {
-      var statements = mutable.Queue(first)
+    if (current(Tokens.Semicolon) && !lookahead(Tokens.Return | Tokens.End | Tokens.Else)) {
+      val statements = Seq.newBuilder += first
 
       do {
         nextToken()
-        statements += statement(follows + Tokens.Semicolon)
-      } while (current(Tokens.Semicolon) && !lookahead(Tokens.Return, Tokens.End, Tokens.Else))
+        statements += statement(follows | Tokens.Semicolon)
+      } while (current(Tokens.Semicolon) && !lookahead(Tokens.Return | Tokens.End | Tokens.Else))
 
-      Composition(statements).withPosition(pos)
+      Composition(statements.result()).withPosition(pos)
     } else
       first
   }
 
-  def statement(follows: Set[Pattern]) =
+  def statement(follows: Pattern) =
     parse[Statement]("<skip statement>", "<if statement>", "<while statement>", "<assignment>", "<function call>")(follows) {
       case Tokens.If =>
         nextToken()
-        val predicate = expression(follows + Tokens.Then)
+        val predicate = expression(follows | Tokens.Then)
 
-        expect(Tokens.Then)(follows + Tokens.KeywordOrIdentifier + Tokens.Skip + Tokens.If + Tokens.While)
-        val consequent = composition(follows + Tokens.Then + Tokens.Semicolon)
+        expect(Tokens.Then)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
+        val consequent = composition(follows | Tokens.Then | Tokens.Semicolon)
         optional(Tokens.Semicolon)
 
-        expect(Tokens.Else)(follows + Tokens.KeywordOrIdentifier + Tokens.Skip + Tokens.If + Tokens.While)
-        val alternative = composition(follows + Tokens.End + Tokens.Semicolon)
+        expect(Tokens.Else)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
+        val alternative = composition(follows | Tokens.End | Tokens.Semicolon)
         optional(Tokens.Semicolon)
 
-        expect(Tokens.End)(follows + Tokens.If)
+        expect(Tokens.End)(follows | Tokens.If)
         expect(Tokens.If)(follows)
 
         If(predicate, consequent, alternative)
       case Tokens.While =>
         nextToken()
-        val predicate = expression(follows + Tokens.Upto)
+        val predicate = expression(follows | Tokens.Upto)
 
-        expect(Tokens.Upto)(follows + Tokens.KeywordOrIdentifier + Tokens.Numeral + Tokens.LParen)
-        val rankingFunction = expression(follows + Tokens.Do)
+        expect(Tokens.Upto)(follows | Tokens.Identifier | Tokens.Numeral | Tokens.LParen)
+        val rankingFunction = expression(follows | Tokens.Do)
 
-        expect(Tokens.Do)(follows + Tokens.KeywordOrIdentifier + Tokens.Skip + Tokens.If + Tokens.While)
-        val consequent = composition(follows + Tokens.End + Tokens.Semicolon)
+        expect(Tokens.Do)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
+        val consequent = composition(follows | Tokens.End | Tokens.Semicolon)
         optional(Tokens.Semicolon)
 
-        expect(Tokens.End)(follows + Tokens.While)
+        expect(Tokens.End)(follows | Tokens.While)
         expect(Tokens.While)(follows)
 
         While(predicate, rankingFunction, consequent)
-      case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.LParen, Tokens.ColonColon) =>
+      case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon) =>
         funCall(follows)
-      case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.Assign) =>
+      case Tokens.Identifier(n) if lookahead(Tokens.Assign) =>
         nextToken()
         nextToken()
         val expr = expression(follows)
@@ -238,23 +233,23 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     }
 
 
-  def funCall(follows: Set[Pattern]): FunCall = {
-    val compOrNamePart = identifier(follows + Tokens.ColonColon + Tokens.LParen)
+  def funCall(follows: Pattern): FunCall = {
+    val compOrNamePart = identifier(follows | Tokens.ColonColon | Tokens.LParen)
 
     val name = if (current(Tokens.ColonColon)) {
       nextToken()
-      val namePart = identifier(follows + Tokens.LParen)
+      val namePart = identifier(follows | Tokens.LParen)
 
       FunName(namePart, Some(compOrNamePart))
     } else
       FunName(compOrNamePart)
 
-    expect(Tokens.LParen)(follows + Tokens.KeywordOrIdentifier + Tokens.Numeral + Tokens.LParen + Tokens.RParen)
-    val arguments = mutable.Queue[Expression]()
+    expect(Tokens.LParen)(follows | Tokens.Identifier | Tokens.Numeral | Tokens.LParen | Tokens.RParen)
+    val arguments = Seq.newBuilder[Expression]
     if (!current(Tokens.RParen)) {
       var halt = false
       do {
-        arguments += expression(follows + Tokens.Comma + Tokens.RParen)
+        arguments += expression(follows | Tokens.Comma | Tokens.RParen)
 
         if (current(Tokens.Comma)) nextToken()
         else halt = true
@@ -262,16 +257,16 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     }
     expect(Tokens.RParen)(follows)
 
-    FunCall(Left(name), arguments)
+    FunCall(Left(name), arguments.result())
   }
 
-  def expression(follows: Set[Pattern]): Expression = orExpr(follows)()
+  def expression(follows: Pattern): Expression = orExpr(follows)()
 
-  def primary(follows: Set[Pattern]): Expression =
+  def primary(follows: Pattern): Expression =
     parse[Expression]("<natural number>", "<function call>", "<variable reference>", "<parenthesized expression>")(follows) {
-      case Tokens.KeywordOrIdentifier(n) if lookahead(Tokens.LParen, Tokens.ColonColon) =>
+      case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon) =>
         funCall(follows)
-      case Tokens.KeywordOrIdentifier(n) =>
+      case Tokens.Identifier(n) =>
         nextToken()
 
         VarRef(Left(n))
@@ -282,26 +277,26 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
       case Tokens.LParen =>
         nextToken()
 
-        val expr = expression(follows + Tokens.RParen)
+        val expr = expression(follows | Tokens.RParen)
         expect(Tokens.RParen)(follows)
 
         expr
     }
 
   @tailrec
-  def multExpr(follows: Set[Pattern])(acc: Expression = primary(follows)): Expression = current match {
+  def multExpr(follows: Pattern)(acc: Expression = primary(follows)): Expression = current match {
     case Tokens.Multiply => nextToken(); multExpr(follows)(Multiply(acc, primary(follows)).withPosition(acc))
     case _               => acc
   }
 
   @tailrec
-  def addExpr(follows: Set[Pattern])(acc: Expression = multExpr(follows)()): Expression = current match {
+  def addExpr(follows: Pattern)(acc: Expression = multExpr(follows)()): Expression = current match {
     case Tokens.Plus  => nextToken(); addExpr(follows)(Add     (acc, multExpr(follows)()).withPosition(acc))
     case Tokens.Minus => nextToken(); addExpr(follows)(Subtract(acc, multExpr(follows)()).withPosition(acc))
     case _            => acc
   }
 
-  def relExpr(follows: Set[Pattern]): Expression = {
+  def relExpr(follows: Pattern): Expression = {
     val left = addExpr(follows)()
     current match {
       case Tokens.LT => nextToken(); LT(left, addExpr(follows)()).withPosition(left)
@@ -315,13 +310,13 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
   }
 
   @tailrec
-  def andExpr(follows: Set[Pattern])(acc: Expression = relExpr(follows)): Expression = current match {
+  def andExpr(follows: Pattern)(acc: Expression = relExpr(follows)): Expression = current match {
     case Tokens.And => nextToken(); andExpr(follows)(And(acc, relExpr(follows)).withPosition(acc))
     case _          => acc
   }
 
   @tailrec
-  def orExpr(follows: Set[Pattern])(acc: Expression = andExpr(follows)()): Expression = current match {
+  def orExpr(follows: Pattern)(acc: Expression = andExpr(follows)()): Expression = current match {
     case Tokens.Or => nextToken(); orExpr(follows)(Or(acc, andExpr(follows)()).withPosition(acc))
     case _         => acc
   }

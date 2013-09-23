@@ -34,7 +34,36 @@ package nl.ru.cs.ecalogic.parser
 
 trait Pattern {
   def matches(token: Token): Boolean
+
+  def |(pattern: Pattern): Pattern = Pattern.union(this, pattern)
 }
+
+object Pattern {
+  private case class MultiPattern(patterns: Set[Pattern]) extends Pattern {
+    def matches(token: Token) = patterns.exists(_.matches(token))
+  }
+
+  private case object NilPattern extends Pattern {
+    def matches(token: Token) = false
+  }
+
+  def empty: Pattern = NilPattern
+
+  def union(patterns: Set[Pattern]): Pattern =  {
+    val patSet = patterns.flatMap {
+      case NilPattern       => Set[Pattern]()
+      case MultiPattern(ps) => ps
+      case p                => Set(p)
+    }
+    if      (patSet.isEmpty)   NilPattern
+    else if (patSet.size == 1) patSet.head
+    else                       MultiPattern(patSet)
+  }
+
+  def union(patterns: Pattern*): Pattern = union(patterns.toSet)
+}
+
+
 
 sealed trait Token extends Pattern {
   def matches(token: Token) = this == token
@@ -121,14 +150,16 @@ object Tokens {
     override def toString = "<natural number>"
   }
 
-  object KeywordOrIdentifier           extends Pattern {
-    def matches(that: Token) = unapply(that).isDefined
+// Disabled because it messes with error recovery
 
-    def unapply(t: Token): Option[String] = t match {
-      case Tokens.Identifier(n) => Some(n)
-      case k: Keyword           => Some(k.keyword)
-      case _                    => None
-    }
-  }
+//  object KeywordOrIdentifier           extends Pattern {
+//    def matches(that: Token) = unapply(that).isDefined
+//
+//    def unapply(t: Token): Option[String] = t match {
+//      case Tokens.Identifier(n) => Some(n)
+//      case k: Keyword           => Some(k.keyword)
+//      case _                    => None
+//    }
+//  }
 
 }

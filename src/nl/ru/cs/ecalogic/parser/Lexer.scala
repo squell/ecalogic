@@ -81,14 +81,19 @@ class Lexer(private var input: String, errorHandler: ErrorHandler = new DefaultE
         case ':' if lookahead('=') => (Assign, 2)
 
         case '/' if lookahead('/') =>
-          val value = input.drop(2).takeWhile(_ != '\n')
-          (Comment(value.trim), value.length + 3)
+          consume(2)
+          val value = input.takeWhile(_ != '\n')
+
+          (Comment(value.trim), value.length)
 
         case '(' if lookahead('*') =>
-          if (input.indexOf("*)", 2) < 0) errorHandler.fatalError(new SPLException("Unterminated comment", pos))
-          val (value, _) = input.drop(2).zip(input.drop(3)).takeWhile(_ != ('*', ')')).unzip
+          consume(2)
+          if (!input.contains("*)"))
+            errorHandler.fatalError(new SPLException("Unterminated comment", pos))
 
-          (Comment(value.mkString.trim), value.length + 4)
+          val (value, _) = input.zip(input.tail).takeWhile(_ != ('*', ')')).unzip
+
+          (Comment(value.mkString.trim), value.length + 2)
 
         case '('                   => (LParen, 1)
         case ')'                   => (RParen, 1)

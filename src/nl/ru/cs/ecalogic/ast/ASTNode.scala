@@ -48,7 +48,7 @@ sealed abstract class ASTNode extends Positional {
 
   def withPosition(p: Positional): this.type = p.position match {
     case Some(position) => withPosition(position)
-    case _ => this
+    case _              => this
   }
 }
 
@@ -85,7 +85,8 @@ trait Expression extends ASTNode {
   def operands: Seq[Expression]
 
   def rewrite(ops: Seq[Expression]): Expression
-  def transform(f: PartialFunction[Expression, Expression]): Expression = f.applyOrElse(rewrite(operands.map(_.transform(f))), identity : Expression => Expression)
+  def transform(f: PartialFunction[Expression, Expression]): Expression =
+    f.applyOrElse(rewrite(operands.map(_.transform(f))), identity : Expression => Expression)
 }
 
 
