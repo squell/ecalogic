@@ -1,0 +1,30 @@
+// Functies
+//   Huidig:
+
+function x(a, b)
+    c := 5;
+return c end function // als onderdeel van functie-einde (de ';' voor return moet dan eigenlijk ook niet verplicht zijn)
+
+function x(a, b)
+    c := 5;
+    return c; // als pseudo-statement
+end function
+
+
+//  Suggesties:
+
+function x(a, b) returns c // mijn voorkeur: geeft zowel argumenten als resultaat weer op 1 regel; optionele ';' achter c
+    c := 5
+end function
+
+function x(a, b)
+begin
+    c := 5
+end function with c
+
+function x(a, b)
+begin
+    c := 5
+end function return c
+
+// ... meer suggesties? tevreden met huidige syntax?
