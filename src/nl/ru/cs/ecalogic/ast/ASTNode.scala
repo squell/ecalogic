@@ -62,7 +62,7 @@ trait Definition extends ASTNode
 
 case class Param(name: String) extends ASTNode
 
-case class FunDef(name: String, parameters: Seq[Param], body: Statement, result: VarRef) extends Definition
+case class FunDef(name: String, parameters: Seq[Param], result: VarRef, body: Statement) extends Definition
 
 
 
@@ -99,9 +99,7 @@ trait PrimaryExpression extends Expression {
 
 case class Literal(value: BigInt) extends PrimaryExpression
 
-case class VarRef(variable: Either[String, VarDecl]) extends PrimaryExpression {
-  def name = variable.fold(identity, _.name)
-}
+case class VarRef(name: String) extends PrimaryExpression
 
 
 trait NAryExpression extends Expression {
@@ -203,20 +201,10 @@ case class FunName(name: String, component: Option[String] = None) {
   override def toString = qualified
 }
 
-case class FunCall(function: Either[FunName, FunDecl], arguments: Seq[Expression]) extends NAryExpression with Statement {
-  def name = function.fold(_.qualified, _.name)
-  def operator = name
+case class FunCall(name: FunName, arguments: Seq[Expression]) extends NAryExpression with Statement {
+  def operator = name.qualified
   def arity = arguments.size
   def operands = arguments
 
   def rewrite(ops: Seq[Expression]) = copy(arguments = ops).withPosition(this)
-}
-
-// TODO: Vervang dummy classes
-case class FunDecl() {
-  def name: String = ???
-}
-
-case class VarDecl() {
-  def name: String = ???
 }

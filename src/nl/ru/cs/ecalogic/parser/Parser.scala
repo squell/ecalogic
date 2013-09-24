@@ -151,34 +151,33 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
         else halt = true
       } while (!halt)
     }
-    expect(Tokens.RParen)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
+    expect(Tokens.RParen)(follows | Tokens.Returns)
+    expect(Tokens.Returns)(follows | Tokens.Identifier)
 
-    val body = composition(follows | Tokens.Semicolon)
-
-    expect(Tokens.Semicolon)(follows | Tokens.Return)
-
-    expect(Tokens.Return)(follows | Tokens.Identifier)
     val resultPos = currentPos
-    val result = VarRef(Left(identifier(follows | Tokens.Semicolon | Tokens.End))).withPosition(resultPos)
+    val result = VarRef(identifier(follows | Tokens.Semicolon | Tokens.If | Tokens.While | Tokens.Skip | Tokens.Identifier)).withPosition(resultPos)
+    optional(Tokens.Semicolon)
+
+    val body = composition(follows | Tokens.End)
     optional(Tokens.Semicolon)
 
     expect(Tokens.End)(follows | Tokens.Function)
     expect(Tokens.Function)(follows)
 
-    FunDef(name, params.result(), body, result).withPosition(pos)
+    FunDef(name, params.result(), result, body).withPosition(pos)
   }
 
   def composition(follows: Pattern): Statement = {
     val pos = currentPos
     val first = statement(follows | Tokens.Semicolon)
 
-    if (current(Tokens.Semicolon) && !lookahead(Tokens.Return | Tokens.End | Tokens.Else)) {
+    if (current(Tokens.Semicolon) && !lookahead(Tokens.End | Tokens.Else)) {
       val statements = Seq.newBuilder += first
 
       do {
         nextToken()
         statements += statement(follows | Tokens.Semicolon)
-      } while (current(Tokens.Semicolon) && !lookahead(Tokens.Return | Tokens.End | Tokens.Else))
+      } while (current(Tokens.Semicolon) && !lookahead(Tokens.End | Tokens.Else))
 
       Composition(statements.result()).withPosition(pos)
     } else
@@ -225,7 +224,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
         nextToken()
         val expr = expression(follows)
 
-        Assignment(VarRef(Left(n)), expr)
+        Assignment(VarRef(n), expr)
       case Tokens.Skip =>
         nextToken()
 
@@ -257,7 +256,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     }
     expect(Tokens.RParen)(follows)
 
-    FunCall(Left(name), arguments.result())
+    FunCall(name, arguments.result())
   }
 
   def expression(follows: Pattern): Expression = orExpr(follows)()
@@ -269,7 +268,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
       case Tokens.Identifier(n) =>
         nextToken()
 
-        VarRef(Left(n))
+        VarRef(n)
       case Tokens.Numeral(v) =>
         nextToken()
 
@@ -326,7 +325,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 object Parser {
 
   def main(args: Array[String]) {
-    val source = Source.fromFile(args.headOption.getOrElse("zooi/stress.eca")).mkString
+    val source = Source.fromFile(args.headOption.getOrElse("zooi/newfunctionstyle.eca")).mkString
     val parser = new Parser(source, new DefaultErrorHandler(source = Some(source)))
     println(parser.program())
   }

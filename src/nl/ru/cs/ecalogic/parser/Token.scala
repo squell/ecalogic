@@ -84,7 +84,7 @@ sealed abstract class VariableToken[T](name: String) extends Token {
 object Tokens {
 
   case object Function                 extends Keyword("function")
-  case object Return                   extends Keyword("return")
+  case object Returns                  extends Keyword("returns")
   case object End                      extends Keyword("end")
 
   case object If                       extends Keyword("if")
