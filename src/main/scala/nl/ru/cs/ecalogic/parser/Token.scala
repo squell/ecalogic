@@ -70,7 +70,7 @@ sealed trait Token extends Pattern {
 }
 
 sealed abstract class FixedToken(fixedValue: String) extends Token {
-  override def toString = "'" + fixedValue + "'"
+  override def toString = s"'$fixedValue'"
 }
 
 sealed abstract class Keyword(val keyword: String) extends FixedToken(keyword)
@@ -78,7 +78,7 @@ sealed abstract class Keyword(val keyword: String) extends FixedToken(keyword)
 sealed abstract class VariableToken[T](name: String) extends Token {
   def value: T
 
-  override def toString = "<" + name + " : '" + value + "'>"
+  override def toString = s"'$value' ($name)"
 }
 
 object Tokens {

@@ -36,6 +36,12 @@ import nl.ru.cs.ecalogic.util.{DefaultErrorHandler, ErrorHandler}
 import nl.ru.cs.ecalogic.SPLException
 import nl.ru.cs.ecalogic.parser.Tokens._
 import scala.io.Source
+import java.io.File
+import scala.util.control.Exception._
+import scala.Some
+import nl.ru.cs.ecalogic.parser.Tokens.Comment
+import nl.ru.cs.ecalogic.parser.Tokens.Whitespace
+import nl.ru.cs.ecalogic.parser.Tokens.Unknown
 
 class Lexer(private var input: String, errorHandler: ErrorHandler = new DefaultErrorHandler()) {
 
@@ -139,16 +145,21 @@ class Lexer(private var input: String, errorHandler: ErrorHandler = new DefaultE
 object Lexer {
 
   def main(args: Array[String]) {
-    val source = Source.fromFile(args.headOption.getOrElse("zooi/test.eca")).mkString
-    val lexer = new Lexer(source, new DefaultErrorHandler(source = Some(source)))
-    var (token, _) = lexer.next()
-    while (token != EndOfFile) {
-      token match {
-        case Whitespace(_) | Comment(_) =>
-        case t                          => println(t)
+    val file = new File(args.headOption.getOrElse("zooi/test.eca"))
+    val source = Source.fromFile(file).mkString
+    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
+    val lexer = new Lexer(source, errorHandler)
+    ignoring(classOf[SPLException]) {
+      var (token, _) = lexer.next()
+      while (token != EndOfFile) {
+        token match {
+          case Whitespace(_) | Comment(_) =>
+          case t                          => println(t)
+        }
+        token = lexer.next()._1
       }
-      token = lexer.next()._1
     }
+    if (errorHandler.errorOccurred) sys.exit(1)
   }
 
 }

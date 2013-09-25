@@ -32,7 +32,6 @@
 
 package nl.ru.cs.ecalogic.ast
 
-import nl.ru.cs.ecalogic.SPLException
 import nl.ru.cs.ecalogic.parser.{Position, Positional}
 
 sealed abstract class ASTNode extends Positional {
@@ -52,7 +51,10 @@ sealed abstract class ASTNode extends Positional {
   }
 }
 
-case class ErrorNode(message: Option[SPLException] = None) extends PrimaryExpression with Definition with Statement
+case object ErrorNode extends PrimaryExpression with Definition with Statement {
+  override def withPosition(p: Position)   = this
+  override def withPosition(p: Positional) = this
+}
 
 
 

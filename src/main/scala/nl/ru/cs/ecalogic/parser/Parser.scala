@@ -34,37 +34,43 @@ package nl.ru.cs.ecalogic.parser
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.util.control.Exception._
 
 import nl.ru.cs.ecalogic.util.{DefaultErrorHandler, ErrorHandler}
 import nl.ru.cs.ecalogic.ast._
 import nl.ru.cs.ecalogic.SPLException
 import scala.io.Source
+import java.io.File
 
 final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorHandler()) extends Lexer(input, errorHandler) {
   private var recovering = false
-  private val buffer = mutable.Queue[(Token, Position)]()
-  fillBuffer()
+
+  private lazy val buffer = {
+    val buf = mutable.Queue[(Token, Position)]()
+    fill(buf)
+    buf
+  }
 
   private def currentPos: Position            = buffer(0)._2
   private def current: Token                  = buffer(0)._1
   private def current(p: Pattern): Boolean    = p.matches(buffer(0)._1)
   private def lookahead(p: Pattern): Boolean  = p.matches(buffer(1)._1)
 
-  private def fillBuffer() {
-    while (buffer.size < 2) next() match {
+  private def fill(buf: mutable.Queue[(Token, Position)]) {
+    while (buf.size < 2) next() match {
       case (Tokens.Comment(_), _)    =>
       case (Tokens.Whitespace(_), _) =>
       case (Tokens.Unknown(t), p)    => errorHandler.error(new SPLException(s"Unrecognized token: '$t'", p))
-      case tp                        => buffer += tp
+      case tp                        => buf += tp
     }
   }
 
   private def nextToken() {
     buffer.dequeue()
-    fillBuffer()
+    fill(buffer)
   }
 
-  private def unexpected(expected: Any*): ErrorNode = {
+  private def unexpected(expected: Any*) {
     if (current(Tokens.EndOfFile))
       errorHandler.fatalError(new SPLException("Unexpected end of file", currentPos))
 
@@ -76,8 +82,6 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 
     if (!recovering)
       errorHandler.error(exception)
-
-    ErrorNode(Some(exception))
   }
 
   private def parse[A, B <: A](default: Token => B)(follows: Pattern)(f: PartialFunction[Token, A]): A = {
@@ -96,9 +100,9 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     })
   }
 
-  private def parse[A >: ErrorNode <: ASTNode](expected: Any*)(follows: Pattern)(f: PartialFunction[Token, A]): A = {
+  private def parse[A >: ErrorNode.type <: ASTNode](expected: Any*)(follows: Pattern)(f: PartialFunction[Token, A]): A = {
     val pos = currentPos
-    val res = parse[A, ErrorNode](_ => unexpected(expected:_*))(follows)(f)
+    val res = parse[A, ErrorNode.type]{_ => unexpected(expected:_*); ErrorNode}(follows)(f)
     res.withPosition(pos)
   }
 
@@ -325,9 +329,12 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 object Parser {
 
   def main(args: Array[String]) {
-    val source = Source.fromFile(args.headOption.getOrElse("zooi/test.eca")).mkString
-    val parser = new Parser(source, new DefaultErrorHandler(source = Some(source)))
-    println(parser.program())
+    val file = new File(args.headOption.getOrElse("zooi/test.eca"))
+    val source = Source.fromFile(file).mkString
+    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
+    val parser = new Parser(source, errorHandler)
+    val program = catching(classOf[SPLException]).opt(parser.program()).filterNot(_ => errorHandler.errorOccurred)
+    println(program.getOrElse(sys.exit(1)))
   }
 
 }

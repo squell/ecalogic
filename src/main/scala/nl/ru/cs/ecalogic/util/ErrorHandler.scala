@@ -34,7 +34,7 @@ package nl.ru.cs.ecalogic.util
 
 import nl.ru.cs.ecalogic.parser.Position
 import nl.ru.cs.ecalogic.SPLException
-import java.io.PrintWriter
+import java.io.{File, PrintWriter}
 import scala.collection.mutable
 
 trait ErrorHandler {
@@ -60,12 +60,14 @@ trait ErrorHandler {
 
 class DefaultErrorHandler(maxErrorCount: Int = 10,
                           writer: PrintWriter = new PrintWriter(Console.err),
-                          source: Option[String] = None) extends ErrorHandler {
+                          source: Option[String] = None,
+                          file: Option[File] = None) extends ErrorHandler {
   private var errorCount = 0
 
   private def printMessage(tpe: String, message: String, position: Option[Position]) {
     writer.print(tpe)
-    writer.print(position.fold("")(p => s" at line ${p.line}, column ${p.column}"))
+    file.foreach(f => writer.print(s" in '${f.getAbsolutePath}'"))
+    position.foreach(p => writer.print(s" at line ${p.line}, column ${p.column}"))
     writer.printf(":%n    %s%n", message)
     source.map(_ + "\n").zip(position).foreach { case (s, Position(l, c)) =>
       val line = s.lines.drop(l - 1).next()
@@ -89,6 +91,7 @@ class DefaultErrorHandler(maxErrorCount: Int = 10,
 
   def fatalError(exception: SPLException) {
     printMessage("Fatal error", exception.message, exception.position)
+    errorCount += 1
     throw new SPLException("Fatal error occurred", exception)
   }
 
@@ -110,9 +113,10 @@ class CachingErrorHandler(val output: ErrorHandler = new DefaultErrorHandler) ex
 
   def reset() {
     errors.clear()
+    output.reset()
   }
 
-  def errorOccurred: Boolean = errors.exists(!_._2)
+  def errorOccurred: Boolean = output.errorOccurred || errors.exists(!_._2)
 
   def fatalError(exception: SPLException) {
     flush()
