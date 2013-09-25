@@ -1,4 +1,3 @@
-function kaas(a, b)
+function kaas(a, b) returns y
     if 5 + 5 then skip else skip end if;
-    return y
 end function
