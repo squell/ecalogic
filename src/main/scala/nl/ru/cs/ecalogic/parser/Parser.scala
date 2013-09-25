@@ -325,7 +325,7 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
 object Parser {
 
   def main(args: Array[String]) {
-    val source = Source.fromFile(args.headOption.getOrElse("zooi/newfunctionstyle.eca")).mkString
+    val source = Source.fromFile(args.headOption.getOrElse("zooi/test.eca")).mkString
     val parser = new Parser(source, new DefaultErrorHandler(source = Some(source)))
     println(parser.program())
   }
