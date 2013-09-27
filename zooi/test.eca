@@ -1,7 +1,6 @@
-function kaas(a, b)
+function kaas(a, b) returns y
     y := 5 * a + 5 - 2; (* lalala *)
     while x < 10 and y < x or dit::dat(2) upto 100 do
         y := y + 1
     end while; // ja ja
-    return y
 end function

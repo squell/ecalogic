@@ -1,48 +1,43 @@
 
-function pow(X,Y)
+function pow(X,Y) returns Z
   Z := 1;
   while Y > 0 upto Y do
     Z := Z * X;
     Y := Y-1
-  end while;
-  return Z
+  end while
 end function
 
-function log(G,X)
+function log(G,X) returns N
   A := 1;
   N := 0;
   while A < X upto X do
     A := A*G;
     N := N+1
   end while;
-  N := N-1;
-  return N
+  N := N-1
 end function
 
-function sqrt(X)
+function sqrt(X) returns A
   A := 1;
   while A*A < X upto X do
     A := A+1
   end while;
-  A := A-1;
-  return A
+  A := A-1
 end function
 
-function div(X,Y)
+function div(X,Y) returns N
   N := 0;
   while X >= Y upto X do
     X := X-Y;
-    N := N+1
-  end while;
-  return N
+    N := N+1;
+  end while
 end function
 
-function mod(X,Y)
-  N := X-Y*div(X,Y);
-  return N
+function mod(X,Y) returns N
+  N := X-Y*div(X,Y)
 end function
 
-function horror(X,P)
+function horror(X,P) returns X
   Y := 1;
   (* find the inverse of X mod P, if it exists at all *)
   while Y <= P upto P do
@@ -69,10 +64,8 @@ function horror(X,P)
   end if;
 
   while Y <= A upto A do 
-    component::do()
+    component::doSomething()
   end while
-
-  return X
-end fuction
+end function
 
 

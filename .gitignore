@@ -1,8 +1,7 @@
 *.class
 *.log
-.idea
 
-# sbt specific
+# SBT
 dist/*
 target/
 lib_managed/
@@ -10,5 +9,16 @@ src_managed/
 project/boot/
 project/plugins/project/
 
-# Scala-IDE specific
+# Scala-IDE
 .scala_dependencies
+
+# Eclipse
+.classpath
+.project
+.cache
+
+# IntelliJ IDEA
+*.iml
+*.ipr
+*.iws
+.idea/
