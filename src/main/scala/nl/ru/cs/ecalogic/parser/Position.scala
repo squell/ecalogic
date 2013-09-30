@@ -43,5 +43,5 @@ case class Position(line: Int, column: Int) extends Ordered[Position] {
 }
 
 trait Positional {
-  def position: Option[Position]
+  def position: Position
 }
