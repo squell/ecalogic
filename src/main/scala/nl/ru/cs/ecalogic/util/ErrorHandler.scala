@@ -32,32 +32,66 @@
 
 package nl.ru.cs.ecalogic.util
 
-import nl.ru.cs.ecalogic.parser.Position
-import nl.ru.cs.ecalogic.SPLException
+import nl.ru.cs.ecalogic.ECAException
 import java.io.{File, PrintWriter}
 import scala.collection.mutable
 
+/** Base trait for error handlers.
+  *
+  * @author Jascha Neutelings
+  */
 trait ErrorHandler {
+  /** Resets the error handler to its original state. */
   def reset()
 
-  def fatalError(exception: SPLException)
-  def error(exception: SPLException)
-  def warning(exception: SPLException)
+  /** Reports a fatal error.
+    *
+    * @param exception error to report
+    */
+  def fatalError(exception: ECAException)
+
+  /** Reports an error.
+    *
+    * @param exception error to report
+    */
+  def error(exception: ECAException)
+
+  /** Reports a warning.
+    *
+    * @param exception error to report
+    */
+  def warning(exception: ECAException)
+
+  /** Returns whether an error has occurred. */
   def errorOccurred: Boolean
 
-  def tryCatch[T](s: => T): Option[T] = try Some(s) catch {
-    case e: SPLException =>
+  /** Tries to evaluate the given expression and optionally returns the result and otherwise reports an error.
+    *
+    * @param  expression expression to evaluate
+    * @tparam T          type of the expression
+    * @return            optional result
+    */
+  def tryCatch[T](expression: => T): Option[T] = try Some(expression) catch {
+    case e: ECAException =>
       error(e)
       None
   }
 
-  def tryCatch[T](s: => T, f: SPLException => T): T = try s catch {
-    case e: SPLException =>
-      error(e)
-      f(e)
-  }
 }
 
+/** Default implementation for error handlers.
+  *
+  * Prints error messages to a `java.io.PrintWriter`. Counts the number of errors reported and throws an exception
+  * if the maximum number is exceeded. If file name and/or source string are provided more informative messages will
+  * be generated. Throws an exception on a fatal error after reporting it first.
+  *
+  * @param maxErrorCount maximum number of error messages
+  * @param writer        output
+  * @param source        optional input
+  * @param file          optional file name
+  *
+  * @author Jascha Neutelings
+  */
 class DefaultErrorHandler(maxErrorCount: Int = 10,
                           writer: PrintWriter = new PrintWriter(Console.err),
                           source: Option[String] = None,
@@ -89,27 +123,36 @@ class DefaultErrorHandler(maxErrorCount: Int = 10,
 
   def errorOccurred: Boolean = errorCount > 0
 
-  def fatalError(exception: SPLException) {
+  def fatalError(exception: ECAException) {
     printMessage("Fatal error", exception.message, exception.position)
     errorCount += 1
-    throw new SPLException("Fatal error occurred", exception)
+    throw new ECAException("Fatal error occurred", exception)
   }
 
-  def error(exception: SPLException) {
+  def error(exception: ECAException) {
     printMessage("Error", exception.message, exception.position)
     errorCount += 1
     if (maxErrorCount > 0 && errorCount >= maxErrorCount) {
-      throw new SPLException("Maximum number of errors reached")
+      throw new ECAException("Maximum number of errors reached")
     }
   }
 
-  def warning(exception: SPLException) {
+  def warning(exception: ECAException) {
     printMessage("Warning", exception.message, exception.position)
   }
+
 }
 
+/** Error handler that caches error and prints them on demand in the order they occurred.
+  *
+  * Wraps around an existing error handler.
+  *
+  * @param output error handler to wrap
+  *
+  * @author Jascha Neutelings
+  */
 class CachingErrorHandler(val output: ErrorHandler = new DefaultErrorHandler) extends ErrorHandler {
-  private val errors = mutable.PriorityQueue[(SPLException, Boolean)]()
+  private val errors = mutable.PriorityQueue[(ECAException, Boolean)]()
 
   def reset() {
     errors.clear()
@@ -118,19 +161,20 @@ class CachingErrorHandler(val output: ErrorHandler = new DefaultErrorHandler) ex
 
   def errorOccurred: Boolean = output.errorOccurred || errors.exists(!_._2)
 
-  def fatalError(exception: SPLException) {
+  def fatalError(exception: ECAException) {
     flush()
     output.fatalError(exception)
   }
 
-  def error(exception: SPLException) {
+  def error(exception: ECAException) {
     errors += ((exception, false))
   }
 
-  def warning(exception: SPLException) {
+  def warning(exception: ECAException) {
     errors += ((exception, true))
   }
 
+  /** Flushes all error messages to the underlying error handler and clears the buffer. */
   def flush() {
     errors.dequeueAll.reverse.foreach { case (e, w) =>
       if (w)
@@ -139,4 +183,5 @@ class CachingErrorHandler(val output: ErrorHandler = new DefaultErrorHandler) ex
         output.error(e)
     }
   }
+
 }

@@ -32,55 +32,32 @@
 
 package nl.ru.cs.ecalogic.parser
 
-import scala.reflect.ClassTag
-
-trait Pattern {
-  def matches(token: Token): Boolean
-
-  def |(pattern: Pattern): Pattern = Pattern.union(this, pattern)
-}
-
-object Pattern {
-  private case class MultiPattern(patterns: Set[Pattern]) extends Pattern {
-    def matches(token: Token) = patterns.exists(_.matches(token))
-  }
-
-  private case object NilPattern extends Pattern {
-    def matches(token: Token) = false
-  }
-
-  def empty: Pattern = NilPattern
-
-  def union(patterns: Set[Pattern]): Pattern =  {
-    val patSet = patterns.flatMap {
-      case NilPattern       => Set[Pattern]()
-      case MultiPattern(ps) => ps
-      case p                => Set(p)
-    }
-    if      (patSet.isEmpty)   NilPattern
-    else if (patSet.size == 1) patSet.head
-    else                       MultiPattern(patSet)
-  }
-
-  def union(patterns: Pattern*): Pattern = union(patterns.toSet)
-}
-
-abstract class TypePattern[T <: Token : ClassTag] extends Pattern {
-  def matches(token: Token) = implicitly[ClassTag[T]].runtimeClass.isInstance(token)
-}
-
-
-
+/** Trait representing a token.
+  *
+  * @author Jascha Neutelings
+  */
 trait Token extends Pattern {
   def matches(token: Token) = this == token
 }
 
+/** Abstract class representing a token with a fixed value and length.
+  *
+  * @author Jascha Neutelings
+  */
 abstract class FixedToken(fixedValue: String) extends Token {
   override def toString = s"'$fixedValue'"
 }
 
+/** Abstract class representing a keyword token.
+  *
+  * @author Jascha Neutelings
+  */
 abstract class Keyword(val keyword: String) extends FixedToken(keyword)
 
+/** Abstract class representing a token with a variable value and length.
+  *
+  * @author Jascha Neutelings
+  */
 abstract class VariableToken[T](name: String) extends Token {
   def value: T
 

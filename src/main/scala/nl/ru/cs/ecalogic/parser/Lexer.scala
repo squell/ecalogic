@@ -36,7 +36,13 @@ import scala.io.Source
 import java.io.File
 import Lexer.Tokens._
 
-class Lexer(in: String) extends BaseLexer(in) {
+/** Lexer for ECA programs.
+ *
+ * @param input input string to parse
+ *
+ * @author Jascha Neutelings
+ */
+class Lexer(protected var input: String) extends BaseLexer {
   import Lexer._
 
   protected val parseToken: PartialFunction[Char, (Token, Int)] = {
@@ -104,14 +110,14 @@ object Lexer {
 
   def isDigit(c: Char) = c >= '0' && c <= '9'
 
-  def isIdHead(c: Char) = c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
+  def isIdHead(c: Char) = c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_'
 
-  def isIdTail(c: Char) = isIdHead(c) || isDigit(c) || c == '_'
+  def isIdTail(c: Char) = isIdHead(c) || isDigit(c)
 
   def isWhitespace(c: Char) = c == ' ' || c == '\t' || c == '\r' || c == '\n'
 
 
-
+  /** Tokens for the ECA program lexer */
   object Tokens {
     // Make base tokens available
     val EndOfFile = BaseLexer.Tokens.EndOfFile

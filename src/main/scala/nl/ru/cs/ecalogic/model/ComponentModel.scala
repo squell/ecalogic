@@ -1,3 +1,4 @@
+
 /*
  * ecalogic: a tool for performing energy consumption analysis.
  *
@@ -30,18 +31,44 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.parser
+package nl.ru.cs.ecalogic.model
 
-case class Position(line: Int, column: Int) extends Ordered[Position] {
-  def compare(that: Position) = {
-    val lineDiff = line - that.line
-    if (lineDiff == 0) column - that.column
-    else lineDiff
-  }
+trait ComponentModel extends PartialOrdering[ComponentState] {
 
-  override def toString = s"$line:$column"
+  def state: ComponentState
+
+  def constants: PartialFunction[String, Constant]
+
+  def element(name: String): Option[Binding] = state.lift(name).orElse(constants.lift(name))
+
+  def lub()
+
+
+
 }
 
-trait Positional {
-  def position: Position
+trait ComponentState extends PartialFunction[String, Variable]
+
+
+sealed trait Binding {
+  def name: String
+  def typ: Type
+  def value: BigInt
+}
+
+case class Variable(name: String, typ: Type, value: BigInt) extends Binding
+case class Constant(name: String,            value: BigInt) extends Binding {
+  def typ = Integer
+}
+
+sealed trait Type {
+  def defaultValue: BigInt
+}
+
+case object Integer extends Type {
+  val defaultValue: BigInt = 0
+}
+
+case object Timestamp extends Type  {
+  val defaultValue: BigInt = 0
 }

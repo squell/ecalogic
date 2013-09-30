@@ -32,44 +32,36 @@
 
 package nl.ru.cs.ecalogic.ast
 
-import nl.ru.cs.ecalogic.parser.{Position, Positional}
+import nl.ru.cs.ecalogic.util.{Positional, Position}
 
-sealed abstract class ASTNode extends Positional {
-//  private var pos: Position = None
-//
-//  def position = pos
+/** Base trait for all AST nodes.
+  *
+  * @author Jascha Neutelings
+  */
+sealed trait ASTNode extends Positional
 
-//  def withPosition(p: Position): this.type = {
-//    require(p != null)
-//    pos = Some(p)
-//    this
-//  }
-//
-//  def withPosition(p: Positional): this.type = p.position match {
-//    case Some(position) => withPosition(position)
-//    case _              => this
-//  }
-}
-
-case class ErrorNode()(val position: Position) extends PrimaryExpression with Statement {
-  //override def withPosition(p: Position)   = this
-  //override def withPosition(p: Positional) = this
-}
+/** Dummy class representing an error during parsing. */
+case class ErrorNode()(val position: Position) extends PrimaryExpression with Statement
 
 
-
+/** Class representing an entire ECA program. */
 case class Program(definitions: Seq[FunDef])(val position: Position) extends ASTNode
 
+/** Class representing a parameter in function definition. */
 case class Param(name: String)(val position: Position) extends ASTNode
 
+/** Class representing a function definition. */
 case class FunDef(name: String, parameters: Seq[Param], result: VarRef, body: Statement)(val position: Position) extends ASTNode
 
 
 
+/** Base trait for statement nodes. */
 trait Statement extends ASTNode
 
+/** Class representing a function definition. */
 case class If(predicate: Expression, consequent: Statement, alternative: Statement)(val position: Position) extends Statement
 
+// TODO: documentatie afmaken
 case class While(predicate: Expression, rankingFunction: Expression, consequent: Statement)(val position: Position) extends Statement
 
 case class Assignment(variable: String, value: Expression)(val position: Position) extends Statement

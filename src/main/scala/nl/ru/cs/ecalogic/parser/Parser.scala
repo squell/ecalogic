@@ -35,38 +35,62 @@ package nl.ru.cs.ecalogic.parser
 import scala.annotation.tailrec
 import scala.util.control.Exception._
 
-import nl.ru.cs.ecalogic.util.{DefaultErrorHandler, ErrorHandler}
+import nl.ru.cs.ecalogic.util.{Position, DefaultErrorHandler, ErrorHandler}
 import nl.ru.cs.ecalogic.ast._
-import nl.ru.cs.ecalogic.SPLException
+import nl.ru.cs.ecalogic.ECAException
 import scala.io.Source
 import java.io.File
 import nl.ru.cs.ecalogic.parser.Lexer.Tokens
 
-final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorHandler()) extends BaseParser(new Lexer(input), errorHandler) {
-  override val ignored = Tokens.Comment | Tokens.Whitespace
+/** Parser for ECA programs.
+  *
+  * @param input        input string to parse
+  * @param errorHandler error handler for resporting error messages
+  *
+  * @author Jascha Neutelings
+  */
+final class Parser(input: String, protected val errorHandler: ErrorHandler = new DefaultErrorHandler()) extends BaseParser {
+  override protected val ignored = Tokens.Comment | Tokens.Whitespace
+  protected val lexer = new Lexer(input)
 
-  private def parse[A >: ErrorNode <: ASTNode](expected: Any*)(follows: Pattern)(f: PartialFunction[Token, Position => A]): A = {
+  private def parse[A >: ErrorNode <: ASTNode](expected: Pattern)(follows: Pattern)(parser: PartialFunction[Token, Position => A]): A = {
     val pos = position
-    val res = parse[(Position => A), (Position => ErrorNode)]{_ => unexpected(expected:_*); ErrorNode()}(follows)(f)
+    val res = parse[(Position => A), (Position => ErrorNode)]{_ => unexpected(expected); ErrorNode()}(follows)(parser)
     res(pos)
   }
 
+  /** Parses an identifier.
+    *
+    * Returns "&lt;error&gt;" in case of failure.
+    *
+    * @param follows follow set pattern
+    * @return        identifier
+    */
   def identifier(follows: Pattern): String =
-    parse[String, String] {_ => unexpected("<identifier>"); "<error>"} (follows) {
+    parse {_ => unexpected(Tokens.Identifier); "<error>"} (follows) {
       case Tokens.Identifier(n) => advance(); n
     }
 
 
-
-  def program(): Program = {
+  /** Parses a program.
+    *
+    * @param follows follow set pattern
+    * @return        program node
+    */
+  def program(follows: Pattern = Pattern.empty): Program = {
     val pos = position
     val definitions = Seq.newBuilder[FunDef]
     while (!current(Tokens.EndOfFile)) {
-      definitions += funDef(Pattern.empty)
+      definitions += funDef(follows)
     }
     Program(definitions.result())(pos)
   }
 
+  /** Parses a function definition.
+    *
+    * @param follows follow set pattern
+    * @return        function definition node
+    */
   def funDef(follows: Pattern): FunDef = {
     val pos = position
 
@@ -104,6 +128,11 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     FunDef(name, params.result(), result, body)(pos)
   }
 
+  /** Parses a list of one or more statements.
+    *
+    * @param follows follow set pattern
+    * @return        composition node
+    */
   def composition(follows: Pattern): Statement = {
     val first = statement(follows | Tokens.Semicolon)
 
@@ -120,8 +149,20 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
       first
   }
 
+  /** Parses a statement.
+    *
+    * Returns an [[nl.ru.cs.ecalogic.ast.ErrorNode]] in case of failure.
+    *
+    * @param follows follow set pattern
+    * @return        statement node
+    */
   def statement(follows: Pattern) =
-    parse[Statement]("<skip statement>", "<if statement>", "<while statement>", "<assignment>", "<function call>")(follows) {
+    parse[Statement]( Tokens.Skip       % "<skip statement>"
+                    | Tokens.If         % "<if statement>"
+                    | Tokens.While      % "<while statement>"
+                    | Tokens.Identifier % "<assignment>"
+                    | Tokens.Identifier % "<function call>"
+                    ) (follows) {
       case Tokens.If =>
         advance()
         val predicate = expression(follows | Tokens.Then)
@@ -166,7 +207,11 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
         Skip()
     }
 
-
+  /** Parses a function call.
+    *
+    * @param follows follow set pattern
+    * @return        function call node
+    */
   def funCall(follows: Pattern): FunCall = {
     val pos = position
 
@@ -196,10 +241,26 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     FunCall(name, arguments.result())(pos)
   }
 
+  /** Parses a expression.
+    *
+    * @param follows follow set pattern
+    * @return        expression node
+    */
   def expression(follows: Pattern): Expression = orExpr(follows)()
 
+  /** Parses a primary expression.
+    *
+    * Returns an [[nl.ru.cs.ecalogic.ast.ErrorNode]] in case of failure.
+    *
+    * @param follows follow set pattern
+    * @return        expression node
+    */
   def primary(follows: Pattern) =
-    parse[Expression]("<natural number>", "<function call>", "<variable reference>", "<parenthesized expression>")(follows) {
+    parse[Expression]( Tokens.Numeral
+                     | Tokens.Identifier % "<function call>"
+                     | Tokens.Identifier % "<variable reference>"
+                     | Tokens.LParen     % "<parenthesized expression>"
+                     ) (follows) {
       case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon) =>
         _ => funCall(follows)
       case Tokens.Identifier(n) =>
@@ -219,12 +280,24 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
         _ => expr
     }
 
+  /** Parses an optional multiply-expression.
+    *
+    * @param follows follow set pattern
+    * @param acc     accumulator for tail recursion
+    * @return        expression node
+    */
   @tailrec
   def multExpr(follows: Pattern)(acc: Expression = primary(follows)): Expression = current match {
     case Tokens.Multiply => advance(); multExpr(follows)(Multiply(acc, primary(follows))(acc.position))
     case _               => acc
   }
 
+  /** Parses an optional add- or subtract-expression.
+    *
+    * @param follows follow set pattern
+    * @param acc     accumulator for tail recursion
+    * @return        expression node
+    */
   @tailrec
   def addExpr(follows: Pattern)(acc: Expression = multExpr(follows)()): Expression = current match {
     case Tokens.Plus  => advance(); addExpr(follows)(Add     (acc, multExpr(follows)())(acc.position))
@@ -232,6 +305,11 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     case _            => acc
   }
 
+  /** Parses an optional relative expression.
+    *
+    * @param follows follow set pattern
+    * @return        expression node
+    */
   def relExpr(follows: Pattern): Expression = {
     val left = addExpr(follows)()
     current match {
@@ -245,12 +323,24 @@ final class Parser(input: String, errorHandler: ErrorHandler = new DefaultErrorH
     }
   }
 
+  /** Parses an optional and-expression.
+    *
+    * @param follows follow set pattern
+    * @param acc     accumulator for tail recursion
+    * @return        expression node
+    */
   @tailrec
   def andExpr(follows: Pattern)(acc: Expression = relExpr(follows)): Expression = current match {
     case Tokens.And => advance(); andExpr(follows)(And(acc, relExpr(follows))(acc.position))
     case _          => acc
   }
 
+  /** Parses an optional or-expression.
+    *
+    * @param follows follow set pattern
+    * @param acc     accumulator for tail recursion
+    * @return        expression node
+    */
   @tailrec
   def orExpr(follows: Pattern)(acc: Expression = andExpr(follows)()): Expression = current match {
     case Tokens.Or => advance(); orExpr(follows)(Or(acc, andExpr(follows)())(acc.position))
@@ -266,7 +356,7 @@ object Parser {
     val source = Source.fromFile(file).mkString
     val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
     val parser = new Parser(source, errorHandler)
-    val program = catching(classOf[SPLException]).opt(parser.program()).filterNot(_ => errorHandler.errorOccurred)
+    val program = catching(classOf[ECAException]).opt(parser.program()).filterNot(_ => errorHandler.errorOccurred)
     println(program.getOrElse(sys.exit(1)))
   }
 
