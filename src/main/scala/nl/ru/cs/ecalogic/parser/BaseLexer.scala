@@ -32,57 +32,46 @@
 
 package nl.ru.cs.ecalogic.parser
 
-import scala.reflect.ClassTag
+import BaseLexer.Tokens._
 
-trait Pattern {
-  def matches(token: Token): Boolean
+abstract class BaseLexer(protected var input: String) extends Positional {
+  private var line = 1
+  private var column = 1
 
-  def |(pattern: Pattern): Pattern = Pattern.union(this, pattern)
-}
+  def position = Position(line, column)
 
-object Pattern {
-  private case class MultiPattern(patterns: Set[Pattern]) extends Pattern {
-    def matches(token: Token) = patterns.exists(_.matches(token))
-  }
-
-  private case object NilPattern extends Pattern {
-    def matches(token: Token) = false
-  }
-
-  def empty: Pattern = NilPattern
-
-  def union(patterns: Set[Pattern]): Pattern =  {
-    val patSet = patterns.flatMap {
-      case NilPattern       => Set[Pattern]()
-      case MultiPattern(ps) => ps
-      case p                => Set(p)
+  private def consume(length: Int) {
+    val (consumed, newInput) = input.splitAt(length)
+    consumed.foreach {
+      case '\n' => line += 1; column = 1
+      case _    => column += 1
     }
-    if      (patSet.isEmpty)   NilPattern
-    else if (patSet.size == 1) patSet.head
-    else                       MultiPattern(patSet)
+    input = newInput
   }
 
-  def union(patterns: Pattern*): Pattern = union(patterns.toSet)
+  protected def lookahead(c: Char) = input.length() > 1 && input.charAt(1) == c
+
+  def next(): (Token, Position) = {
+    def unknown(c: Char) = (Unknown(c), 1)
+
+    val pos = position
+    val (token, length) = input.headOption.map(parseToken.applyOrElse(_, unknown)).getOrElse((EndOfFile, 0))
+    consume(length)
+    (token, pos)
+  }
+
+  protected def parseToken: PartialFunction[Char, (Token, Int)]
+
 }
 
-abstract class TypePattern[T <: Token : ClassTag] extends Pattern {
-  def matches(token: Token) = implicitly[ClassTag[T]].runtimeClass.isInstance(token)
-}
+object BaseLexer {
 
+  object Tokens {
+    case object EndOfFile extends Token {
+      override def toString = "<end-of-file>"
+    }
 
+    case class Unknown(value: Char) extends VariableToken[Char]("unknown")
+  }
 
-trait Token extends Pattern {
-  def matches(token: Token) = this == token
-}
-
-abstract class FixedToken(fixedValue: String) extends Token {
-  override def toString = s"'$fixedValue'"
-}
-
-abstract class Keyword(val keyword: String) extends FixedToken(keyword)
-
-abstract class VariableToken[T](name: String) extends Token {
-  def value: T
-
-  override def toString = s"'$value' ($name)"
 }

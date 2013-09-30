@@ -72,7 +72,7 @@ case class If(predicate: Expression, consequent: Statement, alternative: Stateme
 
 case class While(predicate: Expression, rankingFunction: Expression, consequent: Statement)(val position: Position) extends Statement
 
-case class Assignment(variable: VarRef, expression: Expression)(val position: Position) extends Statement
+case class Assignment(variable: String, value: Expression)(val position: Position) extends Statement
 
 case class Composition(statements: Seq[Statement])(val position: Position) extends Statement
 
