@@ -55,6 +55,7 @@ object StaticAnalysis {
     // todo: rewrite in a more imperative (less wasteful) style - this was just a test.
     def funCalls(node: ASTNode): Set[String] = 
       node match {
+// todo: assignment
 	case If(_,thenPart,elsePart) => funCalls(thenPart) ++ funCalls(elsePart)
 	case While(pred,_,consq)     => funCalls(pred) ++ funCalls(consq)
 	case Composition(stms)       => (for (s<-stms) yield funCalls(s)).flatten.toSet
@@ -71,6 +72,7 @@ object StaticAnalysis {
     def hasCycle(seen: Set[String], open: Set[String]): Boolean =
       (for (next<-open) yield (seen.contains(next) || hasCycle(seen+next, calls(next)))).exists(_==true)
 
+// todo: report which call causes the recursion
     hasCycle(HashSet.empty, calls.keys.toSet)
   }
 
