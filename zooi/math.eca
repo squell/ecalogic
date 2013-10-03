@@ -1,47 +1,45 @@
-
-function pow(X,Y)
-  Z := 1;
-  while Y > 0 upto Y do
-    Z := Z * X;
+ function pow(X,Y)
+  pow := 1;
+  while Y > 0 bound Y do
+    pow := pow * X;
     Y := Y-1
   end while
-  pow := Z
 end function
 
-function log(G,X) returns N
+function log(G,X)
   A := 1;
-  N := 0;
-  while A < X upto X do
+  log := 0;
+  while A < X bound X do
     A := A*G;
-    N := N+1
+    log := log+1
   end while;
-  N := N-1
+  log := log-1
 end function
 
-function sqrt(X) returns A
-  A := 1;
-  while A*A < X upto X do
-    A := A+1
+function sqrt(X)
+  sqrt := 1;
+  while sqrt*sqrt < X bound X do
+    sqrt := sqrt+1
   end while;
-  A := A-1
+  sqrt := sqrt-1
 end function
 
-function div(X,Y) returns N
-  N := 0;
-  while X >= Y upto X do
+function div(X,Y)
+  div := 0;
+  while X >= Y bound X do
     X := X-Y;
-    N := N+1;
+    div := div+1;
   end while
 end function
 
-function mod(X,Y) returns N
-  N := X-Y*div(X,Y)
+function mod(X,Y)
+  mod := X-Y*div(X,Y)
 end function
 
-function horror(X,P) returns X
+function horror(X,P)
   Y := 1;
   (* find the inverse of X mod P, if it exists at all *)
-  while Y <= P upto P do
+  while Y <= P bound P do
     if mod(Y*X, 1709) = 1 then
       Xinv := Y
     else
@@ -52,7 +50,7 @@ function horror(X,P) returns X
 
   (* >:) *)
   Y := 1;
-  while Y <= Xinv upto Xinv do
+  while Y <= Xinv bound Xinv do
     Y := Y+1
   end while;
 
@@ -64,9 +62,9 @@ function horror(X,P) returns X
     A := P
   end if;
 
-  while Y <= A upto A do 
+  while Y <= A bound A do 
     component::doSomething()
   end while
+
+  horror := X
 end function
-
-

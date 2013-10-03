@@ -51,7 +51,7 @@ case class Program(definitions: Seq[FunDef])(val position: Position) extends AST
 case class Param(name: String)(val position: Position) extends ASTNode
 
 /** Class representing a function definition. */
-case class FunDef(name: String, parameters: Seq[Param], result: VarRef, body: Statement)(val position: Position) extends ASTNode
+case class FunDef(name: String, parameters: Seq[Param], body: Statement)(val position: Position) extends ASTNode
 
 
 
@@ -186,9 +186,9 @@ case class GE(left: Expression, right: Expression)(val position: Position) exten
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
 }
 
-case class FunName(name: String, component: Option[String] = None) {
-  def qualified = component.map(_ + "::").getOrElse("") + name
-  def isComponentFunction = component.isDefined
+case class FunName(name: String, prefix: Option[String] = None) {
+  def qualified = prefix.map(_ + "::").getOrElse("") + name
+  def isPrefixed = prefix.isDefined
 
   override def toString = qualified
 }

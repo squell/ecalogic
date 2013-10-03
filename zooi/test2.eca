@@ -1,4 +1,4 @@
-function kaas(a, b) returns a
+function kaas(a, b)
     a := a;
 	fun::call(a);
 	func(b);

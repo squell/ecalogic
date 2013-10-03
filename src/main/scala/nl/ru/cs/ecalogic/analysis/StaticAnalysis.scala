@@ -32,9 +32,8 @@
 
 package nl.ru.cs.ecalogic.analysis
 
-import nl.ru.cs.ecalogic.util.{Position, DefaultErrorHandler, ErrorHandler}
+import nl.ru.cs.ecalogic.util.DefaultErrorHandler
 import nl.ru.cs.ecalogic.ast._
-import scala.collection.immutable.HashSet
 
 import nl.ru.cs.ecalogic.parser.Parser
 import nl.ru.cs.ecalogic.ECAException
@@ -54,21 +53,20 @@ object StaticAnalysis {
   */
   def containsRecursion(program: Program) = {
     // todo: rewrite in a more imperative (less wasteful) style - this was just a test.
-    def funCalls(node: ASTNode): Set[String] =
-      node match {
-        // todo: assignment
-        case If(_, thenPart, elsePart) => funCalls(thenPart) ++ funCalls(elsePart)
-        case While(pred, _, consq)     => funCalls(pred) ++ funCalls(consq)
-        case Composition(stms)         => (for (s<-stms) yield funCalls(s)).flatten.toSet
-        case e: BinaryExpression       => funCalls(e.left) ++ funCalls(e.right)
-        case e: UnaryExpression        => funCalls(e.operand)
-        case FunCall(fun, args)
-          if fun.component.isEmpty     => (for (e<-args) yield funCalls(e)).flatten.toSet + fun.name
-        case _                         => Set.empty
-      }
+    def funCalls(node: ASTNode): Set[String] = node match {
+      // todo: assignment
+      case If(_, thenPart, elsePart) => funCalls(thenPart) ++ funCalls(elsePart)
+      case While(pred, _, consq)     => funCalls(pred) ++ funCalls(consq)
+      case Composition(stms)         => stms.flatMap(funCalls).toSet
+      case e: BinaryExpression       => funCalls(e.left) ++ funCalls(e.right)
+      case e: UnaryExpression        => funCalls(e.operand)
+      case FunCall(fun, args)
+        if !fun.isPrefixed           => args.flatMap(funCalls).toSet + fun.name
+      case _                         => Set.empty
+    }
 
     val calls: Map[String, Set[String]] =
-      (for (fundef<-program.definitions) yield (fundef.name, funCalls(fundef.body))).toMap.withDefaultValue(Set.empty)
+      (for (fundef<-program.definitions) yield fundef.name -> funCalls(fundef.body)).toMap.withDefaultValue(Set.empty)
 
     def hasCycle(seen: Set[String], open: Set[String]): Boolean =
       (for (next<-open) yield seen(next) || hasCycle(seen+next, calls(next))).contains(true)

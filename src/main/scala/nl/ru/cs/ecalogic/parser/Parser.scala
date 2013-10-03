@@ -112,12 +112,7 @@ final class Parser(input: String, protected val errorHandler: ErrorHandler = new
         else halt = true
       } while (!halt)
     }
-    expect(Tokens.RParen)(follows | Tokens.Returns)
-    expect(Tokens.Returns)(follows | Tokens.Identifier)
-
-    val resultPos = position
-    val result = VarRef(identifier(follows | Tokens.Semicolon | Tokens.If | Tokens.While | Tokens.Skip | Tokens.Identifier))(resultPos)
-    optional(Tokens.Semicolon)
+    expect(Tokens.RParen)(follows)
 
     val body = composition(follows | Tokens.End)
     optional(Tokens.Semicolon)
@@ -125,7 +120,7 @@ final class Parser(input: String, protected val errorHandler: ErrorHandler = new
     expect(Tokens.End)(follows | Tokens.Function)
     expect(Tokens.Function)(follows)
 
-    FunDef(name, params.result(), result, body)(pos)
+    FunDef(name, params.result(), body)(pos)
   }
 
   /** Parses a list of one or more statements.
@@ -181,9 +176,9 @@ final class Parser(input: String, protected val errorHandler: ErrorHandler = new
         If(predicate, consequent, alternative)
       case Tokens.While =>
         advance()
-        val predicate = expression(follows | Tokens.Upto)
+        val predicate = expression(follows | Tokens.Bound)
 
-        expect(Tokens.Upto)(follows | Tokens.Identifier | Tokens.Numeral | Tokens.LParen)
+        expect(Tokens.Bound)(follows | Tokens.Identifier | Tokens.Numeral | Tokens.LParen)
         val rankingFunction = expression(follows | Tokens.Do)
 
         expect(Tokens.Do)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)

@@ -83,13 +83,12 @@ class Lexer(protected var input: String) extends BaseLexer {
       val value = input.takeWhile(isIdTail)
       val token = value match {
         case "function" => Function
-        case "returns"  => Returns
         case "end"      => End
         case "if"       => If
         case "then"     => Then
         case "else"     => Else
         case "while"    => While
-        case "upto"     => Upto
+        case "bound"    => Bound
         case "do"       => Do
         case "skip"     => Skip
         case "and"      => And
@@ -124,7 +123,6 @@ object Lexer {
     val Unknown   = BaseLexer.Tokens.Unknown
 
     case object Function                 extends Keyword("function")
-    case object Returns                  extends Keyword("returns")
     case object End                      extends Keyword("end")
 
     case object If                       extends Keyword("if")
@@ -132,7 +130,7 @@ object Lexer {
     case object Else                     extends Keyword("else")
 
     case object While                    extends Keyword("while")
-    case object Upto                     extends Keyword("upto")
+    case object Bound                    extends Keyword("bound")
     case object Do                       extends Keyword("do")
 
     case object Skip                     extends Keyword("skip")

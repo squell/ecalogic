@@ -1,6 +1,6 @@
 // blah
 
-function(**)main(x) returns x // should not paste tokens together!
+function(**)main(x) // should not paste tokens together!
     if((0<=x) * 3) then
       if (0 - (0-(1*0))-(2*0-3*0)-4*0*(0-5)) - (1*0)-(2+0)-3*(4+0) then
 x := 1+2 (* an unhelpful comment *)
