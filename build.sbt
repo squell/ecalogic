@@ -2,7 +2,7 @@ name := "ecalogic"
 
 organization := "nl.ru.cs.ecalogic"
 
-version := "0.1.0"
+version := "0.1-SNAPSHOT"
 
 scalaVersion := "2.10.2"
 

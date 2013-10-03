@@ -1,10 +1,11 @@
 
-function pow(X,Y) returns Z
+function pow(X,Y)
   Z := 1;
   while Y > 0 upto Y do
     Z := Z * X;
     Y := Y-1
   end while
+  pow := Z
 end function
 
 function log(G,X) returns N

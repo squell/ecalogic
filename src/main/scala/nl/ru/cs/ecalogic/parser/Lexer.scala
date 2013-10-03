@@ -117,7 +117,7 @@ object Lexer {
   def isWhitespace(c: Char) = c == ' ' || c == '\t' || c == '\r' || c == '\n'
 
 
-  /** Tokens for the ECA program lexer */
+  /** Tokens for the ECA program lexer. */
   object Tokens {
     // Make base tokens available
     val EndOfFile = BaseLexer.Tokens.EndOfFile
