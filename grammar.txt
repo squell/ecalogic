@@ -35,7 +35,7 @@ stm-list: stm [ ";" stm-list]
 
 stm: "skip"
    | "if" bool-expr "then" stm-list [";"] "else" stm-list [";"] "end" "if"
-   | "while" bool-expr "upto" expr "do" stm-list [";"] "end" "while"
+   | "while" bool-expr "bound" expr "do" stm-list [";"] "end" "while"
    | var ":=" expr
    | fun-call
 
