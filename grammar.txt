@@ -43,7 +43,7 @@ fun-call: | ident "(" arg-list ")"
           | ident "::" ident "(" arg-list ")"
      
 
-fundef: "function" ident "(" parm-ety ")" "returns" var [";"] stm-list [";"] "end" "function"
+fundef: "function" ident "(" parm-ety ")" stm-list [";"] "end" "function"
 
 parm-ety: $ | parm
 parm: var ["," parm]
