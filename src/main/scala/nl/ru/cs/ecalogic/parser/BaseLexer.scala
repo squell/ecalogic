@@ -32,16 +32,64 @@
 
 package nl.ru.cs.ecalogic.parser
 
-case class Position(line: Int, column: Int) extends Ordered[Position] {
-  def compare(that: Position) = {
-    val lineDiff = line - that.line
-    if (lineDiff == 0) column - that.column
-    else lineDiff
+import BaseLexer.Tokens._
+import nl.ru.cs.ecalogic.util.{Positional, Position}
+
+/** Base trait for lexers.
+  *
+  * @author Jascha Neutelings
+  */
+trait BaseLexer extends Positional {
+  private var line = 1
+  private var column = 1
+
+  /** The input string. */
+  protected var input: String
+
+  def position = Position(line, column)
+
+  private def consume(length: Int) {
+    val (consumed, newInput) = input.splitAt(length)
+    consumed.foreach {
+      case '\n' => line += 1; column = 1
+      case _    => column += 1
+    }
+    input = newInput
   }
 
-  override def toString = s"$line:$column"
+  /** Checks whether the ''n''-th character in the input stream matches the given character.
+    *
+    * @param c character to look for.
+    * @param n the amount of look-ahead
+    * @return  whether the character matches
+    */
+  protected def lookahead(c: Char, n: Int = 1) = input.length() > n && input.charAt(n) == c
+
+  def next(): (Token, Position) = {
+    def unknown(c: Char) = (Unknown(c), 1)
+
+    val pos = position
+    val (token, length) = input.headOption.map(parseToken.applyOrElse(_, unknown)).getOrElse((EndOfFile, 0))
+    consume(length)
+    (token, pos)
+  }
+
+  /** A partial function that takes the current character and returns the recognized token (if any) and length of the
+    * matched string.
+    */
+  protected def parseToken: PartialFunction[Char, (Token, Int)]
+
 }
 
-trait Positional {
-  def position: Option[Position]
+object BaseLexer {
+
+  /** Basic tokens. */
+  object Tokens {
+    case object EndOfFile extends Token {
+      override def toString = "<end-of-file>"
+    }
+
+    case class Unknown(value: Char) extends VariableToken[Char]("unknown")
+  }
+
 }

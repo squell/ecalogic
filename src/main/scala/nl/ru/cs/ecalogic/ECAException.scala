@@ -32,18 +32,30 @@
 
 package nl.ru.cs.ecalogic
 
-import nl.ru.cs.ecalogic.parser.{Position, Positional}
+import nl.ru.cs.ecalogic.util.{Positional, Position}
 
-class SPLException(val message: String,
+/** Base class for ecalogic exceptions.
+  *
+  * @param message  exception message
+  * @param position optional position in source
+  * @param cause    optional cause
+  *
+  * @author Jascha Neutelings
+  */
+class ECAException(val message: String,
                    val position: Option[Position] = None,
                    val cause: Option[Throwable] = None) extends RuntimeException(message, cause.orNull)
-with Ordered[SPLException] {
-  def this(message: String, positional: Positional) = this(message, positional.position)
+with Ordered[ECAException] {
+
+  /** @see [[nl.ru.cs.ecalogic.ECAException]] */
   def this(message: String, position: Position) = this(message, Some(position))
+
+  /** @see [[nl.ru.cs.ecalogic.ECAException]] */
+  def this(message: String, positional: Positional) = this(message, positional.position)
+
+  /** @see [[nl.ru.cs.ecalogic.ECAException]] */
   def this(message: String, cause: Throwable) = this(message, None, Option(cause))
 
-  def withPosition(position: Position) = new SPLException(message, Some(position))
-  def withPosition(positional: Positional) = new SPLException(message, positional.position)
+  def compare(that: ECAException): Int = position.compare(that.position)
 
-  def compare(that: SPLException): Int = position.compare(that.position)
 }

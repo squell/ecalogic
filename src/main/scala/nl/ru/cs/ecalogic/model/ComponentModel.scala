@@ -1,3 +1,4 @@
+
 /*
  * ecalogic: a tool for performing energy consumption analysis.
  *
@@ -30,36 +31,44 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.parser
+package nl.ru.cs.ecalogic.model
 
-/** Trait representing a token.
-  *
-  * @author Jascha Neutelings
-  */
-trait Token extends Pattern {
-  def matches(token: Token) = this == token
+trait ComponentModel extends PartialOrdering[ComponentState] {
+
+  def state: ComponentState
+
+  def constants: PartialFunction[String, Constant]
+
+  def element(name: String): Option[Binding] = state.lift(name).orElse(constants.lift(name))
+
+  def lub()
+
+
+
 }
 
-/** Abstract class representing a token with a fixed value and length.
-  *
-  * @author Jascha Neutelings
-  */
-abstract class FixedToken(fixedValue: String) extends Token {
-  override def toString = s"'$fixedValue'"
+trait ComponentState extends PartialFunction[String, Variable]
+
+
+sealed trait Binding {
+  def name: String
+  def typ: Type
+  def value: BigInt
 }
 
-/** Abstract class representing a keyword token.
-  *
-  * @author Jascha Neutelings
-  */
-abstract class Keyword(val keyword: String) extends FixedToken(keyword)
+case class Variable(name: String, typ: Type, value: BigInt) extends Binding
+case class Constant(name: String,            value: BigInt) extends Binding {
+  def typ = Integer
+}
 
-/** Abstract class representing a token with a variable value and length.
-  *
-  * @author Jascha Neutelings
-  */
-abstract class VariableToken[T](name: String) extends Token {
-  def value: T
+sealed trait Type {
+  def defaultValue: BigInt
+}
 
-  override def toString = s"'$value' ($name)"
+case object Integer extends Type {
+  val defaultValue: BigInt = 0
+}
+
+case object Timestamp extends Type  {
+  val defaultValue: BigInt = 0
 }

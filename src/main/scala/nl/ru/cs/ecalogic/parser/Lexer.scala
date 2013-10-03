@@ -32,134 +32,178 @@
 
 package nl.ru.cs.ecalogic.parser
 
-import nl.ru.cs.ecalogic.util.{DefaultErrorHandler, ErrorHandler}
-import nl.ru.cs.ecalogic.SPLException
-import nl.ru.cs.ecalogic.parser.Tokens._
 import scala.io.Source
 import java.io.File
-import scala.util.control.Exception._
-import scala.Some
-import nl.ru.cs.ecalogic.parser.Tokens.Comment
-import nl.ru.cs.ecalogic.parser.Tokens.Whitespace
-import nl.ru.cs.ecalogic.parser.Tokens.Unknown
+import Lexer.Tokens._
 
-class Lexer(private var input: String, errorHandler: ErrorHandler = new DefaultErrorHandler()) {
+/** Lexer for ECA programs.
+ *
+ * @param input input string to parse
+ *
+ * @author Jascha Neutelings
+ */
+class Lexer(protected var input: String) extends BaseLexer {
+  import Lexer._
 
-  private var line = 1
-  private var column = 1
+  protected val parseToken: PartialFunction[Char, (Token, Int)] = {
+    case '+'                   => (Plus, 1)
+    case '-'                   => (Minus, 1)
+    case '*'                   => (Multiply, 1)
 
-  private def position = Position(line, column)
+    case '='                   => (EQ, 1)
+    case '<' if lookahead('=') => (LE, 2)
+    case '<' if lookahead('>') => (NE, 2)
+    case '<'                   => (LT, 1)
+    case '>' if lookahead('=') => (GE, 2)
+    case '>'                   => (GT, 1)
+    case ':' if lookahead(':') => (ColonColon, 2)
+    case ':' if lookahead('=') => (Assign, 2)
 
-  private def isDigit(c: Char) = c >= '0' && c <= '9'
+    case '/' if lookahead('/') =>
+      val end = input.indexOf('\n', 2)
+      val value = if (end >= 0) input.substring(2, end) else input.substring(2)
+      (Comment(value.trim), value.length + 2)
 
-  private def isIdHead(c: Char) = c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
+    case '(' if lookahead('*') =>
+      val end = input.indexOf("*)", 2)
+      //if (end < 0) errorHandler.fatalError(new SPLException("Unterminated comment", position))
+      val value = if (end >= 0) input.substring(2, end) else input.substring(2)
+      (Comment(value.trim), value.length + 4)
 
-  private def isIdTail(c: Char) = isIdHead(c) || isDigit(c) || c == '_'
+    case '('                   => (LParen, 1)
+    case ')'                   => (RParen, 1)
+    case ','                   => (Comma, 1)
+    case ';'                   => (Semicolon, 1)
 
-  private def isWhitespace(c: Char) = c == ' ' || c == '\t' || c == '\r' || c == '\n'
+    case d if isDigit(d)       =>
+      val value = input.takeWhile(isDigit)
+      (Numeral(BigInt(value)), value.length)
 
-  private def consume(length: Int) { // Kan mogelijk efficiënter?
-    input.take(length).foreach(c =>
-      if (c == '\n') {
-        line += 1; column = 1
-      } else column += 1)
-    input = input.drop(length)
-  }
+    case h if isIdHead(h)      =>
+      val value = input.takeWhile(isIdTail)
+      val token = value match {
+        case "function" => Function
+        case "returns"  => Returns
+        case "end"      => End
+        case "if"       => If
+        case "then"     => Then
+        case "else"     => Else
+        case "while"    => While
+        case "upto"     => Upto
+        case "do"       => Do
+        case "skip"     => Skip
+        case "and"      => And
+        case "or"       => Or
 
-  def next(): (Token, Position) = {
-    def lookahead(c: Char) = input.length() > 1 && input.charAt(1) == c
-
-    val pos = position
-    val (token, length) = input.headOption match {
-      case None => (EndOfFile, 0)
-      case Some(ch) => ch match {
-        case '+'                   => (Plus, 1)
-        case '-'                   => (Minus, 1)
-        case '*'                   => (Multiply, 1)
-
-        case '='                   => (EQ, 1)
-        case '<' if lookahead('=') => (LE, 2)
-        case '<' if lookahead('>') => (NE, 2)
-        case '<'                   => (LT, 1)
-        case '>' if lookahead('=') => (GE, 2)
-        case '>'                   => (GT, 1)
-        case ':' if lookahead(':') => (ColonColon, 2)
-        case ':' if lookahead('=') => (Assign, 2)
-
-        case '/' if lookahead('/') =>
-          consume(2)
-          val value = input.takeWhile(_ != '\n')
-
-          (Comment(value.trim), value.length)
-
-        case '(' if lookahead('*') =>
-          consume(2)
-          if (!input.contains("*)"))
-            errorHandler.fatalError(new SPLException("Unterminated comment", pos))
-
-          val (value, _) = input.zip(input.tail).takeWhile(_ != ('*', ')')).unzip
-
-          (Comment(value.mkString.trim), value.length + 2)
-
-        case '('                   => (LParen, 1)
-        case ')'                   => (RParen, 1)
-        case ','                   => (Comma, 1)
-        case ';'                   => (Semicolon, 1)
-
-        case d if isDigit(d)       =>
-          val value = input.takeWhile(isDigit)
-          (Numeral(BigInt(value)), value.length)
-
-        case h if isIdHead(h)      =>
-          val value = input.takeWhile(isIdTail)
-          val token = value match {
-            case "function" => Function
-            case "returns"  => Returns
-            case "end"      => End
-            case "if"       => If
-            case "then"     => Then
-            case "else"     => Else
-            case "while"    => While
-            case "upto"     => Upto
-            case "do"       => Do
-            case "skip"     => Skip
-            case "and"      => And
-            case "or"       => Or
-
-            case v          => Identifier(v)
-          }
-          (token, value.length)
-
-        case w if isWhitespace(w)  =>
-          val value = input.takeWhile(isWhitespace)
-          (Whitespace(value), value.length)
-
-        case c                     => (Unknown(c), 1)
+        case v          => Identifier(v)
       }
-    }
-    consume(length)
-    (token, pos)
+      (token, value.length)
+
+    case w if isWhitespace(w)  =>
+      val value = input.takeWhile(isWhitespace)
+      (Whitespace(value), value.length)
   }
+
 }
 
 object Lexer {
 
+  def isDigit(c: Char) = c >= '0' && c <= '9'
+
+  def isIdHead(c: Char) = c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_'
+
+  def isIdTail(c: Char) = isIdHead(c) || isDigit(c)
+
+  def isWhitespace(c: Char) = c == ' ' || c == '\t' || c == '\r' || c == '\n'
+
+
+  /** Tokens for the ECA program lexer */
+  object Tokens {
+    // Make base tokens available
+    val EndOfFile = BaseLexer.Tokens.EndOfFile
+    val Unknown   = BaseLexer.Tokens.Unknown
+
+    case object Function                 extends Keyword("function")
+    case object Returns                  extends Keyword("returns")
+    case object End                      extends Keyword("end")
+
+    case object If                       extends Keyword("if")
+    case object Then                     extends Keyword("then")
+    case object Else                     extends Keyword("else")
+
+    case object While                    extends Keyword("while")
+    case object Upto                     extends Keyword("upto")
+    case object Do                       extends Keyword("do")
+
+    case object Skip                     extends Keyword("skip")
+
+    case class Numeral(value: BigInt)    extends VariableToken[BigInt]("numeral")
+    case class Identifier(value: String) extends VariableToken[String]("identifier")
+
+    case object Assign                   extends FixedToken(":=")
+
+    case object Plus                     extends FixedToken("+")
+    case object Minus                    extends FixedToken("-")
+    case object Multiply                 extends FixedToken("*")
+
+    case object EQ                       extends FixedToken("=")
+    case object LT                       extends FixedToken("<")
+    case object GT                       extends FixedToken(">")
+    case object LE                       extends FixedToken("<=")
+    case object GE                       extends FixedToken(">=")
+    case object NE                       extends FixedToken("<>")
+
+    case object And                      extends FixedToken("and")
+    case object Or                       extends FixedToken("or")
+
+    case object LParen                   extends FixedToken("(")
+    case object RParen                   extends FixedToken(")")
+
+    case object Comma                    extends FixedToken(",")
+    case object Semicolon                extends FixedToken(";")
+
+    case object ColonColon               extends FixedToken("::")
+
+    case class Comment(value: String)    extends VariableToken[String]("comment")
+    case class Whitespace(value: String) extends VariableToken[String]("whitespace")
+
+
+
+    // Patterns
+    object Identifier extends TypePattern[Identifier] {
+      override def toString = "<identifier>"
+    }
+
+    object Numeral extends TypePattern[Numeral] {
+      override def toString = "<natural number>"
+    }
+
+    object Comment extends TypePattern[Comment] {
+      override def toString = "<comment>"
+    }
+
+    object Whitespace extends TypePattern[Whitespace] {
+      override def toString = "<whitespace>"
+    }
+
+  }
+
+
+
   def main(args: Array[String]) {
     val file = new File(args.headOption.getOrElse("zooi/test.eca"))
     val source = Source.fromFile(file).mkString
-    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
-    val lexer = new Lexer(source, errorHandler)
-    ignoring(classOf[SPLException]) {
-      var (token, _) = lexer.next()
-      while (token != EndOfFile) {
-        token match {
-          case Whitespace(_) | Comment(_) =>
-          case t                          => println(t)
-        }
-        token = lexer.next()._1
+    val lexer = new Lexer(source)
+
+    var (token, _) = lexer.next()
+    while (token != EndOfFile) {
+      token match {
+        case Whitespace(_) | Comment(_) =>
+        case t                          => println(t)
       }
+      token = lexer.next()._1
     }
-    if (errorHandler.errorOccurred) sys.exit(1)
+
   }
 
 }

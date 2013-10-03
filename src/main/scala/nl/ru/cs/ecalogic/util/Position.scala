@@ -30,36 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.parser
+package nl.ru.cs.ecalogic.util
 
-/** Trait representing a token.
-  *
-  * @author Jascha Neutelings
-  */
-trait Token extends Pattern {
-  def matches(token: Token) = this == token
+/**
+ * Class representing a position in a source file.
+ *
+ * @param line   line number
+ * @param column colum number
+ *
+ * @author Jascha Neutelings
+ */
+case class Position(line: Int, column: Int) extends Ordered[Position] {
+
+  def compare(that: Position) = {
+    val lineDiff = line - that.line
+    if (lineDiff == 0) column - that.column
+    else lineDiff
+  }
+
+  override def toString = s"$line:$column"
+
 }
 
-/** Abstract class representing a token with a fixed value and length.
-  *
-  * @author Jascha Neutelings
-  */
-abstract class FixedToken(fixedValue: String) extends Token {
-  override def toString = s"'$fixedValue'"
-}
+/**
+ * Trait for classes that have a [[Position]].
+ *
+ * @author Jascha Neutelings
+ */
+trait Positional {
 
-/** Abstract class representing a keyword token.
-  *
-  * @author Jascha Neutelings
-  */
-abstract class Keyword(val keyword: String) extends FixedToken(keyword)
+  /** The position of this object*/
+  def position: Position
 
-/** Abstract class representing a token with a variable value and length.
-  *
-  * @author Jascha Neutelings
-  */
-abstract class VariableToken[T](name: String) extends Token {
-  def value: T
-
-  override def toString = s"'$value' ($name)"
 }
