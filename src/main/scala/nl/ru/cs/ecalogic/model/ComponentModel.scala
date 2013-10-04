@@ -32,44 +32,54 @@
  */
 
 package nl.ru.cs.ecalogic.model
-import scala.collection.immutable.HashMap
+import scala.collection.immutable.Map
 
-trait ComponentModel {
+class ComponentState(val time: Map[String,Int], val ints: Map[String,Int]) //extends PartiallyOrdered[ComponentState] {
+//class ComponentState(val time: Map[String,Int], val ints: Map[String,Int]) extends PartialFunction[String, Variable] with PartiallyOrdered[ComponentState] {
 
-  trait ComponentState extends PartialFunction[String, Variable] with PartiallyOrdered[ComponentState] {
-    def timestamps: HashMap[String,Int]
-    def integers: HashMap[String,Int]
+  // should we really implement PartialFunction?
 
-    def follows(that: ComponentState) = {
-      val vr_GE = integers.  keys.forall(key => integers  (key) >= that.integers  (key))
-      val ts_LE = timestamps.keys.forall(key => timestamps(key) <= that.timestamps(key))
-      ts_LE && vr_GE
-    }
+/*
 
-    def tryCompareTo(that: ComponentState) = {
-      if(follows(that)) {
-        if(that.follows(this)) Some(0)
-        else Some(1)
-      } else if (that.follows(this)) {
-        Some(-1)
-      } else {
-        None
-      }
-    }
+  def tryCompareTo(that: ComponentState): Option[Int] = {
+    if(follows(that)) {
+      if(that.follows(this)) Some(0)
+      else Some(1)
+    } else if (that.follows(this)) 
+      Some(-1)
+    else
+      None
+  }
+  */
+
+
+trait ComponentModel extends PartialOrdering[ComponentState] {
+
+  def lub(a: ComponentState, b: ComponentState) = {
+    new ComponentState(a.ints.keys.map(key => key->(a.ints(key) max b.ints(key))).toMap,
+		       a.time.keys.map(key => key->(a.time(key) min b.time(key))).toMap)
   }
 
-//  def lub(x:St, y: St) = {
-//    x.vars  y.vars
-//    x.timestamps y.timestmaps
-//  }
-//
-//
-//  A,B: Map[String,Int]
-//   Map[String,Int]
-//  - voor elke waarde 'x'
-//     C['x'] := f(A['x'], B['x'])
+  def lteq(a: ComponentState, b:ComponentState) = 
+    a.ints.keys.forall(key => a.ints(key) <= b.ints(key)) &&
+    a.time.keys.forall(key => a.time(key) >= b.time(key))
 
-  def symbol: Seq[Symbol]
+  def tryCompareTo(a: ComponentState, b:ComponentState): Option[Int] = {
+    if(lteq(a,b)) {
+      if(lteq(b,a)) Some(0)
+      else Some(-1)
+    } else if (lteq(b,a))
+      Some(+1)
+    else
+      None
+  }
+
+  def r(s: ComponentState, old: ComponentState) =
+    new ComponentState(s.ints, old.time)
+
+  def td(s: ComponentState, t: Int) = 0
+
+// todo: rcf
 
 }
 
