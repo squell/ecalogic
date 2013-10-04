@@ -1,4 +1,4 @@
-cd src
+cd src/main/scala
 
 # so what to target?
 select main in $(grep -l "main" `find nl -name "*.scala"` | sed 's:/:.:g;s:[.]scala$::'); do

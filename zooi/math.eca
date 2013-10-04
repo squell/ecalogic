@@ -36,7 +36,7 @@ function mod(X,Y)
   mod := X-Y*div(X,Y)
 end function
 
-function horror(X,P)
+function norror(X,P)
   Y := 1;
   (* find the inverse of X mod P, if it exists at all *)
   while Y <= P bound P do
@@ -64,7 +64,7 @@ function horror(X,P)
 
   while Y <= A bound A do 
     component::doSomething()
-  end while
+  end while;
 
   horror := X
 end function
