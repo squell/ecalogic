@@ -53,6 +53,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
   def functionCallHygiene() {
     val defs = program.definitions;
 
+    // THIS NEXT 3 LINEZ IST B0RKEN. PL0X FIXME
     for(i <- 0 to defs.length-1) 
       if(defs.view(0,i).contains(defs(i)))
         eh.error(new ECAException("Redefinition of function "+defs(i).name, defs(i).position))
@@ -65,15 +66,15 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
       case While(pred, _, consq)        => funCalls(pred) ++ funCalls(consq)
       case Composition(stms)            => stms.flatMap(funCalls).toSet
       case Assignment(_, expr)          => funCalls(expr)
-      case e: BinaryExpression          => funCalls(e.left) ++ funCalls(e.right)
-      case e: UnaryExpression           => funCalls(e.operand)
       case FunCall(fun, args)
-        if !fun.isPrefixed              => arity.getOrElse(fun.name, -1) match {
-                                             case -1                    => eh.error(new ECAException("Undefined function: "+fun.name, node.position))
-                                             case x if x != args.length => eh.error(new ECAException("Incorrect number of arguments", node.position))
-					     case _                     => 
+        if !fun.isPrefixed              => arity.get(fun.name) match {
+                                             case None                  => eh.error(new ECAException("Undefined function: "+fun.name, node.position))
+                                             case Some(x) if x != args.length
+                                                                        => eh.error(new ECAException("Incorrect number of arguments", node.position))
+                                             case _                     => 
                                            }
                                            args.flatMap(funCalls).toSet + fun.name
+      case e: Expression                => e.operands.flatMap(funCalls).toSet
       case _                            => Set.empty
     }
 
@@ -96,21 +97,20 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
 
     def varFlow(live: Set[String], node: ASTNode): Set[String] = {
       node match {
-        case If(pred, thenPart, elsePart) => varFlow(live, pred); 
-                                             return varFlow(live, thenPart) & varFlow(live, elsePart)
+        case If(pred, thenPart, elsePart) => varFlow(live, pred)
+                                             varFlow(live, thenPart) & varFlow(live, elsePart)
         case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, rf); varFlow(live, consq)
         case Composition(stms)            => stms.foldLeft(live)(varFlow)
-        case Assignment(ident, expr)      => varFlow(live, expr); 
-                                             return live + ident
-        case e: BinaryExpression          => varFlow(live, e.left); varFlow(live, e.right)
-        case e: UnaryExpression           => varFlow(live, e.operand)
+        case Assignment(ident, expr)      => varFlow(live, expr) 
+                                             live + ident
         case FunCall(fun, args)
-          if !fun.isPrefixed              => args.map(varFlow(live,_))
+          if !fun.isPrefixed              => args.foreach(varFlow(live,_)); live
         case VarRef(ident)                => if(!live(ident))
                                                eh.warning(new ECAException("Variable "+ident+" may be used uninitialized", node.position))
-        case _                            => ;
+                                             live
+        case e: Expression                => e.operands.foreach(varFlow(live, _)); live
+        case _                            => live
       }
-      return live;
     }
 
     for(fundef <- program.definitions)
