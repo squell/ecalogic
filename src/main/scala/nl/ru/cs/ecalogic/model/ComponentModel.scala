@@ -32,23 +32,46 @@
  */
 
 package nl.ru.cs.ecalogic.model
+import scala.collection.immutable.HashMap
 
-trait ComponentModel extends PartialOrdering[ComponentState] {
+trait ComponentModel {
 
-  def state: ComponentState
+  trait ComponentState extends PartialFunction[String, Variable] with PartiallyOrdered[ComponentState] {
+    def timestamps: HashMap[String,Int]
+    def integers: HashMap[String,Int]
 
-  def constants: PartialFunction[String, Constant]
+    def follows(that: ComponentState) = {
+      val vr_GE = integers.  keys.forall(key => integers  (key) >= that.integers  (key))
+      val ts_LE = timestamps.keys.forall(key => timestamps(key) <= that.timestamps(key))
+      ts_LE && vr_GE
+    }
 
-  def element(name: String): Option[Binding] = state.lift(name).orElse(constants.lift(name))
+    def tryCompareTo(that: ComponentState) = {
+      if(follows(that)) {
+        if(that.follows(this)) Some(0)
+        else Some(1)
+      } else if (that.follows(this)) {
+        Some(-1)
+      } else {
+        None
+      }
+    }
+  }
 
-  def lub()
+//  def lub(x:St, y: St) = {
+//    x.vars  y.vars
+//    x.timestamps y.timestmaps
+//  }
+//
+//
+//  A,B: Map[String,Int]
+//   Map[String,Int]
+//  - voor elke waarde 'x'
+//     C['x'] := f(A['x'], B['x'])
 
-
+  def symbol: Seq[Symbol]
 
 }
-
-trait ComponentState extends PartialFunction[String, Variable]
-
 
 sealed trait Binding {
   def name: String

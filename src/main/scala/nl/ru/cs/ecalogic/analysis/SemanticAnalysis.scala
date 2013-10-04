@@ -40,6 +40,7 @@ import nl.ru.cs.ecalogic.ECAException
 import scala.util.control.Exception._
 import scala.io.Source
 import java.io.File
+import scala.collection.mutable
 
 
 /**
@@ -51,12 +52,15 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
     * Number of argument should match number of parameters, no recursion
     */
   def functionCallHygiene() {
-    val defs = program.definitions;
+    val defs = program.definitions
 
-    // THIS NEXT 3 LINEZ IST B0RKEN. PL0X FIXME
-    for(i <- 0 to defs.length-1) 
-      if(defs.view(0,i).contains(defs(i)))
-        eh.error(new ECAException("Redefinition of function "+defs(i).name, defs(i).position))
+    val funNames = mutable.Set[String]()
+    defs.foreach { f =>
+      if (funNames(f.name))
+        eh.error(new ECAException(s"Redefinition of function ${f.name}.", f.position))
+      else
+        funNames += f.name
+    }
 
     val arity: Map[String, Int] =
       defs.map(fundef=>fundef.name->fundef.parameters.length).toMap
@@ -68,10 +72,10 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
       case Assignment(_, expr)          => funCalls(expr)
       case FunCall(fun, args)
         if !fun.isPrefixed              => arity.get(fun.name) match {
-                                             case None                  => eh.error(new ECAException("Undefined function: "+fun.name, node.position))
+                                             case None                  => eh.error(new ECAException(s"Undefined function: '${fun.name}'.", node.position))
                                              case Some(x) if x != args.length
-                                                                        => eh.error(new ECAException("Incorrect number of arguments", node.position))
-                                             case _                     => 
+                                                                        => eh.error(new ECAException(s"Incorrect number of arguments for '${fun.name}'.", node.position))
+                                             case _                     =>
                                            }
                                            args.flatMap(funCalls).toSet + fun.name
       case e: Expression                => e.operands.flatMap(funCalls).toSet
@@ -82,35 +86,32 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
       defs.map(fundef=>fundef.name->funCalls(fundef.body)).toMap.withDefaultValue(Set.empty)
 
     def detectCycle(seen: Set[String], open: Set[String]) {
-      for(next <- open) 
+      for(next <- open)
         if(seen(next))
-          eh.error(new ECAException("Recursion in function "+next+" is not allowed"))
+          eh.error(new ECAException(s"Recursion in function $next is not allowed."))
         else
           detectCycle(seen+next, calls(next))
     }
     detectCycle(Set.empty, calls.keys.toSet)
   }
 
-  /** Checks whether variables could be used uninitialized
-    */
+  /** Checks whether variables could be used uninitialized. */
   def uninitializedVars() {
 
-    def varFlow(live: Set[String], node: ASTNode): Set[String] = {
-      node match {
-        case If(pred, thenPart, elsePart) => varFlow(live, pred)
-                                             varFlow(live, thenPart) & varFlow(live, elsePart)
-        case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, rf); varFlow(live, consq)
-        case Composition(stms)            => stms.foldLeft(live)(varFlow)
-        case Assignment(ident, expr)      => varFlow(live, expr) 
-                                             live + ident
-        case FunCall(fun, args)
-          if !fun.isPrefixed              => args.foreach(varFlow(live,_)); live
-        case VarRef(ident)                => if(!live(ident))
-                                               eh.warning(new ECAException("Variable "+ident+" may be used uninitialized", node.position))
-                                             live
-        case e: Expression                => e.operands.foreach(varFlow(live, _)); live
-        case _                            => live
-      }
+    def varFlow(live: Set[String], node: ASTNode): Set[String] = node match {
+      case If(pred, thenPart, elsePart) => varFlow(live, pred)
+                                           varFlow(live, thenPart) & varFlow(live, elsePart)
+      case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, rf); varFlow(live, consq)
+      case Composition(stms)            => stms.foldLeft(live)(varFlow)
+      case Assignment(ident, expr)      => varFlow(live, expr)
+                                           live + ident
+      case FunCall(fun, args)
+        if !fun.isPrefixed              => args.foreach(varFlow(live,_)); live
+      case VarRef(ident)                => if(!live(ident))
+                                             eh.warning(new ECAException(s"Variable $ident may be used uninitialized.", node.position))
+                                           live
+      case e: Expression                => e.operands.foreach(varFlow(live, _)); live
+      case _                            => live
     }
 
     for(fundef <- program.definitions)
@@ -126,8 +127,8 @@ object SemanticAnalysis {
     val parser = new Parser(source, errorHandler)
     val program = catching(classOf[ECAException]).opt(parser.program()).filterNot(_ => errorHandler.errorOccurred)
     val checker = new SemanticAnalysis(program.getOrElse(sys.exit(1)), errorHandler)
-    checker.functionCallHygiene
-    checker.uninitializedVars
+    checker.functionCallHygiene()
+    checker.uninitializedVars()
     println("Done")
   }
 }
