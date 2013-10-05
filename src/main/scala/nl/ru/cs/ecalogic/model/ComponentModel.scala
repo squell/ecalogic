@@ -53,7 +53,7 @@ trait ComponentModel {
     val timestamps: Map[String, BigInt]
     val variables: Map[String, BigInt]
 
-    override def toString = s"[ timestamps: ${timestamps.mkString(", ")}| variables: ${timestamps.mkString(", ")}]"
+    override def toString = s"[ variables: ${variables.mkString(", ")}| timestamps: ${timestamps.mkString(", ")}]"
   }
 
   //protected def newState(overrides: Map[String, Value]): State
