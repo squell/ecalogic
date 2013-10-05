@@ -32,39 +32,45 @@
  */
 
 package nl.ru.cs.ecalogic.model
+
 import scala.collection.immutable.Map
 
-class ComponentState(val time: Map[String,Int], val ints: Map[String,Int]) //extends PartiallyOrdered[ComponentState] {
-//class ComponentState(val time: Map[String,Int], val ints: Map[String,Int]) extends PartialFunction[String, Variable] with PartiallyOrdered[ComponentState] {
+trait ComponentModel {
 
-  // should we really implement PartialFunction?
+  type State <: ComponentState
 
-/*
+  protected trait ComponentState {
+//    protected val elements: Map[String, Value]
 
-  def tryCompareTo(that: ComponentState): Option[Int] = {
-    if(follows(that)) {
-      if(that.follows(this)) Some(0)
-      else Some(1)
-    } else if (that.follows(this)) 
-      Some(-1)
-    else
-      None
-  }
-  */
+//    private[ComponentModel] lazy val timestamps = elements.collect {
+//      case (k, Timestamp(v)) => (k, v)
+//    }
+//
+//    private[ComponentModel] lazy val variables = elements.collect {
+//      case (k, Integer(v)) => (k, v)
+//    }
 
+    val timestamps: Map[String, BigInt]
+    val variables: Map[String, BigInt]
 
-trait ComponentModel extends PartialOrdering[ComponentState] {
-
-  def lub(a: ComponentState, b: ComponentState) = {
-    new ComponentState(a.ints.keys.map(key => key->(a.ints(key) max b.ints(key))).toMap,
-		       a.time.keys.map(key => key->(a.time(key) min b.time(key))).toMap)
+    override def toString = s"[ timestamps: ${timestamps.mkString(", ")}| variables: ${timestamps.mkString(", ")}]"
   }
 
-  def lteq(a: ComponentState, b:ComponentState) = 
-    a.ints.keys.forall(key => a.ints(key) <= b.ints(key)) &&
-    a.time.keys.forall(key => a.time(key) >= b.time(key))
+  //protected def newState(overrides: Map[String, Value]): State
 
-  def tryCompareTo(a: ComponentState, b:ComponentState): Option[Int] = {
+  def newState: State = newState(Map.empty, Map.empty)
+
+  def newState(integers: Map[String, BigInt], timestamps: Map[String, BigInt]): State
+
+  def lub(a: State, b: State) =
+    newState(a.variables.keys.map(key => key->(a.variables(key) max b.variables(key))).toMap,
+             a.timestamps.keys.map(key => key->(a.timestamps(key) min b.timestamps(key))).toMap)
+
+  def lteq(a: State, b: State) =
+    a.variables.keys.forall(key => a.variables(key) <= b.variables(key)) &&
+    a.timestamps.keys.forall(key => a.timestamps(key) >= b.timestamps(key))
+
+  def tryCompare(a: State, b: State): Option[Int] = {
     if(lteq(a,b)) {
       if(lteq(b,a)) Some(0)
       else Some(-1)
@@ -74,34 +80,75 @@ trait ComponentModel extends PartialOrdering[ComponentState] {
       None
   }
 
-  def r(s: ComponentState, old: ComponentState) =
-    new ComponentState(s.ints, old.time)
+  def r(s: State, old: State) =
+    newState(s.variables, old.timestamps)
 
-  def td(s: ComponentState, t: Int) = 0
+  def td(s: State, t: BigInt) = 0
 
-// todo: rcf
+  // Does not actually operate on the set of component states, but only the component state that belongs to this model.
+  // Might be sufficient?
+  def rc(f: String, s: State, g: GlobalState, args: Seq[BigInt]): (State, GlobalState) = (s, g)
 
 }
 
-sealed trait Binding {
-  def name: String
-  def typ: Type
-  def value: BigInt
-}
+case class GlobalState(time: BigInt, energy: BigInt)
 
-case class Variable(name: String, typ: Type, value: BigInt) extends Binding
-case class Constant(name: String,            value: BigInt) extends Binding {
-  def typ = Integer
-}
-
-sealed trait Type {
-  def defaultValue: BigInt
-}
-
-case object Integer extends Type {
-  val defaultValue: BigInt = 0
-}
-
-case object Timestamp extends Type  {
-  val defaultValue: BigInt = 0
-}
+//sealed trait Value extends ScalaNumber with ScalaNumericConversions {
+//
+//  type T <: Value
+//
+//  def value: BigInt
+//
+//  protected def newValue(v: BigInt): T
+//
+//  def isWhole() = true
+//
+//  def +(that: T): T = newValue(value + that.value)
+//
+//  def -(that: T): T = newValue(value - that.value)
+//
+//  def *(that: T): T = newValue(value * that.value)
+//
+//  def intValue() = value.intValue()
+//
+//  def longValue() = value.longValue()
+//
+//  def floatValue() = value.floatValue()
+//
+//  def doubleValue() = value.doubleValue()
+//
+//  def underlying(): BigInt = value
+//
+//  def toTimestamp = Timestamp(value)
+//
+//  def toInteger = Integer(value)
+//
+//}
+//
+//case class Integer(value: BigInt = 0) extends Value with Ordered[Integer] {
+//
+//  type T = Integer
+//
+//  protected def newValue(v: BigInt) = Integer(v)
+//
+//  def compare(that: Integer): Int = value.compare(that.value)
+//
+//  def and(that: Integer): Integer = newValue(if (value != BigInt(0) && that.value != BigInt(0)) BigInt(1) else BigInt(0))
+//
+//  def or(that: Integer): Integer = newValue(if (value != BigInt(0) || that.value != BigInt(0)) BigInt(1) else BigInt(0))
+//
+//  override def toInteger = this
+//
+//}
+//
+//case class Timestamp(value: BigInt = 0) extends Value with Ordered[Timestamp] {
+//
+//  type T = Timestamp
+//
+//  def compare(that: Timestamp): Int = value.compare(that.value)
+//
+//  protected def newValue(v: BigInt) = Timestamp(v)
+//
+//  override def toTimestamp = this
+//
+//}
