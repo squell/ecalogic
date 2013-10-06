@@ -35,11 +35,29 @@ package nl.ru.cs.ecalogic.model
 
 import scala.collection.immutable.Map
 
-trait ComponentModel {
+case class GlobalState(time: BigInt, energy: BigInt) {
+  def update(t: BigInt, e: BigInt) = new GlobalState(time+t, energy+e)
+}
 
-  type State <: ComponentState
+/*
 
-  protected trait ComponentState {
+  COMMENT/IDEA:
+
+     we could use reflection to implement ComponentStates, e.g.:
+     trait ComponentState
+     class MyComponentState extends ComponentState {
+       var x: IntType
+       var t: TimeStamp
+     }
+
+     howwwwwwwwever. it seems to be a recent addition to the language, so perhaps
+     it is risky to use this 'in production'?
+
+ */
+
+// isn't it useful to keep as a base class in a place we can access it?
+
+class ComponentState(val timestamps: Map[String, BigInt], val variables: Map[String, BigInt]) {
 //    protected val elements: Map[String, Value]
 
 //    private[ComponentModel] lazy val timestamps = elements.collect {
@@ -50,48 +68,98 @@ trait ComponentModel {
 //      case (k, Integer(v)) => (k, v)
 //    }
 
-    val timestamps: Map[String, BigInt]
-    val variables: Map[String, BigInt]
+  def updateVariable(name: String, value: BigInt) =
+    new ComponentState(timestamps, variables.updated(name,value))
 
-    override def toString = s"[ variables: ${variables.mkString(", ")}| timestamps: ${timestamps.mkString(", ")}]"
-  }
+  def updateTimestamp(name: String, value: BigInt) =
+    new ComponentState(timestamps.updated(name,value), variables)
 
-  //protected def newState(overrides: Map[String, Value]): State
+  override def toString = s"[ variables: ${variables.mkString(", ")}| timestamps: ${timestamps.mkString(", ")}]"
+}
+
+abstract class ComponentModel(val name: String) {
+
+  type State <: ComponentState
 
   def newState: State = newState(Map.empty, Map.empty)
 
-  def newState(integers: Map[String, BigInt], timestamps: Map[String, BigInt]): State
-
+  def newState(integers: Map[String, BigInt], timestamps: Map[String, BigInt]): State 
+    
   def lub(a: State, b: State) =
-    newState(a.variables.keys.map(key => key->(a.variables(key) max b.variables(key))).toMap,
+    newState(a.variables.keys.map (key => key->(a.variables (key) max b.variables (key))).toMap,
              a.timestamps.keys.map(key => key->(a.timestamps(key) min b.timestamps(key))).toMap)
 
   def lteq(a: State, b: State) =
-    a.variables.keys.forall(key => a.variables(key) <= b.variables(key)) &&
+    a.variables. keys.forall(key => a.variables (key) <= b.variables (key)) &&
     a.timestamps.keys.forall(key => a.timestamps(key) >= b.timestamps(key))
 
   def tryCompare(a: State, b: State): Option[Int] = {
-    if(lteq(a,b)) {
-      if(lteq(b,a)) Some(0)
-      else Some(-1)
-    } else if (lteq(b,a))
-      Some(+1)
-    else
-      None
+    var sign = 0;
+    for(key <- a.variables.keys) {
+      val cmp = a.variables(key) compare b.variables(key)
+      if(sign*cmp < 0) return None // note: a*b<0 iff a,b have different signs
+      else sign |= cmp
+    }
+    for(key <- a.timestamps.keys) {
+      val cmp = -(a.timestamps(key) compare b.timestamps(key))
+      if(sign*cmp < 0) return None
+      else sign |= cmp
+    }
+    return Some(sign)
   }
 
   def r(s: State, old: State) =
     newState(s.variables, old.timestamps)
 
-  def td(s: State, t: BigInt) = 0
+  def td(s: State, t: BigInt): BigInt = 0
 
+// humorous: convergent evolution in program design:
+
+/* 
+MARC:
+  //according to the paper, this should be the signature:
+  //def rc(fun: String, gamma: Set[ComponentState], delta: GlobalState) =
+
+  //however, i currently fail to see why this is necessary
+JASCHA:
   // Does not actually operate on the set of component states, but only the component state that belongs to this model.
   // Might be sufficient?
-  def rc(f: String, s: State, g: GlobalState, args: Seq[BigInt]): (State, GlobalState) = (s, g)
+*/
+
+  def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[BigInt]): (State, GlobalState) = (gamma, delta)
 
 }
 
-case class GlobalState(time: BigInt, energy: BigInt)
+case class LinearComponentState(content: Map[String,BigInt], power:BigInt=0, tau:BigInt=0) extends ComponentState(Map("tau"->tau), content) {
+  def update(level: BigInt, delay: BigInt) = 
+    new LinearComponentState(content, level, tau+delay)
+}
+
+abstract class LinearComponentModel(name: String) extends ComponentModel(name) {
+
+  override type State = LinearComponentState
+
+  override def td(s: State, t: BigInt) = {
+    s.power * ((t - s.tau) max 0)
+  }
+
+}
+
+class DemoComponent extends LinearComponentModel("Demo") {
+
+  override def newState(integers: Map[String,BigInt], timestamps: Map[String,BigInt]) =
+    new LinearComponentState(Map.empty, 0, 0)
+
+  override def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[BigInt]): (State, GlobalState) = {
+    fun match {
+      case "on"  => (gamma.update(1,0), delta)
+      case "off" => (gamma.update(0,0), delta)
+      case "idle"=> (gamma.update(gamma.power,1), delta)
+      case _     => (gamma, delta)
+    }
+  }
+
+}
 
 //sealed trait Value extends ScalaNumber with ScalaNumericConversions {
 //
