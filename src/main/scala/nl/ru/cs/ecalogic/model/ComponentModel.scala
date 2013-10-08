@@ -1,5 +1,4 @@
-
-/*
+ /*
  * ecalogic: a tool for performing energy consumption analysis.
  *
  * Copyright (c) 2013, J. Neutelings, D. Peelen, M. Schoolderman
@@ -33,12 +32,6 @@
 
 package nl.ru.cs.ecalogic.model
 
-import scala.collection.immutable.Map
-
-case class GlobalState(time: BigInt, energy: BigInt) {
-  def update(t: BigInt, e: BigInt) = new GlobalState(time+t, energy+e)
-}
-
 /*
 
   COMMENT/IDEA:
@@ -57,65 +50,38 @@ case class GlobalState(time: BigInt, energy: BigInt) {
 
 // isn't it useful to keep as a base class in a place we can access it?
 
-class ComponentState(val timestamps: Map[String, BigInt], val variables: Map[String, BigInt]) {
-//    protected val elements: Map[String, Value]
+// use ComponentModel#ComponentState for a path independent reference
+// or c.ComponentState where c is an instance of a ComponentModel for a path dependent reference
+// I don't see the problem of using an inner class
 
-//    private[ComponentModel] lazy val timestamps = elements.collect {
-//      case (k, Timestamp(v)) => (k, v)
-//    }
-//
-//    private[ComponentModel] lazy val variables = elements.collect {
-//      case (k, Integer(v)) => (k, v)
-//    }
-
-  def updateVariable(name: String, value: BigInt) =
-    new ComponentState(timestamps, variables.updated(name,value))
-
-  def updateTimestamp(name: String, value: BigInt) =
-    new ComponentState(timestamps.updated(name,value), variables)
-
-  override def toString = s"[ variables: ${variables.mkString(", ")}| timestamps: ${timestamps.mkString(", ")}]"
-}
-
-abstract class ComponentModel(val name: String) {
+/**
+ * @author Marc Schoolderman
+ * @author Jascha Neutelings
+ */
+trait ComponentModel {
 
   type State <: ComponentState
 
-  def newState: State = newState(Map.empty, Map.empty)
+  val name: String
 
-  def newState(integers: Map[String, BigInt], timestamps: Map[String, BigInt]): State 
-    
+  def newState: State = newState(Map.empty)
+
+  protected def newState(elements: Map[String, TypedECAValue]): State
+
+  protected def newState(integers: Map[String, ECAValue], timestamps: Map[String, ECAValue]): State =
+    newState(integers.mapValues(ECAInteger(_)) ++ timestamps.mapValues(ECATimestamp(_)))
+
   def lub(a: State, b: State) =
-    newState(a.variables.keys.map (key => key->(a.variables (key) max b.variables (key))).toMap,
-             a.timestamps.keys.map(key => key->(a.timestamps(key) min b.timestamps(key))).toMap)
+    newState(a.integers.keys.map (key => key -> (a.integers (key) max b.integers (key))).toMap,
+             a.timestamps.keys.map(key => key -> (a.timestamps(key) min b.timestamps(key))).toMap)
 
-  def lteq(a: State, b: State) =
-    a.variables. keys.forall(key => a.variables (key) <= b.variables (key)) &&
-    a.timestamps.keys.forall(key => a.timestamps(key) >= b.timestamps(key))
+  def r(s: State, old: State) = newState(s.integers, old.timestamps)
 
-  def tryCompare(a: State, b: State): Option[Int] = {
-    var sign = 0;
-    for(key <- a.variables.keys) {
-      val cmp = a.variables(key) compare b.variables(key)
-      if(sign*cmp < 0) return None // note: a*b<0 iff a,b have different signs
-      else sign |= cmp
-    }
-    for(key <- a.timestamps.keys) {
-      val cmp = -(a.timestamps(key) compare b.timestamps(key))
-      if(sign*cmp < 0) return None
-      else sign |= cmp
-    }
-    return Some(sign)
-  }
-
-  def r(s: State, old: State) =
-    newState(s.variables, old.timestamps)
-
-  def td(s: State, t: BigInt): BigInt = 0
+  def td(s: State, t: ECAValue): ECAValue = ECAValue.Zero
 
 // humorous: convergent evolution in program design:
 
-/* 
+/*
 MARC:
   //according to the paper, this should be the signature:
   //def rc(fun: String, gamma: Set[ComponentState], delta: GlobalState) =
@@ -126,97 +92,85 @@ JASCHA:
   // Might be sufficient?
 */
 
-  def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[BigInt]): (State, GlobalState) = (gamma, delta)
+  def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue]): (State, GlobalState) = (gamma, delta)
 
 }
 
-case class LinearComponentState(content: Map[String,BigInt], power:BigInt=0, tau:BigInt=0) extends ComponentState(Map("tau"->tau), content) {
-  def update(level: BigInt, delay: BigInt) = 
-    new LinearComponentState(content, level, tau+delay)
-}
+trait ComponentState extends PartiallyOrdered[ComponentState] {
 
-abstract class LinearComponentModel(name: String) extends ComponentModel(name) {
+  val elements: Map[String, TypedECAValue]
 
-  override type State = LinearComponentState
-
-  override def td(s: State, t: BigInt) = {
-    s.power * ((t - s.tau) max 0)
+  lazy val timestamps: Map[String, ECAValue] = elements.collect {
+    case (n, ECATimestamp(value)) => n -> value
   }
 
+  lazy val integers: Map[String, ECAValue] = elements.collect {
+    case (n, ECAInteger(value)) => n -> value
+  }
+
+  def tryCompareTo[B >: ComponentState <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
+    case that: ComponentState =>
+      var sign = 0
+      for(key <- integers.keys) {
+        val cmp = integers(key) compare that.integers(key)
+        if(sign*cmp < 0) return None // note: a*b<0 iff a,b have different signs
+        else sign |= cmp
+      }
+      for(key <- timestamps.keys) {
+        val cmp = -(timestamps(key) compare that.timestamps(key))
+        if(sign*cmp < 0) return None
+        else sign |= cmp
+      }
+      Some(sign)
+    case _ => None
+  }
+
+  def typeOf(name: String) = elements(name).typ
+
+  override def equals(that: Any) = that match {
+    case that: ComponentState => tryCompareTo(that) == Some(0)
+    case _                    => false
+  }
+
+  override def hashCode = elements.hashCode
+
+  override def toString = s"[ integers: ${integers.mkString(", ")} | timestamps: ${timestamps.mkString(", ")}  ]"
+
 }
 
-class DemoComponent extends LinearComponentModel("Demo") {
 
-  override def newState(integers: Map[String,BigInt], timestamps: Map[String,BigInt]) =
-    new LinearComponentState(Map.empty, 0, 0)
 
-  override def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[BigInt]): (State, GlobalState) = {
+abstract class LinearComponentModel(val name: String) extends ComponentModel {
+
+  // Je geeft power niet door aan de onderliggende state?
+  case class State(content: Map[String, ECAValue], power: ECAValue = 0, tau: ECAValue = 0) extends ComponentState {
+    val elements: Map[String, TypedECAValue] =
+      content.mapValues(ECAInteger(_)) + ("power" -> ECAInteger(power)) + ("tau" -> ECATimestamp(tau))
+
+    def this(elements: Map[String, TypedECAValue]) =
+      this(elements -- Seq("power", "tau"), elements.getOrElse("power", 0), elements.getOrElse("tau", 0))
+
+    def update(level: ECAValue, delay: ECAValue) = new State(content, level, tau+delay)
+
+  }
+
+  override def td(s: State, t: ECAValue) = s.power * ((t - s.tau) max 0)
+
+}
+
+object DemoComponent extends LinearComponentModel("Demo") {
+
+  // Deze functie maakt een nieuw state object gegeven de elementen; het is dus wel belangrijk dat je iets met deze
+  // elementen doet, aangezien newState ook door lub en r wordt gebruikt om een nieuwe state te construeren.
+  protected def newState(elements: Map[String, TypedECAValue]) = new State(elements)
+
+  override def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue]): (State, GlobalState) = {
     fun match {
-      case "on"  => (gamma.update(1,0), delta)
-      case "off" => (gamma.update(0,0), delta)
-      case "idle"=> (gamma.update(gamma.power,1), delta)
+      case "on"  => (gamma.update(1, 0), delta)
+      case "off" => (gamma.update(0, 0), delta)
+      case "idle"=> (gamma.update(gamma.power, 1), delta)
       case _     => (gamma, delta)
     }
   }
 
 }
-
-//sealed trait Value extends ScalaNumber with ScalaNumericConversions {
-//
-//  type T <: Value
-//
-//  def value: BigInt
-//
-//  protected def newValue(v: BigInt): T
-//
-//  def isWhole() = true
-//
-//  def +(that: T): T = newValue(value + that.value)
-//
-//  def -(that: T): T = newValue(value - that.value)
-//
-//  def *(that: T): T = newValue(value * that.value)
-//
-//  def intValue() = value.intValue()
-//
-//  def longValue() = value.longValue()
-//
-//  def floatValue() = value.floatValue()
-//
-//  def doubleValue() = value.doubleValue()
-//
-//  def underlying(): BigInt = value
-//
-//  def toTimestamp = Timestamp(value)
-//
-//  def toInteger = Integer(value)
-//
-//}
-//
-//case class Integer(value: BigInt = 0) extends Value with Ordered[Integer] {
-//
-//  type T = Integer
-//
-//  protected def newValue(v: BigInt) = Integer(v)
-//
-//  def compare(that: Integer): Int = value.compare(that.value)
-//
-//  def and(that: Integer): Integer = newValue(if (value != BigInt(0) && that.value != BigInt(0)) BigInt(1) else BigInt(0))
-//
-//  def or(that: Integer): Integer = newValue(if (value != BigInt(0) || that.value != BigInt(0)) BigInt(1) else BigInt(0))
-//
-//  override def toInteger = this
-//
-//}
-//
-//case class Timestamp(value: BigInt = 0) extends Value with Ordered[Timestamp] {
-//
-//  type T = Timestamp
-//
-//  def compare(that: Timestamp): Int = value.compare(that.value)
-//
-//  protected def newValue(v: BigInt) = Timestamp(v)
-//
-//  override def toTimestamp = this
-//
-//}
