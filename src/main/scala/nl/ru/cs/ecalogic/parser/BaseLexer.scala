@@ -63,8 +63,9 @@ trait BaseLexer extends Positional {
     * @param n the amount of look-ahead
     * @return  whether the character matches
     */
-  protected def lookahead(c: Char, n: Int = 1) = input.length() > n && input.charAt(n) == c
+  protected def lookahead(c: Char, n: Int = 1) = input.length > n && input.charAt(n) == c
 
+  //TODO: doc
   def next(): (Token, Position) = {
     def unknown(c: Char) = (Unknown(c), 1)
 
@@ -77,7 +78,7 @@ trait BaseLexer extends Positional {
   /** A partial function that takes the current character and returns the recognized token (if any) and length of the
     * matched string.
     */
-  protected def parseToken: PartialFunction[Char, (Token, Int)]
+  protected val parseToken: PartialFunction[Char, (Token, Int)]
 
 }
 

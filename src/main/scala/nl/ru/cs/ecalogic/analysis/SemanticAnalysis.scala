@@ -57,7 +57,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
     val funNames = mutable.Set[String]()
     defs.foreach { f =>
       if (funNames(f.name))
-        eh.error(new ECAException(s"Redefinition of function ${f.name}.", f.position))
+        eh.error(new ECAException(s"Redefinition of function '${f.name}'.", f.position))
       else
         funNames += f.name
     }
@@ -88,7 +88,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
     def detectCycle(seen: Set[String], open: Set[String]) {
       for(next <- open)
         if(seen(next))
-          eh.error(new ECAException(s"Recursion in function $next is not allowed."))
+          eh.error(new ECAException(s"Recursion in function '$next' is not allowed."))
         else
           detectCycle(seen+next, calls(next))
     }
@@ -101,14 +101,14 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
     def varFlow(live: Set[String], node: ASTNode): Set[String] = node match {
       case If(pred, thenPart, elsePart) => varFlow(live, pred)
                                            varFlow(live, thenPart) & varFlow(live, elsePart)
-      case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, rf); varFlow(live, consq)
+      case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, rf); varFlow(live, consq); live
       case Composition(stms)            => stms.foldLeft(live)(varFlow)
       case Assignment(ident, expr)      => varFlow(live, expr)
                                            live + ident
       case FunCall(fun, args)
-        if !fun.isPrefixed              => args.foreach(varFlow(live,_)); live
+        if !fun.isPrefixed              => args.foreach(varFlow(live,_)); live // TODO: Waarom alleen niet prefixed?
       case VarRef(ident)                => if(!live(ident))
-                                             eh.warning(new ECAException(s"Variable $ident may be used uninitialized.", node.position))
+                                             eh.warning(new ECAException(s"Variable '$ident' may be used uninitialized.", node.position))
                                            live
       case e: Expression                => e.operands.foreach(varFlow(live, _)); live
       case _                            => live

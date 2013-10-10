@@ -94,7 +94,7 @@ object ECAValue {
 
 }
 
-class TypedECAValue(_value: BigInt, val typ: ECAType) extends ECAValue(_value)
+class TypedECAValue(value: BigInt, val typ: ECAType) extends ECAValue(value)
 
 sealed trait ECAType {
   def apply(value: ECAValue) = new TypedECAValue(value.toBigInt, this)
