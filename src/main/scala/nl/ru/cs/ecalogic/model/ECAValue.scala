@@ -33,6 +33,7 @@
 package nl.ru.cs.ecalogic.model
 
 import scala.math.{ScalaNumericConversions, ScalaNumber}
+import scala.language.implicitConversions
 
 class ECAValue(private val value: BigInt) extends ScalaNumber with ScalaNumericConversions with Ordered[ECAValue] {
 
