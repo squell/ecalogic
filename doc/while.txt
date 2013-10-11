@@ -1,0 +1,24 @@
+function forwardSignals1(N)
+  Cradio::on();
+  while N > 0 bound N do
+    X = sensor::m();
+    radio::queue(X);
+    radio::send();
+    N := N-1
+  end while;
+  radio::off()
+end function
+
+function forwardSignals2(N)
+while N > 0 bound N do
+  X := 10;
+  while X > 0 bound X  do
+    X1 := sensor::m();
+	radio::queue(X1);
+    X := X - 1;
+    N = N - 1;
+  end while
+  Cradio::on();
+  Cradio::send();
+  Cradio::off();
+end function
