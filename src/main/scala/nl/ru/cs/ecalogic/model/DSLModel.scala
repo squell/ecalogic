@@ -225,10 +225,10 @@ object Radio extends DSLModel("radio") {
 
   // Defines the resource consumption functions.
   define rc (
-    on    = (s, Δ, _) => (s(τ = Δ.t, on = true)  , Δ(dT = +c.ton,        dE = c.eon        + td(s, Δ.t))),
-    off   = (s, Δ, _) => (s(τ = Δ.t, on = 0)     , Δ(dT = +c.toff,       dE = c.eoff       + td(s, Δ.t))),
-    queue = (s, Δ, _) => (s(τ = Δ.t, q = s.q + 1), Δ(dT = +c.tq,         dE = c._eq        + td(s, Δ.t))),
-    send  = (s, Δ, _) => (s(τ = Δ.t, q = 0)      , Δ(dT = +c.tsendconst, dE = c.esendconst + td(s, Δ.t)))
+    on    = (s, Δ, _) => (s(τ = Δ.t, on = true)  , (Δ.t + c.ton,        Δ.e + c.eon        + td(s, Δ.t))),
+    off   = (s, Δ, _) => (s(τ = Δ.t, on = 0)     , (Δ.t + c.toff,       Δ.e + c.eoff       + td(s, Δ.t))),
+    queue = (s, Δ, _) => (s(τ = Δ.t, q = s.q + 1), (Δ.t + c.tq,         Δ.e + c._eq        + td(s, Δ.t))),
+    send  = (s, Δ, _) => (s(τ = Δ.t, q = 0)      , (Δ.t + c.tsendconst, Δ.e + c.esendconst + td(s, Δ.t)))
   )
 
   // Overrides the td function.
