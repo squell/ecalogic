@@ -61,7 +61,7 @@ package model
  */
 trait ComponentModel {
 
-  protected type State <: ComponentState
+  type State <: ComponentState
 
   trait ComponentState extends PartiallyOrdered[State] {
 

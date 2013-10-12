@@ -40,7 +40,7 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
   type LUBFunction = (State, State) => State
   type RFunction   = (State, State) => State
 
-  protected class State(val elements: Map[String, TypedECAValue]) extends ComponentState with Dynamic {
+  class State private[DSLModel](val elements: Map[String, TypedECAValue]) extends ComponentState with Dynamic {
 
     def selectDynamic(name: String) = elements(name)
 
@@ -49,14 +49,14 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
         val newElements = args.map {
           case (name, value) => name -> typeOfElement(name)(value)
         }.toMap
-        val illegal = newElements.keySet &~ elements.keySet
-        if (!illegal.isEmpty) {
-          throw new ECAException(s"State transformer contains illegal elements: ${illegal.mkString(", ")}.")
+        val undefined = newElements.keySet &~ elements.keySet
+        if (!undefined.isEmpty) {
+          throw new ECAException(s"State transformer contains undefined elements: ${undefined.mkString(", ")}.")
         }
         new State(elements ++ newElements)
     }
 
-    protected def update(newElements: Map[String, TypedECAValue]): State = new State(elements ++ newElements)
+    protected def update(newElements: Map[String, TypedECAValue]) = new State(elements ++ newElements)
 
   }
 
@@ -76,19 +76,21 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
   private def checkRegistrationClosed() {
     if (registering) {
-      throw new IllegalStateException("Registration not yet finished.")
+      throw new IllegalStateException("Registration in progress.")
     }
   }
 
-  private def checkDuplicates[A](seq: Seq[(String, A)], description: String, showDuplicateValues: Boolean) {
+  private def checkDuplicates[A](seq: Seq[(String, A)], description: String, showDuplicateDefinitions: Boolean) {
     val duplicates = seq.groupBy(_._1).filter(_._2.size > 1).mapValues(_.map(_._2))
     if (!duplicates.isEmpty) {
       val duplicatesString = duplicates.map {
-        case (name, values) if showDuplicateValues => s"'$name' ${values.map(v => s"$name := $v").mkString("(", ", ", ")")}"
-        case (name, _)                             => s"'$name'"
-      }.mkString(",")
+        case (name, values) if showDuplicateDefinitions =>
+          s"'$name' ${values.map(v => s"$name = $v").mkString("(", ", ", ")")}"
+        case (name, _) =>
+          s"'$name'"
+      }.mkString(", ")
 
-      throw new ECAException(s"One or more $description were redeclared: $duplicatesString.")
+      throw new ECAException(s"One or more $description were redefined: $duplicatesString.")
     }
   }
 
@@ -121,7 +123,7 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
           case "apply" =>
             checkRegistering()
             checkDuplicates(declarations, "variables", true)
-            elements = DSLModel.createTypedByNameMap(declarations.toMap).withDefault(n => throw new ECAException(s"Undeclared element: '$n'."))
+            elements = DSLModel.createTypedByNameMap(declarations.toMap).withDefault(n => throw new ECAException(s"Undefined element: '$n'."))
         }
       }
     }
@@ -132,7 +134,7 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
           case "apply" =>
             checkRegistering()
             checkDuplicates(declarations, "constants", true)
-            constants = declarations.toMap.mapValues(ECAInteger(_)).withDefault(n => throw new ECAException(s"Undeclared constant: '$n'."))
+            constants = declarations.toMap.mapValues(ECAInteger(_)).withDefault(n => throw new ECAException(s"Undefined constant: '$n'."))
         }
       }
     }
@@ -254,7 +256,7 @@ object RadioTest extends App {
 
   val padding = transformers.map(_.length).max + 7
 
-  val message = (None +: transformers.map(Some(_))).zip(states).map {
+  val message = (None +: transformers.map(Some.apply)).zip(states).map {
     case (None   , (s, g)) =>                 Seq.fill(padding)(' ').mkString + s"[$s, $g]"
     case (Some(t), (s, g)) => s"==[$t]=>\n" + Seq.fill(padding)(' ').mkString + s"[$s, $g]"
   }.mkString("\n")
@@ -262,4 +264,3 @@ object RadioTest extends App {
   println(message)
 
 }
-
