@@ -8,4 +8,4 @@ scalaVersion := "2.10.3"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.2" % "test"
 
-scalacOptions ++= Seq("-language:implicitConversions", "-deprecation", "-unchecked", "-encoding", "UTF8")
+scalacOptions ++= Seq("-language:implicitConversions", "-language:dynamics", "-deprecation", "-unchecked", "-encoding", "UTF8")

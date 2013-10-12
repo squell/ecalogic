@@ -36,13 +36,19 @@ package nl.ru.cs.ecalogic.model
  * @author Marc Schoolderman
  * @author Jascha Neutelings
  */
-case class GlobalState(time: ECAValue = 0, energy: ECAValue = 0) {
+case class GlobalState(t: ECAValue, e: ECAValue) {
 
   def apply(dT: ECAValue = 0, dE: ECAValue = 0) = copy(time + dT, energy + dE)
 
-  def t = time
-  def e = energy
+  def time = t
+  def energy = e
 
   override def toString = s"(t = $t, e = $e)"
+
+}
+
+object GlobalState {
+
+  def initial = GlobalState(ECAValue.Zero, ECAValue.Zero)
 
 }

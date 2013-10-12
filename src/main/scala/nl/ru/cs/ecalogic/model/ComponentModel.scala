@@ -30,7 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.model
+package nl.ru.cs.ecalogic
+package model
 
 /*
 
@@ -60,22 +61,64 @@ package nl.ru.cs.ecalogic.model
  */
 trait ComponentModel {
 
-  type State <: ComponentState
+  protected type State <: ComponentState
+
+  trait ComponentState extends PartiallyOrdered[State] {
+
+    val elements: Map[String, TypedECAValue]
+
+    lazy val timestamps: Map[String, TypedECAValue] = elements.collect {
+      case (name, value: TypedECAValue) if value.typ == ECATimestamp => name -> value
+    }
+
+    lazy val integers: Map[String, TypedECAValue] = elements.collect {
+      case (name, value: TypedECAValue) if value.typ == ECAInteger => name -> value
+    }
+
+    def tryCompareTo[B >: State <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
+      case that: ComponentState =>
+        var sign = 0
+        for(key <- integers.keys) {
+          val cmp = integers(key) compare that.integers(key)
+          if(sign*cmp < 0) return None // note: a*b<0 iff a,b have different signs
+          else sign |= cmp
+        }
+        for(key <- timestamps.keys) {
+          val cmp = -(timestamps(key) compare that.timestamps(key))
+          if(sign*cmp < 0) return None
+          else sign |= cmp
+        }
+        Some(sign)
+      case _ => None
+    }
+
+    protected def update(newElements: Map[String, TypedECAValue]): State
+
+    private[ComponentModel] def _update(newElements: Map[String, TypedECAValue]) = update(newElements)
+
+    def typeOfElement(name: String) = elements(name).typ
+
+    override def equals(that: Any) = that match {
+      case that: ComponentState => tryCompareTo(that) == Some(0)
+      case _                    => false
+    }
+
+    override def hashCode = elements.hashCode
+
+    override def toString = elements.mkString("(", ", ", ")")
+
+  }
 
   val name: String
 
-  def newState: State = newState(Map.empty)
+  val initialState: State
 
-  protected def newState(elements: Map[String, TypedECAValue]): State
+  def lub(a: State, b: State): State =
+    initialState._update(
+      a.integers.  keys.map(key => key -> (a.integers  (key) max b.integers  (key))).toMap.mapValues(ECAInteger(_)) ++
+      a.timestamps.keys.map(key => key -> (a.timestamps(key) min b.timestamps(key))).toMap.mapValues(ECATimestamp(_)))
 
-  protected def newState(integers: Map[String, ECAValue], timestamps: Map[String, ECAValue]): State =
-    newState(integers.mapValues(ECAInteger(_)) ++ timestamps.mapValues(ECATimestamp(_)))
-
-  def lub(a: State, b: State) =
-    newState(a.integers.keys.map (key => key -> (a.integers (key) max b.integers (key))).toMap,
-             a.timestamps.keys.map(key => key -> (a.timestamps(key) min b.timestamps(key))).toMap)
-
-  def r(s: State, old: State) = newState(s.integers, old.timestamps)
+  def r(s: State, old: State): State = initialState._update(s.integers ++ old.timestamps)
 
   def td(s: State, t: ECAValue): ECAValue = ECAValue.Zero
 
@@ -92,58 +135,18 @@ JASCHA:
   // Might be sufficient?
 */
 
-  def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue]): (State, GlobalState) = (gamma, delta)
+  def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue] = Seq.empty): (State, GlobalState) = (gamma, delta)
 
 }
 
-trait ComponentState extends PartiallyOrdered[ComponentState] {
 
-  val elements: Map[String, TypedECAValue]
-
-  lazy val timestamps: Map[String, ECAValue] = elements.collect {
-    case (n, ECATimestamp(value)) => n -> value
-  }
-
-  lazy val integers: Map[String, ECAValue] = elements.collect {
-    case (n, ECAInteger(value)) => n -> value
-  }
-
-  def tryCompareTo[B >: ComponentState <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
-    case that: ComponentState =>
-      var sign = 0
-      for(key <- integers.keys) {
-        val cmp = integers(key) compare that.integers(key)
-        if(sign*cmp < 0) return None // note: a*b<0 iff a,b have different signs
-        else sign |= cmp
-      }
-      for(key <- timestamps.keys) {
-        val cmp = -(timestamps(key) compare that.timestamps(key))
-        if(sign*cmp < 0) return None
-        else sign |= cmp
-      }
-      Some(sign)
-    case _ => None
-  }
-
-  def typeOf(name: String) = elements(name).typ
-
-  override def equals(that: Any) = that match {
-    case that: ComponentState => tryCompareTo(that) == Some(0)
-    case _                    => false
-  }
-
-  override def hashCode = elements.hashCode
-
-  override def toString = s"[ integers: ${integers.mkString(", ")} | timestamps: ${timestamps.mkString(", ")}  ]"
-
-}
 
 
 
 abstract class LinearComponentModel(val name: String) extends ComponentModel {
 
   // Je geeft power niet door aan de onderliggende state?
-  case class State(content: Map[String, ECAValue], power: ECAValue = 0, tau: ECAValue = 0) extends ComponentState {
+  case class State(content: Map[String, ECAValue] = Map.empty, power: ECAValue = 0, tau: ECAValue = 0) extends ComponentState {
     val elements: Map[String, TypedECAValue] =
       content.mapValues(ECAInteger(_)) + ("power" -> ECAInteger(power)) + ("tau" -> ECATimestamp(tau))
 
@@ -151,6 +154,8 @@ abstract class LinearComponentModel(val name: String) extends ComponentModel {
       this(elements -- Seq("power", "tau"), elements.getOrElse("power", 0), elements.getOrElse("tau", 0))
 
     def update(level: ECAValue, delay: ECAValue) = new State(content, level, tau+delay)
+
+    protected def update(newElements: Map[String, TypedECAValue]): State = new State(elements ++ newElements)
 
   }
 
@@ -162,7 +167,7 @@ object DemoComponent extends LinearComponentModel("Demo") {
 
   // Deze functie maakt een nieuw state object gegeven de elementen; het is dus wel belangrijk dat je iets met deze
   // elementen doet, aangezien newState ook door lub en r wordt gebruikt om een nieuwe state te construeren.
-  protected def newState(elements: Map[String, TypedECAValue]) = new State(elements)
+  val initialState = new State
 
   override def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue]): (State, GlobalState) = {
     fun match {
