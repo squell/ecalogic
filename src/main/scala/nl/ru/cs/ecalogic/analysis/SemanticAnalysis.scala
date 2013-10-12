@@ -120,8 +120,9 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
 }
 
 object SemanticAnalysis {
+
   def main(args: Array[String]) {
-    val file = new File(args.headOption.getOrElse("zooi/test.eca"))
+    val file = new File(args.headOption.getOrElse(sys.error("Missing argument.")))
     val source = Source.fromFile(file).mkString
     val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
     val parser = new Parser(source, errorHandler)
@@ -131,4 +132,5 @@ object SemanticAnalysis {
     checker.uninitializedVars()
     println("Done")
   }
+
 }

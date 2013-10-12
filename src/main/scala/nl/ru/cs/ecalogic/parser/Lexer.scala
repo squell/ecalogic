@@ -189,7 +189,7 @@ object Lexer {
 
 
   def main(args: Array[String]) {
-    val file = new File(args.headOption.getOrElse("zooi/test.eca"))
+    val file = new File(args.headOption.getOrElse(sys.error("Missing argument.")))
     val source = Source.fromFile(file).mkString
     val lexer = new Lexer(source)
 
