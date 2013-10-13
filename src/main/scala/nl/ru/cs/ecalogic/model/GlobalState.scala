@@ -51,6 +51,6 @@ object GlobalState {
 
   def initial = GlobalState(ECAValue.Zero, ECAValue.Zero)
 
-  implicit def tupleToGlobalState(v: (ECAValue, ECAValue)):GlobalState = GlobalState(v._1, v._2)
+  implicit def tupleToGlobalState(v: (ECAValue, ECAValue)): GlobalState = GlobalState(v._1, v._2)
 
 }

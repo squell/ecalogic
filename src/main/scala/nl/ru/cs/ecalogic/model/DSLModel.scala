@@ -238,7 +238,7 @@ object Radio extends DSLModel("radio") {
   // NOTE: The implementation below does exactly the same as the default implementation.
   //define lub ((s1, s2) => s0(on = s1.on max s2.on, q = s1.q max s2.q, τ = s1.τ min s2.τ))
 
-  // Overrides the lub function.
+  // Overrides the r function.
   // NOTE: The implementation below does exactly the same as the default implementation.
   //define r ((s, sOld) => s(τ = sOld.τ))
 

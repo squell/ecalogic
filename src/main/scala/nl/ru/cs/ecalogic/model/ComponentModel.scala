@@ -145,7 +145,6 @@ JASCHA:
 
 abstract class LinearComponentModel(val name: String) extends ComponentModel {
 
-  // Je geeft power niet door aan de onderliggende state?
   case class State(content: Map[String, ECAValue] = Map.empty, power: ECAValue = 0, tau: ECAValue = 0) extends ComponentState {
     val elements: Map[String, TypedECAValue] =
       content.mapValues(ECAInteger(_)) + ("power" -> ECAInteger(power)) + ("tau" -> ECATimestamp(tau))
@@ -165,8 +164,6 @@ abstract class LinearComponentModel(val name: String) extends ComponentModel {
 
 object DemoComponent extends LinearComponentModel("Demo") {
 
-  // Deze functie maakt een nieuw state object gegeven de elementen; het is dus wel belangrijk dat je iets met deze
-  // elementen doet, aangezien newState ook door lub en r wordt gebruikt om een nieuwe state te construeren.
   val initialState = new State
 
   override def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue]): (State, GlobalState) = {
