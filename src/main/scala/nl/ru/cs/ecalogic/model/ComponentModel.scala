@@ -79,7 +79,11 @@ trait ComponentModel {
 
   }
 
-  case class EACState(state: CState, timestamp: ECAValue, energy: ECAValue)
+  case class EACState(state: CState, timestamp: ECAValue, energy: ECAValue) {
+    def s = state
+    def t = timestamp
+    def e = energy
+  }
 
   val name: String
 
@@ -100,7 +104,7 @@ trait ComponentModel {
     )
   }
 
-  def td(s: EACState, t: ECAValue): ECAValue = ECAValue.Zero
+  def td(g: EACState, t: ECAValue): ECAValue = if (t > g.t) (t - g.t) * phi(g.s) else ECAValue.Zero
 
   def delta(f: String)(s: CState) = s
 
