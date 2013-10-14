@@ -64,7 +64,7 @@ trait ComponentModel {
 
     protected def update(newElements: Map[String, ECAValue]): CState
 
-    private[ComponentModel] def _update(newElements: Map[String, ECAValue]) = update(newElements)
+    private[ComponentModel] def update(newElements: Iterable[(String, ECAValue)]): CState = update(newElements.toMap)
 
     override def equals(that: Any) = that match {
       case that: ComponentState => tryCompareTo(that) == Some(0)
@@ -98,7 +98,7 @@ trait ComponentModel {
     val EACState(sb, tb, eb) = b
 
     EACState(
-      sa._update(sa.elements.keys.map(key => key -> (sa.elements(key) max sb.elements(key))).toMap),
+      sa.update(sa.elements.keys.map(key => key -> (sa.elements(key) max sb.elements(key)))),
       ta min tb,
       ea max eb
     )
