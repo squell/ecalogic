@@ -54,12 +54,12 @@ trait ComponentModel {
         var sign = 0
         for (key <- integers.keys) {
           val cmp = integers(key) compare that.integers(key)
-          if (sign * cmp < 0) return None // note: a*b<0 iff a,b have different signs
+          if (sign* cmp < 0) return None // note: a*b<0 iff a,b have different signs
           else sign |= cmp
         }
         for (key <- timestamps.keys) {
           val cmp = -(timestamps(key) compare that.timestamps(key))
-          if (sign * cmp < 0) return None
+          if (sign *cmp < 0) return None
           else sign |= cmp
         }
         Some(sign)
