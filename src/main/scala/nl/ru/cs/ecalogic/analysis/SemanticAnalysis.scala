@@ -104,8 +104,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
       case Composition(stms)            => stms.foldLeft(live)(varFlow)
       case Assignment(ident, expr)      => varFlow(live, expr)
                                            live + ident
-      case FunCall(fun, args)
-        if !fun.isPrefixed              => args.foreach(varFlow(live,_)); live // TODO: Waarom alleen niet prefixed?
+      case FunCall(fun, args)           => args.foreach(varFlow(live,_)); live
       case VarRef(ident)                => if(!live(ident))
                                              eh.warning(new ECAException(s"Variable '$ident' may be used uninitialized.", node.position))
                                            live
