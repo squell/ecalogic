@@ -94,26 +94,55 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
     detectCycle(Set.empty, calls.keys.toSet)
   }
 
-  /** Checks whether variables could be used uninitialized. */
-  def uninitializedVars() {
+  /** Checks whether all variable references are proper;
+      In particular, disallow programs for which it cannot be determined (statically) if references to it
+      are preceeded by assignments. Also disallow values constructed at run-time from being used inside
+      ranking funcions. 
+    */
+  def variableReferenceHygiene() {
 
-    def varFlow(live: Set[String], node: ASTNode): Set[String] = node match {
-      case If(pred, thenPart, elsePart) => varFlow(live, pred)
-                                           varFlow(live, thenPart) & varFlow(live, elsePart)
-      case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, rf); varFlow(live, consq); live
-      case Composition(stms)            => stms.foldLeft(live)(varFlow)
-      case Assignment(ident, expr)      => varFlow(live, expr)
-                                           live + ident
-      case FunCall(fun, args)           => args.foreach(varFlow(live,_)); live
-      case VarRef(ident)                => if(!live(ident))
-                                             eh.warning(new ECAException(s"Variable '$ident' may be used uninitialized.", node.position))
-                                           live
-      case e: Expression                => e.operands.foreach(varFlow(live, _)); live
-      case _                            => live
+    for(fundef <- program.definitions) {
+
+      /** Determine if all variable references are potentially used uninitialized.
+       *
+       * @param live Set of variable names that have been assigned
+       * @param node AST node under consideration
+       * @return updated set of live variables
+       *
+      */
+      val params = fundef.parameters.map(_.name).toSet
+
+      def varFlow(live: Set[String], node: ASTNode): Set[String] = node match {
+	case If(pred, thenPart, elsePart) => varFlow(live, pred)
+					     varFlow(live, thenPart) & varFlow(live, elsePart)
+	case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, consq)
+	                                     // is there a nice 'map' methode to do this using a lambda?
+					     rf.foreach {
+					       case _: ArithmeticExpression =>
+					       case Literal(_) =>
+					       case v@VarRef(ident) => 
+					         if(!params(ident))
+						   eh.warning(new ECAException(s"Non-parameter '$ident' not allowed in a bound expression.", v.position))
+						 if(live(ident)) 
+						   eh.warning(new ECAException(s"Variable '$ident' written to before this reference.", v.position))
+					       case e: Expression =>
+						   eh.warning(new ECAException(s"Expression '$e' not suitable for use in a ranking function.", e.position))
+					     }
+                                             live
+	case Composition(stms)            => stms.foldLeft(live)(varFlow)
+	case Assignment(ident, expr)      => varFlow(live, expr)
+					     live + ident
+	case FunCall(fun, args)           => args.foreach(varFlow(live,_)); live
+	case VarRef(ident)                => if(!live(ident))
+					       eh.warning(new ECAException(s"Variable '$ident' may be used uninitialized.", node.position))
+					     live
+	case e: Expression                => e.operands.foreach(varFlow(live, _)); live
+	case _                            => live
+      }
+
+      varFlow(params, fundef.body)
     }
 
-    for(fundef <- program.definitions)
-      varFlow(fundef.parameters.map(_.name).toSet, fundef.body)
   }
 }
 
@@ -129,7 +158,7 @@ object SemanticAnalysis {
     val program = catching(classOf[ECAException]).opt(parser.program()).filterNot(_ => errorHandler.errorOccurred)
     val checker = new SemanticAnalysis(program.getOrElse(sys.exit(1)), errorHandler)
     checker.functionCallHygiene()
-    checker.uninitializedVars()
+    checker.variableReferenceHygiene()
     println("Done")
   }
 
