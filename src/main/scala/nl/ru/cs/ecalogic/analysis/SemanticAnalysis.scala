@@ -30,18 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.analysis
+package nl.ru.cs.ecalogic
+package analysis
 
-import nl.ru.cs.ecalogic.util.{ErrorHandler, DefaultErrorHandler}
-import nl.ru.cs.ecalogic.ast._
+import ast._
+import parser.Parser
+import util.{ErrorHandler, DefaultErrorHandler}
 
-import nl.ru.cs.ecalogic.parser.Parser
-import nl.ru.cs.ecalogic.ECAException
-import scala.util.control.Exception._
-import scala.io.Source
-import java.io.File
 import scala.collection.mutable
+import scala.io.Source
 
+import java.io.File
 
 /**
  * @author Marc Schoolderman
@@ -54,7 +53,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
   def functionCallHygiene() {
     val defs = program.definitions
 
-    val funNames = mutable.Set[String]()
+    val funNames = mutable.Set.empty[String]
     defs.foreach { f =>
       if (funNames(f.name))
         eh.error(new ECAException(s"Redefinition of function '${f.name}'.", f.position))
@@ -122,6 +121,8 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
 object SemanticAnalysis {
 
   def main(args: Array[String]) {
+    import scala.util.control.Exception._
+
     val file = new File(args.headOption.getOrElse(sys.error("Missing argument.")))
     val source = Source.fromFile(file).mkString
     val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))

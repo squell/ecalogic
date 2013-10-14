@@ -30,17 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.parser
+package nl.ru.cs.ecalogic
+package parser
+
+import ast._
+import util.{Position, DefaultErrorHandler, ErrorHandler}
+import Lexer.Tokens
 
 import scala.annotation.tailrec
-import scala.util.control.Exception._
-
-import nl.ru.cs.ecalogic.util.{Position, DefaultErrorHandler, ErrorHandler}
-import nl.ru.cs.ecalogic.ast._
-import nl.ru.cs.ecalogic.ECAException
 import scala.io.Source
+
 import java.io.File
-import nl.ru.cs.ecalogic.parser.Lexer.Tokens
 
 /** Parser for ECA programs.
   *
@@ -347,6 +347,8 @@ final class Parser(input: String, protected val errorHandler: ErrorHandler = new
 object Parser {
 
   def main(args: Array[String]) {
+    import scala.util.control.Exception._
+
     val file = new File(args.headOption.getOrElse(sys.error("Missing argument.")))
     val source = Source.fromFile(file).mkString
     val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))

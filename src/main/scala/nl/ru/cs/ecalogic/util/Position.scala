@@ -30,7 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.util
+package nl.ru.cs.ecalogic
+package util
 
 /**
  * Class representing a position in a source file.
@@ -53,7 +54,7 @@ case class Position(line: Int, column: Int) extends Ordered[Position] {
 }
 
 /**
- * Trait for classes that have a [[Position]].
+ * Trait for classes that have a [[nl.ru.cs.ecalogic.util.Position]].
  *
  * @author Jascha Neutelings
  */

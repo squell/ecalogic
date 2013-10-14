@@ -30,7 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.model
+package nl.ru.cs.ecalogic
+package model
 
 /**
  * @author Marc Schoolderman
@@ -48,6 +49,7 @@ case class GlobalState(t: ECAValue, e: ECAValue) {
 }
 
 object GlobalState {
+  import scala.language.implicitConversions
 
   def initial = GlobalState(ECAValue.Zero, ECAValue.Zero)
 

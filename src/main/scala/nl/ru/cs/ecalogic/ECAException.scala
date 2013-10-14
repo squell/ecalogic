@@ -32,7 +32,7 @@
 
 package nl.ru.cs.ecalogic
 
-import nl.ru.cs.ecalogic.util.{Positional, Position}
+import util.{Positional, Position}
 
 /** Base class for ecalogic exceptions.
   *

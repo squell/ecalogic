@@ -30,12 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.parser
+package nl.ru.cs.ecalogic
+package parser
 
-import nl.ru.cs.ecalogic.util.{Positional, Position, ErrorHandler}
+import util.{Positional, Position, ErrorHandler}
+import BaseLexer.Tokens
+
 import scala.collection.mutable
-import nl.ru.cs.ecalogic.parser.BaseLexer.Tokens
-import nl.ru.cs.ecalogic.ECAException
 
 /** Base trait for recursive descent parsers.
   *
@@ -45,7 +46,7 @@ trait BaseParser extends Positional {
   private var recovering = false
 
   private lazy val buffer = {
-    val buf = mutable.Queue[(Token, Position)]()
+    val buf = mutable.Queue.empty[(Token, Position)]
     fill(buf)
     buf
   }

@@ -30,16 +30,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.parser
+package nl.ru.cs.ecalogic
+package parser
 
-import BaseLexer.Tokens._
-import nl.ru.cs.ecalogic.util.{Positional, Position}
+import util.{Positional, Position}
 
 /** Base trait for lexers.
   *
   * @author Jascha Neutelings
   */
 trait BaseLexer extends Positional {
+  import BaseLexer.Tokens._
+
   private var line = 1
   private var column = 1
 

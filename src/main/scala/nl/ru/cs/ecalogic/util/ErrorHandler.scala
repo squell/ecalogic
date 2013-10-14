@@ -30,11 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.util
+package nl.ru.cs.ecalogic
+package util
 
-import nl.ru.cs.ecalogic.ECAException
-import java.io.{File, PrintWriter}
 import scala.collection.mutable
+
+import java.io.{File, PrintWriter}
 
 /** Base trait for error handlers.
   *
@@ -152,7 +153,7 @@ class DefaultErrorHandler(maxErrorCount: Int = 10,
   * @author Jascha Neutelings
   */
 class CachingErrorHandler(val output: ErrorHandler = new DefaultErrorHandler) extends ErrorHandler {
-  private val errors = mutable.PriorityQueue[(ECAException, Boolean)]()
+  private val errors = mutable.PriorityQueue.empty[(ECAException, Boolean)]
 
   def reset() {
     errors.clear()

@@ -43,6 +43,7 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
   type RFunction   = (State, State) => State
 
   class State private[DSLModel](val elements: Map[String, ECAValue]) extends ComponentState with Dynamic {
+    import scala.language.dynamics
 
     def selectDynamic(name: String) = elements(name)
 
@@ -60,9 +61,9 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
   }
 
-  private val elements                 = mutable.Map[String, ECAValue]().withDefault(n => throw new ECAException(s"Undefined element: '$n'."))
-  private val constants                = mutable.Map[String, ECAValue]().withDefault(n => throw new ECAException(s"Undefined constant: '$n'."))
-  private val rcFunctions              = mutable.Map[String, RCFunction]().withDefault(DSLModel.super.rc)
+  private val elements                 = mutable.Map.empty[String, ECAValue].withDefault(n => throw new ECAException(s"Undefined element: '$n'."))
+  private val constants                = mutable.Map.empty[String, ECAValue].withDefault(n => throw new ECAException(s"Undefined constant: '$n'."))
+  private val rcFunctions              = mutable.Map.empty[String, RCFunction].withDefault(DSLModel.super.rc)
   private var tdFunction: TDFunction   = super.td
   private var lubFunction: LUBFunction = super.lub
   private var rFunction: RFunction     = super.r
@@ -120,6 +121,7 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
   protected object define {
 
     private[define] abstract class Declaration[T] extends Dynamic {
+      import scala.language.dynamics
 
       def applyDynamicNamed(name: String)(declarations: (String, T)*) {
         name match {
@@ -184,6 +186,7 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
   }
 
   object c extends Dynamic {
+    import scala.language.dynamics
 
     def selectDynamic(name: String) = {
       checkRegistrationClosed()
@@ -196,90 +199,13 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
     private val timestampPattern = """[\p{InGreek}$]""".r
 
-    private val cache = new mutable.HashSet[String] with mutable.SynchronizedSet[String]
+    private val cache = mutable.Map.empty[String, Boolean]
 
-    def isTimestamp(name: String) =
-      if (cache(name)) true
-      else if (timestampPattern.findPrefixOf(name).isDefined) {
-        cache += name
-        true
-      } else false
+    def isTimestamp(name: String) = cache.getOrElseUpdate(name, timestampPattern.findPrefixOf(name).isDefined)
 
   }
 
-
 }
 
 
-// Example DSL-based model of a radio.
-// NOTE: Uses Unicode characters!
-object Radio extends DSLModel("radio") {
 
-  // Defines the initial state.
-  // Variables starting with a Greek letter or a dollar sign ($) are considered timestamps.
-  // NOTE: DSL limitation requires specifying an initial value.
-  define s0 (
-    on = 0,
-    q  = 0,
-    τ  = 0
-  )
-
-  // Defines the constants.
-  // The values are always of type integer.
-  // NOTE: You can also use Scala-style constants (val), but this structure was added for consistency.
-  define c (
-    ton        = 40,
-    toff       = 20,
-    tq         = 3 ,
-    tsendconst = 10,
-    tsendq     = 1 ,
-    eon        = 40,
-    eoff       = 20,
-    _eq        = 3 ,
-    esendconst = 10,
-    esendq     = 3 ,
-    εon        = 30,
-    εoff       = 2
-  )
-
-  // Defines the resource consumption functions.
-  define rc (
-    on    = (s, Δ, _) => (s(τ = Δ.t, on = true)  , (Δ.t + c.ton       , Δ.e + c.eon        + td(s, Δ.t))),
-    off   = (s, Δ, _) => (s(τ = Δ.t, on = 0)     , (Δ.t + c.toff      , Δ.e + c.eoff       + td(s, Δ.t))),
-    queue = (s, Δ, _) => (s(τ = Δ.t, q = s.q + 1), (Δ.t + c.tq        , Δ.e + c._eq        + td(s, Δ.t))),
-    send  = (s, Δ, _) => (s(τ = Δ.t, q = 0)      , (Δ.t + c.tsendconst, Δ.e + c.esendconst + td(s, Δ.t)))
-  )
-
-  // Overrides the td function.
-  define td ((s, t) => if (t > s.τ) (t - s.τ) * (if (s.on) c.εon else c.εoff) else 0)
-
-  // Overrides the lub function.
-  // NOTE: The implementation below does exactly the same as the default implementation.
-  //define lub ((s1, s2) => s0(on = s1.on max s2.on, q = s1.q max s2.q, τ = s1.τ min s2.τ))
-
-  // Overrides the r function.
-  // NOTE: The implementation below does exactly the same as the default implementation.
-  //define r ((s, sOld) => s(τ = sOld.τ))
-
-}
-
-object RadioTest extends App {
-
-  val s0 = Radio.initialState
-  val g0 = GlobalState.initial
-  val transformers = Seq("on", "queue", "queue", "send", "off")
-
-  val states = transformers.foldLeft(Seq((s0, g0))) {
-    case (xs @ :+(_, (s, g)), t) => xs :+ Radio.rc(t)(s, g, Seq.empty)
-  }
-
-  val padding = transformers.map(_.length).max + 7
-
-  val message = (None +: transformers.map(Some.apply)).zip(states).map {
-    case (None   , (s, g)) =>                 Seq.fill(padding)(' ').mkString + s"[$s, $g]"
-    case (Some(t), (s, g)) => s"==[$t]=>\n" + Seq.fill(padding)(' ').mkString + s"[$s, $g]"
-  }.mkString("\n")
-
-  println(message)
-
-}

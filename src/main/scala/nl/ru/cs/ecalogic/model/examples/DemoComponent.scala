@@ -31,36 +31,40 @@
  */
 
 package nl.ru.cs.ecalogic
-package parser
+package model
+package examples
 
-/** Trait representing a token.
-  *
-  * @author Jascha Neutelings
-  */
-trait Token extends Pattern {
-  def matches(token: Token) = this == token
+abstract class LinearComponentModel(val name: String) extends ComponentModel {
+
+  case class State(content: Map[String, ECAValue] = Map.empty, power: ECAValue = 0, tau: ECAValue = 0) extends ComponentState {
+    val elements: Map[String, ECAValue] = content + ("power" -> power) + ("tau" -> tau)
+
+    def this(elements: Map[String, ECAValue]) =
+      this(elements -- Seq("power", "tau"), elements("power"), elements("tau"))
+
+    protected def update(newElements: Map[String, ECAValue]): State = State(elements ++ newElements)
+
+    def update(level: ECAValue, delay: ECAValue) = State(content, level, tau+delay)
+
+  }
+
+  protected def isTimestamp(name: String) = name == "tau"
+
+  override def td(s: State, t: ECAValue) = s.power * ((t - s.tau) max 0)
+
 }
 
-/** Abstract class representing a token with a fixed value and length.
-  *
-  * @author Jascha Neutelings
-  */
-abstract class FixedToken(fixedValue: String) extends Token {
-  override def toString = s"'$fixedValue'"
-}
+object DemoComponent extends LinearComponentModel("Demo") {
 
-/** Abstract class representing a keyword token.
-  *
-  * @author Jascha Neutelings
-  */
-abstract class Keyword(val keyword: String) extends FixedToken(keyword)
+  val initialState = State()
 
-/** Abstract class representing a token with a variable value and length.
-  *
-  * @author Jascha Neutelings
-  */
-abstract class VariableToken[T](name: String) extends Token {
-  def value: T
+  override def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue]): (State, GlobalState) = {
+    fun match {
+      case "on"  => (gamma.update(1, 0), delta)
+      case "off" => (gamma.update(0, 0), delta)
+      case "idle"=> (gamma.update(gamma.power, 1), delta)
+      case _     => (gamma, delta)
+    }
+  }
 
-  override def toString = s"'$value' ($name)"
 }

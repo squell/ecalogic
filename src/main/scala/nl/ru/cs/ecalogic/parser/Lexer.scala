@@ -30,11 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.parser
+package nl.ru.cs.ecalogic
+package parser
 
 import scala.io.Source
+
 import java.io.File
-import Lexer.Tokens._
 
 /** Lexer for ECA programs.
  *
@@ -44,6 +45,7 @@ import Lexer.Tokens._
  */
 class Lexer(protected var input: String) extends BaseLexer {
   import Lexer._
+  import Tokens._
 
   protected val parseToken: PartialFunction[Char, (Token, Int)] = {
     case '+'                   => (Plus, 1)
@@ -194,14 +196,13 @@ object Lexer {
     val lexer = new Lexer(source)
 
     var (token, _) = lexer.next()
-    while (token != EndOfFile) {
+    while (token != Tokens.EndOfFile) {
       token match {
-        case Whitespace(_) | Comment(_) =>
-        case t                          => println(t)
+        case Tokens.Whitespace(_) | Tokens.Comment(_) =>
+        case t                                        => println(t)
       }
       token = lexer.next()._1
     }
-
   }
 
 }

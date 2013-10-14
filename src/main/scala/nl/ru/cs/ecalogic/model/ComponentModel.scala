@@ -33,28 +33,6 @@
 package nl.ru.cs.ecalogic
 package model
 
-/*
-
-  COMMENT/IDEA:
-
-     we could use reflection to implement ComponentStates, e.g.:
-     trait ComponentState
-     class MyComponentState extends ComponentState {
-       var x: IntType
-       var t: TimeStamp
-     }
-
-     howwwwwwwwever. it seems to be a recent addition to the language, so perhaps
-     it is risky to use this 'in production'?
-
- */
-
-// isn't it useful to keep as a base class in a place we can access it?
-
-// use ComponentModel#ComponentState for a path independent reference
-// or c.ComponentState where c is an instance of a ComponentModel for a path dependent reference
-// I don't see the problem of using an inner class
-
 /**
  * @author Marc Schoolderman
  * @author Jascha Neutelings
@@ -76,12 +54,12 @@ trait ComponentModel {
         var sign = 0
         for (key <- integers.keys) {
           val cmp = integers(key) compare that.integers(key)
-          if (sign*cmp < 0) return None // note: a*b<0 iff a,b have different signs
+          if (sign * cmp < 0) return None // note: a*b<0 iff a,b have different signs
           else sign |= cmp
         }
         for (key <- timestamps.keys) {
           val cmp = -(timestamps(key) compare that.timestamps(key))
-          if (sign*cmp < 0) return None
+          if (sign * cmp < 0) return None
           else sign |= cmp
         }
         Some(sign)
@@ -120,59 +98,6 @@ trait ComponentModel {
 
   def td(s: State, t: ECAValue): ECAValue = ECAValue.Zero
 
-// humorous: convergent evolution in program design:
-
-/*
-MARC:
-  //according to the paper, this should be the signature:
-  //def rc(fun: String, gamma: Set[ComponentState], delta: GlobalState) =
-
-  //however, i currently fail to see why this is necessary
-JASCHA:
-  // Does not actually operate on the set of component states, but only the component state that belongs to this model.
-  // Might be sufficient?
-*/
-
   def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue] = Seq.empty): (State, GlobalState) = (gamma, delta)
-
-}
-
-
-
-
-
-abstract class LinearComponentModel(val name: String) extends ComponentModel {
-
-  case class State(content: Map[String, ECAValue] = Map.empty, power: ECAValue = 0, tau: ECAValue = 0) extends ComponentState {
-    val elements: Map[String, ECAValue] =
-      content + ("power" -> power) + ("tau" -> tau)
-
-    def this(elements: Map[String, ECAValue]) =
-      this(elements -- Seq("power", "tau"), elements.getOrElse("power", 0), elements.getOrElse("tau", 0))
-
-    protected def update(newElements: Map[String, ECAValue]): State = State(elements ++ newElements)
-
-    def update(level: ECAValue, delay: ECAValue) = State(content, level, tau+delay)
-
-  }
-
-  protected def isTimestamp(name: String) = name == "tau"
-
-  override def td(s: State, t: ECAValue) = s.power * ((t - s.tau) max 0)
-
-}
-
-object DemoComponent extends LinearComponentModel("Demo") {
-
-  val initialState = State()
-
-  override def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue]): (State, GlobalState) = {
-    fun match {
-      case "on"  => (gamma.update(1, 0), delta)
-      case "off" => (gamma.update(0, 0), delta)
-      case "idle"=> (gamma.update(gamma.power, 1), delta)
-      case _     => (gamma, delta)
-    }
-  }
 
 }

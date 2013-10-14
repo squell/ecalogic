@@ -30,10 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.model
+package nl.ru.cs.ecalogic
+package model
 
 import scala.math.{ScalaNumericConversions, ScalaNumber}
-import scala.language.implicitConversions
 
 class ECAValue(private val value: BigInt) extends ScalaNumber with ScalaNumericConversions with Ordered[ECAValue] {
 
@@ -78,6 +78,7 @@ class ECAValue(private val value: BigInt) extends ScalaNumber with ScalaNumericC
 }
 
 object ECAValue {
+  import scala.language.implicitConversions
 
   val Zero = new ECAValue(0)
   val One  = new ECAValue(1)

@@ -30,9 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.ast
+package nl.ru.cs.ecalogic
+package ast
 
-import nl.ru.cs.ecalogic.util.{Positional, Position}
+import util.{Positional, Position}
 
 /** Base trait for all AST nodes.
   *
