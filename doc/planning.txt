@@ -6,9 +6,9 @@ week                  SDR-activiteit
 2013-W38 (16-20 Sep): 
 2013-W39 (23-27 Sep):
 --------------------------> Milestone #1: bruikbare AST maken uit een .eca
-2013-W40 (30- 4 Oct): Presentaties voorbereiden              <-@ THIS IS NOW.
+2013-W40 (30- 4 Oct): Presentaties voorbereiden
 2013-W41 ( 7-11 Oct): Presentaties "new project requirements"
-2013-W42 (14-18 Oct): presentaties "new project requirements"
+2013-W42 (14-18 Oct): presentaties "new project requirements"<-@ THIS IS NOW
 2013-W43 (21-25 Oct):
 --------------------------> Milestone #2: analyse met een hardcoded model
 2013-W44 (28- 1 Nov): *Kwartaalbreak/tentamenperiode?
