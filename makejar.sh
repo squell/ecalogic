@@ -13,7 +13,7 @@ scalac `find -name "*.scala"`
 wait
 
 pushd /tmp >/dev/null
-jar xf "`which scala | grep -o '/tmp/[^\/]*/'`lib"/scala-library.jar
+jar xf `which scala | grep -o '/.*scala[^\/]*/bin'`/../lib/scala-library.jar
 popd >/dev/null
-jar cef "$main" ecalogic.jar nl -C /tmp scala
+jar cef "$main" ../../../ecalogic.jar nl -C /tmp scala
 rm -rf /tmp/scala
