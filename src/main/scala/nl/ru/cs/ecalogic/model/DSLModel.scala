@@ -33,6 +33,8 @@
 package nl.ru.cs.ecalogic
 package model
 
+import scala.collection.mutable
+
 abstract class DSLModel(val name: String) extends ComponentModel with DelayedInit {
 
   type RCFunction  = (State, GlobalState, Seq[ECAValue]) => (State, GlobalState)
@@ -40,15 +42,13 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
   type LUBFunction = (State, State) => State
   type RFunction   = (State, State) => State
 
-  class State private[DSLModel](val elements: Map[String, TypedECAValue]) extends ComponentState with Dynamic {
+  class State private[DSLModel](val elements: Map[String, ECAValue]) extends ComponentState with Dynamic {
 
     def selectDynamic(name: String) = elements(name)
 
     def applyDynamicNamed(name: String)(args: (String, ECAValue)*): State = name match {
       case "apply" =>
-        val newElements = args.map {
-          case (name, value) => name -> typeOfElement(name)(value)
-        }.toMap
+        val newElements = args.toMap
         val undefined = newElements.keySet &~ elements.keySet
         if (!undefined.isEmpty) {
           throw new ECAException(s"State transformer contains undefined elements: ${undefined.mkString(", ")}.")
@@ -56,13 +56,13 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
         new State(elements ++ newElements)
     }
 
-    protected def update(newElements: Map[String, TypedECAValue]) = new State(elements ++ newElements)
+    protected def update(newElements: Map[String, ECAValue]) = new State(elements ++ newElements)
 
   }
 
-  private var elements                 = Map[String, TypedECAValue]()
-  private var constants                = Map[String, TypedECAValue]()
-  private var rcFunctions              = Map[String, RCFunction]()
+  private val elements                 = mutable.Map[String, ECAValue]().withDefault(n => throw new ECAException(s"Undefined element: '$n'."))
+  private val constants                = mutable.Map[String, ECAValue]().withDefault(n => throw new ECAException(s"Undefined constant: '$n'."))
+  private val rcFunctions              = mutable.Map[String, RCFunction]().withDefault(DSLModel.super.rc)
   private var tdFunction: TDFunction   = super.td
   private var lubFunction: LUBFunction = super.lub
   private var rFunction: RFunction     = super.r
@@ -100,12 +100,14 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
     registering = false
   }
 
-  protected def s0 = initialState
+  def s0 = initialState
 
   lazy val initialState = {
     checkRegistrationClosed()
-    new State(elements)
+    new State(elements.toMap)
   }
+
+  protected def isTimestamp(name: String) = TimestampCache.isTimestamp(name)
 
   override def rc(fun: String)(s: State, d: GlobalState, a: Seq[ECAValue]) = rcFunctions(fun)(s, d, a)
 
@@ -117,37 +119,51 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
   protected object define {
 
-    object s0 extends Dynamic {
-      def applyDynamicNamed(name: String)(declarations: (String, ECAValue)*) {
+    private[define] abstract class Declaration[T] extends Dynamic {
+
+      def applyDynamicNamed(name: String)(declarations: (String, T)*) {
         name match {
           case "apply" =>
             checkRegistering()
-            checkDuplicates(declarations, "variables", true)
-            elements = DSLModel.createTypedByNameMap(declarations.toMap).withDefault(n => throw new ECAException(s"Undefined element: '$n'."))
+            apply(declarations)
+          case name =>
+            throw new RuntimeException(s"Undeclared method: $name.")
         }
       }
+
+      def applyDynamic(name: String)() {
+        applyDynamicNamed(name)()
+      }
+
+      protected def apply(declarations: Seq[(String, T)])
+
     }
 
-    object c extends Dynamic {
-      def applyDynamicNamed(name: String)(declarations: (String, ECAValue)*) {
-        name match {
-          case "apply" =>
-            checkRegistering()
-            checkDuplicates(declarations, "constants", true)
-            constants = declarations.toMap.mapValues(ECAInteger(_)).withDefault(n => throw new ECAException(s"Undefined constant: '$n'."))
-        }
+    object s0 extends Declaration[ECAValue] {
+
+      protected def apply(declarations: Seq[(String, ECAValue)]) {
+        checkDuplicates(declarations, "variables", true)
+        elements ++= declarations.toMap
       }
+
     }
 
-    object rc extends Dynamic {
-      def applyDynamicNamed(name: String)(declarations: (String, RCFunction)*) {
-        name match {
-          case "apply" =>
-            checkRegistering()
-            checkDuplicates(declarations, "resource consumption functions", false)
-            rcFunctions = declarations.toMap.withDefault(DSLModel.super.rc)
-        }
+    object c extends Declaration[ECAValue] {
+
+      protected def apply(declarations: Seq[(String, ECAValue)]) {
+        checkDuplicates(declarations, "constants", true)
+        constants ++= declarations.toMap
       }
+
+    }
+
+    object rc extends Declaration[RCFunction] {
+
+      protected def apply(declarations: Seq[(String, RCFunction)]) {
+        checkDuplicates(declarations, "resource consumption functions", false)
+        rcFunctions ++= declarations.toMap
+      }
+
     }
 
     def td(f: TDFunction) = {
@@ -167,29 +183,32 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
   }
 
-  protected object c extends Dynamic {
+  object c extends Dynamic {
+
     def selectDynamic(name: String) = {
       checkRegistrationClosed()
       constants(name)
     }
+
   }
 
-}
+  private object TimestampCache {
 
-object DSLModel {
+    private val timestampPattern = """[\p{InGreek}$]""".r
 
-  private def determineTypeByName(name: String) =
-    """[\p{InGreek}$]""".r.findPrefixOf(name) match {
-      case Some(_) => ECATimestamp
-      case _       => ECAInteger
-    }
+    private val cache = new mutable.HashSet[String] with mutable.SynchronizedSet[String]
 
-  private def createTypedByNameMap(m: Map[String, ECAValue]) = m.map {
-    case (name, value) => name -> determineTypeByName(name)(value)
+    def isTimestamp(name: String) =
+      if (cache(name)) true
+      else if (timestampPattern.findPrefixOf(name).isDefined) {
+        cache += name
+        true
+      } else false
+
   }
 
-}
 
+}
 
 
 // Example DSL-based model of a radio.
@@ -198,7 +217,7 @@ object Radio extends DSLModel("radio") {
 
   // Defines the initial state.
   // Variables starting with a Greek letter or a dollar sign ($) are considered timestamps.
-  // NOTE: DSL limitation requires you to specify an initial value.
+  // NOTE: DSL limitation requires specifying an initial value.
   define s0 (
     on = 0,
     q  = 0,

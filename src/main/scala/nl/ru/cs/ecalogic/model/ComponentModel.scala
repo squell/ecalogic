@@ -65,38 +65,32 @@ trait ComponentModel {
 
   trait ComponentState extends PartiallyOrdered[State] {
 
-    val elements: Map[String, TypedECAValue]
+    val elements: Map[String, ECAValue]
 
-    lazy val timestamps: Map[String, TypedECAValue] = elements.collect {
-      case (name, value: TypedECAValue) if value.typ == ECATimestamp => name -> value
-    }
-
-    lazy val integers: Map[String, TypedECAValue] = elements.collect {
-      case (name, value: TypedECAValue) if value.typ == ECAInteger => name -> value
+    lazy val (timestamps, integers) = elements.partition {
+      case (name, _) => isTimestamp(name)
     }
 
     def tryCompareTo[B >: State <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
       case that: ComponentState =>
         var sign = 0
-        for(key <- integers.keys) {
+        for (key <- integers.keys) {
           val cmp = integers(key) compare that.integers(key)
-          if(sign*cmp < 0) return None // note: a*b<0 iff a,b have different signs
+          if (sign*cmp < 0) return None // note: a*b<0 iff a,b have different signs
           else sign |= cmp
         }
-        for(key <- timestamps.keys) {
+        for (key <- timestamps.keys) {
           val cmp = -(timestamps(key) compare that.timestamps(key))
-          if(sign*cmp < 0) return None
+          if (sign*cmp < 0) return None
           else sign |= cmp
         }
         Some(sign)
       case _ => None
     }
 
-    protected def update(newElements: Map[String, TypedECAValue]): State
+    protected def update(newElements: Map[String, ECAValue]): State
 
-    private[ComponentModel] def _update(newElements: Map[String, TypedECAValue]) = update(newElements)
-
-    def typeOfElement(name: String) = elements(name).typ
+    private[ComponentModel] def _update(newElements: Map[String, ECAValue]) = update(newElements)
 
     override def equals(that: Any) = that match {
       case that: ComponentState => tryCompareTo(that) == Some(0)
@@ -105,7 +99,9 @@ trait ComponentModel {
 
     override def hashCode = elements.hashCode
 
-    override def toString = elements.mkString("(", ", ", ")")
+    override def toString = elements.map {
+      case (name, value) => s"$name = $value"
+    }.mkString("(", ", ", ")")
 
   }
 
@@ -113,10 +109,12 @@ trait ComponentModel {
 
   val initialState: State
 
+  protected def isTimestamp(name: String): Boolean
+
   def lub(a: State, b: State): State =
     initialState._update(
-      a.integers.  keys.map(key => key -> (a.integers  (key) max b.integers  (key))).toMap.mapValues(ECAInteger(_)) ++
-      a.timestamps.keys.map(key => key -> (a.timestamps(key) min b.timestamps(key))).toMap.mapValues(ECATimestamp(_)))
+      a.integers.  keys.map(key => key -> (a.integers  (key) max b.integers  (key))).toMap ++
+      a.timestamps.keys.map(key => key -> (a.timestamps(key) min b.timestamps(key))).toMap)
 
   def r(s: State, old: State): State = initialState._update(s.integers ++ old.timestamps)
 
@@ -146,17 +144,19 @@ JASCHA:
 abstract class LinearComponentModel(val name: String) extends ComponentModel {
 
   case class State(content: Map[String, ECAValue] = Map.empty, power: ECAValue = 0, tau: ECAValue = 0) extends ComponentState {
-    val elements: Map[String, TypedECAValue] =
-      content.mapValues(ECAInteger(_)) + ("power" -> ECAInteger(power)) + ("tau" -> ECATimestamp(tau))
+    val elements: Map[String, ECAValue] =
+      content + ("power" -> power) + ("tau" -> tau)
 
-    def this(elements: Map[String, TypedECAValue]) =
+    def this(elements: Map[String, ECAValue]) =
       this(elements -- Seq("power", "tau"), elements.getOrElse("power", 0), elements.getOrElse("tau", 0))
 
-    def update(level: ECAValue, delay: ECAValue) = new State(content, level, tau+delay)
+    protected def update(newElements: Map[String, ECAValue]): State = State(elements ++ newElements)
 
-    protected def update(newElements: Map[String, TypedECAValue]): State = new State(elements ++ newElements)
+    def update(level: ECAValue, delay: ECAValue) = State(content, level, tau+delay)
 
   }
+
+  protected def isTimestamp(name: String) = name == "tau"
 
   override def td(s: State, t: ECAValue) = s.power * ((t - s.tau) max 0)
 
@@ -164,7 +164,7 @@ abstract class LinearComponentModel(val name: String) extends ComponentModel {
 
 object DemoComponent extends LinearComponentModel("Demo") {
 
-  val initialState = new State
+  val initialState = State()
 
   override def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue]): (State, GlobalState) = {
     fun match {

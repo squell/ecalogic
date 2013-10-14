@@ -94,13 +94,3 @@ object ECAValue {
   implicit def booleanToValue(v: Boolean): ECAValue = if (v) True else False
 
 }
-
-class TypedECAValue(value: BigInt, val typ: ECAType) extends ECAValue(value)
-
-sealed trait ECAType {
-  def apply(value: ECAValue) = new TypedECAValue(value.toBigInt, this)
-  def unapply(value: TypedECAValue): Option[TypedECAValue] = if (value.typ == this) Some(value) else None
-}
-
-case object ECAInteger extends ECAType
-case object ECATimestamp extends ECAType
