@@ -34,35 +34,29 @@ package nl.ru.cs.ecalogic
 package model
 package examples
 
-abstract class LinearComponentModel(val name: String) extends ComponentModel {
+object StubComponent extends ComponentModel {
 
-  case class CState(content: Map[String, ECAValue] = Map.empty, power: ECAValue = 0, tau: ECAValue = 0) extends ComponentState {
-    val elements: Map[String, ECAValue] = content + ("power" -> power) + ("tau" -> tau)
+  val name = "Stub"
 
-    def this(elements: Map[String, ECAValue]) =
-      this(elements -- Seq("power", "tau"), elements("power"), elements("tau"))
-
-    protected def update(newElements: Map[String, ECAValue]): CState = CState(elements ++ newElements)
-
-    def update(level: ECAValue, delay: ECAValue) = CState(content, level, tau+delay)
-
+  case class CState(on: Int=0)  extends ComponentState {
+    val elements: Map[String,ECAValue] = Map("active"->on)
+    def update(newElts: Map[String,ECAValue]) = CState(newElts("active"))
   }
 
-  //override def td(s: EACState, t: ECAValue) = s.power * ((t - s.tau) max 0)
+  override def T(f:String) = f match {
+    case "idle"=> 1
+    case _     => 0
+  }
 
-}
+  override def delta(f:String)(s:CState) = f match {
+    case "on"  => CState(1)
+    case "off" => CState(0)
+    case _     => s
+  }
 
-object DemoComponent extends LinearComponentModel("Demo") {
+  override def phi(s:CState) = s("active")
 
   val initialState = CState()
 
-//  override def rc(fun: String)(gamma: CState, delta: GlobalState, args: Seq[ECAValue]): (CState, GlobalState) = {
-//    fun match {
-//      case "on"  => (gamma.update(1, 0), delta)
-//      case "off" => (gamma.update(0, 0), delta)
-//      case "idle"=> (gamma.update(gamma.power, 1), delta)
-//      case _     => (gamma, delta)
-//    }
-//  }
-
 }
+
