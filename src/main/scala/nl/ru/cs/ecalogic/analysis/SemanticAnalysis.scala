@@ -116,17 +116,16 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
 	case If(pred, thenPart, elsePart) => varFlow(live, pred)
 					     varFlow(live, thenPart) & varFlow(live, elsePart)
 	case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, consq)
-					     // is there a nice 'map' methode to do this using a lambda?
 					     rf.foreach {
 					       case _: ArithmeticExpression =>
 					       case Literal(_) =>
 					       case v@VarRef(ident) => 
 						 if(!params(ident))
-						   eh.warning(new ECAException(s"Non-parameter '$ident' not allowed in a bound expression.", v.position))
+						   eh.error(new ECAException(s"Non-parameter '$ident' not allowed in a bound expression.", v.position))
 						 if(live(ident)) 
 						   eh.warning(new ECAException(s"Variable '$ident' written to before this reference.", v.position))
 					       case e: Expression =>
-						   eh.warning(new ECAException(s"Expression '$e' not suitable for use in a ranking function.", e.position))
+						   eh.error(new ECAException(s"Expression '$e' not suitable for use in a ranking function.", e.position))
 					     }
                                              live
 	case Composition(stms)            => stms.foldLeft(live)(varFlow)
