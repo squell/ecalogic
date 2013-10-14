@@ -132,11 +132,14 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
 	case Assignment(ident, expr)      => varFlow(live, expr)
 					     live + ident
 
+	case FunCall(fun, args)
+          if fun.isPrefixed               => args.foreach(varFlow(live,_))
+					     live
+
 	// TODO: once we have "annotations", we may be more permissive as to what we can do with function calls. this following restriction severely
 	// restricts the power of our language. we could also determine which parameters may be used as loop bounds and be more permissive about those.
 
-	case FunCall(fun, args)           => //was: args.foreach(varFlow(live,_))
-                                             args.foreach(_.foreach {
+	case FunCall(fun, args)           => args.foreach(_.foreach {
 					       case _: ArithmeticExpression =>
 					       case Literal(_) =>
 					       case VarRef(ident) if !live(ident) && params(ident) =>
