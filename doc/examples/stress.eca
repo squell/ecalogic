@@ -8,7 +8,7 @@ else
 y := (compo::f((1),2,3))
       end if
     else while//
-x upto y*f(y)
+x bound y*f(y)
 do y := isthis_allowed(2,3);
 		skip end while
 end if;

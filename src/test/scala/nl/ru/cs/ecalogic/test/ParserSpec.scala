@@ -45,7 +45,7 @@ class ParserSpec extends FlatSpec {
   it should "succeed on the test files" in {
     new File("doc/examples").listFiles().withFilter(_.getName.endsWith(".eca")).foreach { f =>
       val source = Source.fromFile(f).mkString
-      val parser = new Parser(source, new DefaultErrorHandler(source = Some(source)))
+      val parser = new Parser(source, new DefaultErrorHandler(source = Some(source), file = Some(f)))
       parser.program()
     }
   }
