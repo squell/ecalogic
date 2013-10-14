@@ -34,54 +34,38 @@ package nl.ru.cs.ecalogic
 package model
 package examples
 
-// Example DSL-based model of a radio.
-// NOTE: Uses Unicode characters!
-object RadioComponent extends DSLModel("radio") {
+object DemoComponents {
 
-  define s0 (
-    on = 0
-  )
+  object CPU extends DSLModel("cpu") with CPUComponent {
 
-  define T (
-    on   = 40,
-    off  = 20,
-    q    = 3 ,
-    send = 100
-  )
+    define T (e = 10, a = 5, w = 25, ite = 25)
+    define E (e = 10, a = 5, w = 25, ite = 25)
 
-  define E (
-    on   = 40,
-    off  = 20,
-    q    = 3 ,
-    send = 100
-  )
+  }
 
-  define δ (
-    on  = s => s(on = true),
-    off = s => s(on = false)
-  )
+  object Sensor extends DSLModel("sensor") {
 
-  define ϕ (s => 2 + 100 * s.on)
+    define T (m = 10)
+    define E (m = 40)
+
+    define ϕ (_ => 3)
+
+  }
+
+  object Radio extends DSLModel("radio") {
+
+    define s0 (on = 0)
+
+    define T (on = 40, off = 20, queue = 3, send = 100)
+    define E (on = 40, off = 20, queue = 3, send = 100)
+
+    define δ (
+      on  = s => s(on = true),
+      off = s => s(on = false)
+    )
+
+    define ϕ (s => 2 + 100 * s.on)
+
+  }
 
 }
-
-//object RadioComponentTest extends App {
-//
-//  val s0 = RadioComponent.initialState
-//  val g0 = GlobalState.initial
-//  val transformers = Seq("on", "queue", "queue", "send", "off")
-//
-//  val states = transformers.foldLeft(Seq((s0, g0))) {
-//    case (xs @ :+(_, (s, g)), t) => xs :+ RadioComponent.rc(t)(s, g, Seq.empty)
-//  }
-//
-//  val padding = transformers.map(_.length).max + 7
-//
-//  val message = (None +: transformers.map(Some.apply)).zip(states).map {
-//    case (None   , (s, g)) =>                 Seq.fill(padding)(' ').mkString + s"[$s, $g]"
-//    case (Some(t), (s, g)) => s"==[$t]=>\n" + Seq.fill(padding)(' ').mkString + s"[$s, $g]"
-//  }.mkString("\n")
-//
-//  println(message)
-//
-//}
