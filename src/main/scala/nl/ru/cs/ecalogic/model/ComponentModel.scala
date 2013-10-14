@@ -53,11 +53,6 @@ trait ComponentModel {
           if (sign* cmp < 0) return None // note: a*b<0 iff a,b have different signs
           else sign |= cmp
         }
-//        for (key <- timestamps.keys) {
-//          val cmp = -(timestamps(key) compare that.timestamps(key))
-//          if (sign *cmp < 0) return None
-//          else sign |= cmp
-//        }
         Some(sign)
       case _ => None
     }
@@ -83,6 +78,14 @@ trait ComponentModel {
     def s = state
     def t = timestamp
     def e = energy
+
+    def update(f: String) = {
+      val s1 = delta(f)(s)
+      val t1 = t + T(f)
+      val e1 = e + E(f) + td(this, t1)
+
+      EACState(s1, t1, e1)
+    }
   }
 
   val name: String
@@ -112,4 +115,5 @@ trait ComponentModel {
 
 }
 
+/** Marker for CPU components. */
 trait CPUComponent { this: ComponentModel => }
