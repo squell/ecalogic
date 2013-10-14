@@ -37,36 +37,37 @@ import scala.collection.mutable
 
 abstract class DSLModel(val name: String) extends ComponentModel with DelayedInit {
 
-  type RCFunction  = (State, GlobalState, Seq[ECAValue]) => (State, GlobalState)
-  type TDFunction  = (State, ECAValue) => ECAValue
-  type LUBFunction = (State, State) => State
-  type RFunction   = (State, State) => State
+  type TDFunction  = (EACState, ECAValue) => ECAValue
+  type LUBFunction = (EACState, EACState) => EACState
+  type PHIFunction = CState => ECAValue
+  type DFunction   = CState => CState
 
-  class State private[DSLModel](val elements: Map[String, ECAValue]) extends ComponentState with Dynamic {
+  class CState private[DSLModel](val elements: Map[String, ECAValue]) extends ComponentState with Dynamic {
     import scala.language.dynamics
 
     def selectDynamic(name: String) = elements(name)
 
-    def applyDynamicNamed(name: String)(args: (String, ECAValue)*): State = name match {
+    def applyDynamicNamed(name: String)(args: (String, ECAValue)*): CState = name match {
       case "apply" =>
         val newElements = args.toMap
         val undefined = newElements.keySet &~ elements.keySet
         if (!undefined.isEmpty) {
           throw new ECAException(s"State transformer contains undefined elements: ${undefined.mkString(", ")}.")
         }
-        new State(elements ++ newElements)
+        new CState(elements ++ newElements)
     }
 
-    protected def update(newElements: Map[String, ECAValue]) = new State(elements ++ newElements)
+    protected def update(newElements: Map[String, ECAValue]) = new CState(elements ++ newElements)
 
   }
 
-  private val elements                 = mutable.Map.empty[String, ECAValue].withDefault(n => throw new ECAException(s"Undefined element: '$n'."))
-  private val constants                = mutable.Map.empty[String, ECAValue].withDefault(n => throw new ECAException(s"Undefined constant: '$n'."))
-  private val rcFunctions              = mutable.Map.empty[String, RCFunction].withDefault(DSLModel.super.rc)
+  private val elements                 = mutable.Map.empty[String, ECAValue].withDefault(n => throw new ECAException(s"Undefined element: '$n'.")) // moet dit niet 0 zijn?
+  private val energyConstants          = mutable.Map.empty[String, ECAValue].withDefault(super.E)
+  private val timeConstants            = mutable.Map.empty[String, ECAValue].withDefault(super.T)
+  private val deltaFunctions           = mutable.Map.empty[String, DFunction].withDefault(super.delta)
   private var tdFunction: TDFunction   = super.td
   private var lubFunction: LUBFunction = super.lub
-  private var rFunction: RFunction     = super.r
+  private var phiFunction: PHIFunction = super.phi
   private var registering              = false
 
   private def checkRegistering() {
@@ -105,18 +106,20 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
   lazy val initialState = {
     checkRegistrationClosed()
-    new State(elements.toMap)
+    new CState(elements.toMap)
   }
 
-  protected def isTimestamp(name: String) = TimestampCache.isTimestamp(name)
+  override def E(f: String) = energyConstants(f)
 
-  override def rc(fun: String)(s: State, d: GlobalState, a: Seq[ECAValue]) = rcFunctions(fun)(s, d, a)
+  override def T(f: String) = timeConstants(f)
 
-  override def td(s: State, t: ECAValue) = tdFunction(s, t)
+  override def delta(f: String)(s: CState) = deltaFunctions(f)(s)
 
-  override def lub(a: State, b: State) = lubFunction(a, b)
+  override def td(s: EACState, t: ECAValue) = tdFunction(s, t)
 
-  override def r(s: State, old: State) = rFunction(s, old)
+  override def lub(a: EACState, b: EACState) = lubFunction(a, b)
+
+  override def phi(s: CState) = phiFunction(s)
 
   protected object define {
 
@@ -141,6 +144,8 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
     }
 
+    private[DSLModel] class VariableDeclaration(val value: ECAValue)
+
     object s0 extends Declaration[ECAValue] {
 
       protected def apply(declarations: Seq[(String, ECAValue)]) {
@@ -150,20 +155,32 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
     }
 
-    object c extends Declaration[ECAValue] {
+    object E extends Declaration[ECAValue] {
 
       protected def apply(declarations: Seq[(String, ECAValue)]) {
-        checkDuplicates(declarations, "constants", true)
-        constants ++= declarations.toMap
+        checkDuplicates(declarations, "incidental energy constants", true)
+        energyConstants ++= declarations.toMap
       }
 
     }
 
-    object rc extends Declaration[RCFunction] {
+    object T extends Declaration[ECAValue] {
 
-      protected def apply(declarations: Seq[(String, RCFunction)]) {
-        checkDuplicates(declarations, "resource consumption functions", false)
-        rcFunctions ++= declarations.toMap
+      protected def apply(declarations: Seq[(String, ECAValue)]) {
+        checkDuplicates(declarations, "time cost constants", true)
+        timeConstants ++= declarations.toMap
+      }
+
+    }
+
+    val ∂     = d
+    val δ     = d
+    val delta = d
+    object d extends Declaration[DFunction] {
+
+      protected def apply(declarations: Seq[(String, DFunction)]) {
+        checkDuplicates(declarations, "state update functions", false)
+        deltaFunctions ++= declarations.toMap
       }
 
     }
@@ -178,32 +195,23 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
       lubFunction = f
     }
 
-    def r(f: RFunction) = {
+    val ϕ = phi _
+    def phi(f: PHIFunction) = {
       checkRegistering()
-      rFunction = f
+      phiFunction = f
     }
 
   }
 
-  object c extends Dynamic {
-    import scala.language.dynamics
-
-    def selectDynamic(name: String) = {
-      checkRegistrationClosed()
-      constants(name)
-    }
-
-  }
-
-  private object TimestampCache {
-
-    private val timestampPattern = """[\p{InGreek}$]""".r
-
-    private val cache = mutable.Map.empty[String, Boolean]
-
-    def isTimestamp(name: String) = cache.getOrElseUpdate(name, timestampPattern.findPrefixOf(name).isDefined)
-
-  }
+//  object E extends Dynamic {
+//    import scala.language.dynamics
+//
+//    def selectDynamic(name: String) = {
+//      checkRegistrationClosed()
+//      constants(name)
+//    }
+//
+//  }
 
 }
 

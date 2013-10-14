@@ -39,34 +39,30 @@ package model
  */
 trait ComponentModel {
 
-  type State <: ComponentState
+  type CState <: ComponentState
 
-  trait ComponentState extends PartiallyOrdered[State] {
+  trait ComponentState extends PartiallyOrdered[CState] {
 
     val elements: Map[String, ECAValue]
 
-    lazy val (timestamps, integers) = elements.partition {
-      case (name, _) => isTimestamp(name)
-    }
-
-    def tryCompareTo[B >: State <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
+    def tryCompareTo[B >: CState <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
       case that: ComponentState =>
         var sign = 0
-        for (key <- integers.keys) {
-          val cmp = integers(key) compare that.integers(key)
+        for (key <- elements.keys) {
+          val cmp = elements(key) compare that.elements(key)
           if (sign* cmp < 0) return None // note: a*b<0 iff a,b have different signs
           else sign |= cmp
         }
-        for (key <- timestamps.keys) {
-          val cmp = -(timestamps(key) compare that.timestamps(key))
-          if (sign *cmp < 0) return None
-          else sign |= cmp
-        }
+//        for (key <- timestamps.keys) {
+//          val cmp = -(timestamps(key) compare that.timestamps(key))
+//          if (sign *cmp < 0) return None
+//          else sign |= cmp
+//        }
         Some(sign)
       case _ => None
     }
 
-    protected def update(newElements: Map[String, ECAValue]): State
+    protected def update(newElements: Map[String, ECAValue]): CState
 
     private[ComponentModel] def _update(newElements: Map[String, ECAValue]) = update(newElements)
 
@@ -83,21 +79,33 @@ trait ComponentModel {
 
   }
 
+  case class EACState(state: CState, timestamp: ECAValue, energy: ECAValue)
+
   val name: String
 
-  val initialState: State
+  val initialState: CState
 
-  protected def isTimestamp(name: String): Boolean
+  def E(f: String) = ECAValue.Zero
 
-  def lub(a: State, b: State): State =
-    initialState._update(
-      a.integers.  keys.map(key => key -> (a.integers  (key) max b.integers  (key))).toMap ++
-      a.timestamps.keys.map(key => key -> (a.timestamps(key) min b.timestamps(key))).toMap)
+  def T(f: String) = ECAValue.Zero
 
-  def r(s: State, old: State): State = initialState._update(s.integers ++ old.timestamps)
+  def lub(a: EACState, b: EACState): EACState = {
+    val EACState(sa, ta, ea) = a
+    val EACState(sb, tb, eb) = b
 
-  def td(s: State, t: ECAValue): ECAValue = ECAValue.Zero
+    EACState(
+      sa._update(sa.elements.keys.map(key => key -> (sa.elements(key) max sb.elements(key))).toMap),
+      ta min tb,
+      ea max eb
+    )
+  }
 
-  def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue] = Seq.empty): (State, GlobalState) = (gamma, delta)
+  def td(s: EACState, t: ECAValue): ECAValue = ECAValue.Zero
+
+  def delta(f: String)(s: CState) = s
+
+  def phi(s: CState) = ECAValue.Zero
 
 }
+
+trait CPUComponent { this: ComponentModel => }

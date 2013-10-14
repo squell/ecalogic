@@ -36,35 +36,33 @@ package examples
 
 abstract class LinearComponentModel(val name: String) extends ComponentModel {
 
-  case class State(content: Map[String, ECAValue] = Map.empty, power: ECAValue = 0, tau: ECAValue = 0) extends ComponentState {
+  case class CState(content: Map[String, ECAValue] = Map.empty, power: ECAValue = 0, tau: ECAValue = 0) extends ComponentState {
     val elements: Map[String, ECAValue] = content + ("power" -> power) + ("tau" -> tau)
 
     def this(elements: Map[String, ECAValue]) =
       this(elements -- Seq("power", "tau"), elements("power"), elements("tau"))
 
-    protected def update(newElements: Map[String, ECAValue]): State = State(elements ++ newElements)
+    protected def update(newElements: Map[String, ECAValue]): CState = CState(elements ++ newElements)
 
-    def update(level: ECAValue, delay: ECAValue) = State(content, level, tau+delay)
+    def update(level: ECAValue, delay: ECAValue) = CState(content, level, tau+delay)
 
   }
 
-  protected def isTimestamp(name: String) = name == "tau"
-
-  override def td(s: State, t: ECAValue) = s.power * ((t - s.tau) max 0)
+  //override def td(s: EACState, t: ECAValue) = s.power * ((t - s.tau) max 0)
 
 }
 
 object DemoComponent extends LinearComponentModel("Demo") {
 
-  val initialState = State()
+  val initialState = CState()
 
-  override def rc(fun: String)(gamma: State, delta: GlobalState, args: Seq[ECAValue]): (State, GlobalState) = {
-    fun match {
-      case "on"  => (gamma.update(1, 0), delta)
-      case "off" => (gamma.update(0, 0), delta)
-      case "idle"=> (gamma.update(gamma.power, 1), delta)
-      case _     => (gamma, delta)
-    }
-  }
+//  override def rc(fun: String)(gamma: CState, delta: GlobalState, args: Seq[ECAValue]): (CState, GlobalState) = {
+//    fun match {
+//      case "on"  => (gamma.update(1, 0), delta)
+//      case "off" => (gamma.update(0, 0), delta)
+//      case "idle"=> (gamma.update(gamma.power, 1), delta)
+//      case _     => (gamma, delta)
+//    }
+//  }
 
 }

@@ -34,8 +34,9 @@ package nl.ru.cs.ecalogic
 package model
 
 import scala.math.{ScalaNumericConversions, ScalaNumber}
+import scala.collection.immutable.NumericRange
 
-class ECAValue(private val value: BigInt) extends ScalaNumber with ScalaNumericConversions with Ordered[ECAValue] {
+class ECAValue private(private val value: BigInt) extends ScalaNumber with ScalaNumericConversions with Ordered[ECAValue] {
 
   def isWhole = true
 
@@ -50,7 +51,15 @@ class ECAValue(private val value: BigInt) extends ScalaNumber with ScalaNumericC
   def min(that: ECAValue) = if (this > that) that else this
   def max(that: ECAValue) = if (this > that) this else that
 
-  def compare(that: ECAValue) = value.compare(that.value)
+  def to(that: ECAValue) = NumericRange.inclusive[ECAValue](this, that, ECAValue.One)(ECAValue.ECAValueIsIntegral) // Can't find implicit? WHAT?
+
+  def in(from: ECAValue, to: ECAValue) {
+    require(this >= from && this <= to)
+
+    // TODO: or not TODO?
+  }
+
+  def compare(that: ECAValue) = value compare that.value
 
   def &&(that: ECAValue) = ECAValue.booleanToValue(toBoolean && that.toBoolean)
   def ||(that: ECAValue) = ECAValue.booleanToValue(toBoolean || that.toBoolean)
@@ -93,5 +102,25 @@ object ECAValue {
   implicit def bigIntToValue(v: BigInt): ECAValue   = new ECAValue(v)
   implicit def intToValue(v: Int): ECAValue         = new ECAValue(v)
   implicit def booleanToValue(v: Boolean): ECAValue = if (v) True else False
+
+  implicit object ECAValueIsIntegral extends Integral[ECAValue] with ECAValueOrdering  {
+    def plus(x: ECAValue, y: ECAValue)  = x + y
+    def minus(x: ECAValue, y: ECAValue) = x - y
+    def times(x: ECAValue, y: ECAValue) = x * y
+    def quot(x: ECAValue, y: ECAValue)  = x / y
+    def rem(x: ECAValue, y: ECAValue)   = x % y
+    def negate(x: ECAValue)             = -x
+    def fromInt(x: Int)                 = intToValue(x)
+    def toInt(x: ECAValue)              = x.toInt
+    def toLong(x: ECAValue)             = x.toLong
+    def toFloat(x: ECAValue)            = x.toFloat
+    def toDouble(x: ECAValue)           = x.toDouble
+  }
+
+  trait ECAValueOrdering extends Ordering[ECAValue] {
+    def compare(x: ECAValue, y: ECAValue) = x compare y
+  }
+
+  implicit object ECAValueOrdering extends ECAValueOrdering
 
 }

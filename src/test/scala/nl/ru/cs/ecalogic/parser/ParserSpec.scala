@@ -30,24 +30,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.test
+package nl.ru.cs.ecalogic
+package parser
 
-import org.scalatest.FlatSpec
-import nl.ru.cs.ecalogic.parser.Parser
+import ast._
+import util.{Position, DefaultErrorHandler}
+
 import scala.io.Source
-import nl.ru.cs.ecalogic.util.DefaultErrorHandler
+
 import java.io.File
+import org.scalatest.FlatSpec
+import org.scalatest.matchers.{MatchResult, Matcher, ShouldMatchers}
 
-class ParserSpec extends FlatSpec {
+class ParserSpec extends FlatSpec with ShouldMatchers {
 
-  behavior of "The Parser"
+  private def parse(f: File): Program = parse(Source.fromFile(f).mkString, Some(f))
+
+  private def parse(s: String, f: Option[File] = None): Program = {
+    val parser = new Parser(s, new DefaultErrorHandler(source = Some(s), file = f))
+    parser.program()
+  }
+
+
+
+  behavior of "The parser"
 
   it should "succeed on the test files" in {
     new File("doc/examples").listFiles().withFilter(_.getName.endsWith(".eca")).foreach { f =>
-      val source = Source.fromFile(f).mkString
-      val parser = new Parser(source, new DefaultErrorHandler(source = Some(source), file = Some(f)))
-      parser.program()
+      parse(f)
     }
+  }
+
+  it should "succeed on the empty string" in {
+    val program = parse("")
+    program should not equal (null)
+    program.definitions should be ('empty)
   }
 
 }
