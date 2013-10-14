@@ -41,6 +41,7 @@ object StubComponent extends ComponentModel {
   case class CState(on: Int=0)  extends ComponentState {
     val elements: Map[String,ECAValue] = Map("active"->on)
     def update(newElts: Map[String,ECAValue]) = CState(newElts("active"))
+    def apply(s: String) = elements(s)
   }
 
   override def T(f:String) = f match {

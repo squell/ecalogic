@@ -72,8 +72,6 @@ trait ComponentModel {
       case (name, value) => s"$name = $value"
     }.mkString("(", ", ", ")")
 
-    def apply(s: String) = elements(s)
-
   }
 
   case class EACState(state: CState, timestamp: ECAValue, energy: ECAValue) {
