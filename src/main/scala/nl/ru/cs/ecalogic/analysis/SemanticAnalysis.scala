@@ -131,15 +131,27 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
 	case Composition(stms)            => stms.foldLeft(live)(varFlow)
 	case Assignment(ident, expr)      => varFlow(live, expr)
 					     live + ident
-	case FunCall(fun, args)           => args.foreach(varFlow(live,_)); live
-	case VarRef(ident)                => if(!live(ident))
+
+	// TODO: once we have "annotations", we may be more permissive as to what we can do with function calls. this following restriction severely
+	// restricts the power of our language. we could also determine which parameters may be used as loop bounds and be more permissive about those.
+
+	case FunCall(fun, args)           => //was: args.foreach(varFlow(live,_))
+                                             args.foreach(_.foreach {
+					       case _: ArithmeticExpression =>
+					       case Literal(_) =>
+					       case VarRef(ident) if !live(ident) && params(ident) =>
+					       case e: Expression => 
+						   eh.error(new ECAException(s"Sorry, not in this version: '$e' as argument to call.", e.position))
+					     })
+					     live
+	case VarRef(ident)                => if(!live(ident) && !params(ident))
 					       eh.warning(new ECAException(s"Variable '$ident' may be used uninitialized.", node.position))
 					     live
 	case e: Expression                => e.operands.foreach(varFlow(live, _)); live
 	case _                            => live
       }
 
-      varFlow(params, fundef.body)
+      varFlow(Set.empty[String], fundef.body)
     }
 
   }
