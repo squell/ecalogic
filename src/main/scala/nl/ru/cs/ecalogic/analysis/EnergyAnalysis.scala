@@ -71,8 +71,7 @@ class EnergyAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandle
       // the same type.
       def max(that: (States,ECAValue)) = {
 	val (c2, t2) = that
-        //c.transform((comp,g)=> g.lub(c2(comp))) -> t.max(t2)
-        c.transform((comp,g)=> g) -> t.max(t2)
+        c.transform((comp,g)=> g.lub(c2(comp))) -> t.max(t2)
       }
     }
 

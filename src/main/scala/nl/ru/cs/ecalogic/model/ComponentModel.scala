@@ -90,8 +90,9 @@ trait ComponentModel {
         EACState(s1, t, e1) -> t2
     }
  
-    def lub(that: EACState) =
-      Model.lub(this, that)
+    def lub(that: ComponentModel#EACState) =
+      // there has to be a better way?
+      Model.lub(this, that.asInstanceOf[EACState])
   }
 
   val name: String
