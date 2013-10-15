@@ -79,12 +79,15 @@ trait ComponentModel {
     def t = timestamp
     def e = energy
 
-    def update(f: String) = {
+    def update(f: String, t1: ECAValue) = {
+      val e1 = e + E(f) 
+      val t2 = t1 + T(f)
       val s1 = delta(f)(s)
-      val t1 = t + T(f)
-      val e1 = e + E(f) + td(this, t1)
-
-      EACState(s1, t1, e1)
+      if(s1 != s) {
+        EACState(s1, t1, e1 + td(this,t1)) -> t2
+      } else
+        // do not update the timestamp if the state did not change
+        EACState(s1, t, e1) -> t2
     }
   }
 
