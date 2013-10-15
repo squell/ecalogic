@@ -82,6 +82,9 @@ class EnergyAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandle
         val (c2, t2) = that
         c.transform((comp,g)=> g.lub(c2(comp))) -> t.max(t2)
       }
+
+      def transform(fun: (String,ComponentModel#EACState)=>ComponentModel#EACState) = 
+        c.transform(fun) -> t
     }
 
     val lookup: Map[String, FunDef] =
@@ -110,12 +113,16 @@ class EnergyAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandle
 
         // but, perhaps this is what they really mean:
         // note: for milestone #3, add some checks
+        var seen = mutable.Set.empty[States]
         var g_fix = gamma
         var g_old = gamma
         do {
+          if(!seen.add(g_fix._1))
+            eh.fatalError(new ECAException("Model error: state delta functions not monotone"))
+          g_old = g_fix
           g_fix = duracellBunny(duracellBunny(g_fix, expr), stm)
-        } while(g_fix != g_old)
-        g_fix.regress(gamma)
+        } while(g_fix._1.mapValues(_.s) == g_old._1.mapValues(_.s))
+        g_fix.regress(gamma).transform((name,st)=>st.setEnergy(gamma._1(name).e))
       }
 
       /** Energy consumption analysis
