@@ -56,18 +56,30 @@ class EnergyAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandle
     */
   def foo() {
 
-    object T {
-      val ite = CPU.T("ite")
-      val a = CPU.T("a")
-      val e = CPU.T("e")
-      val w = CPU.T("w")
+    type States = Map[String,ComponentModel#EACState]
+
+    implicit class StateMutator(G: (States,ECAValue)) {
+      // why no pattern match on^ this baby?
+      final val (c, t) = G
+      def update(comp: String, fun: String) = {
+	val (g, t1) = c(comp).update(fun, t)
+	c.updated(comp, g) -> t1
+      }
+
+      // there is a cute problem with this function:
+      // Scala doesn't know that the two EACStates are
+      // the same type.
+      def max(that: (States,ECAValue)) = {
+	val (c2, t2) = that
+        //c.transform((comp,g)=> g.lub(c2(comp))) -> t.max(t2)
+        c.transform((comp,g)=> g.lub(c2(comp))) -> t.max(t2)
+        c.transform((comp,g)=> g) -> t.max(t2)
+      }
     }
 
     for(fundef <- program.definitions) {
 
-      val C = StubComponent
-      val G = C.EACState(C.initialState, 0, 0)
-      // is t equal to the CPU's timestamp (answer: no, but can't we hack it so that it is?)
+      val C: States = Map("CPU" ->CPU.initialEACState(), "Stub" -> StubComponent.initialEACState())
       val t: ECAValue = 0
 
       // NOTE: do not edit, working on this
@@ -80,21 +92,20 @@ class EnergyAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandle
        *
       */
       // TODO: incorporate cpu (right now we only keep track of time)
-      def duracellBunny(G: (C.EACState,ECAValue), node: ASTNode): (C.EACState,ECAValue) = node match {
+      def duracellBunny(G: (States,ECAValue), node: ASTNode): (States,ECAValue) = node match {
 	case Skip()                       => G
-	case If(pred, thenPart, elsePart) => val NG = duracellBunny(G,pred) match { case (g,t) => (g,t+T.ite) }
-					     val (g1,t1) = duracellBunny(NG,thenPart)
-					     val (g2,t2) = duracellBunny(NG,elsePart)
-					     (C.lub(g1, g2), t1 max t2)
+	case If(pred, thenPart, elsePart) => val NG = duracellBunny(G,pred).update("CPU","ite")
+					     val G1 = duracellBunny(NG,thenPart) 
+					     val G2 = duracellBunny(NG,elsePart)
+					     G1 max G2
 	case While(pred, rf, consq)       => throw new ECAException("while not implemented do nothing")
 	case Composition(stms)            => stms.foldLeft(G)(duracellBunny); G
-	case Assignment(_, expr)          => duracellBunny(G,expr) match { case (g,t) => (g,t+T.a) }
-	//TODO fix eac update, because it is broken
+	case Assignment(_, expr)          => duracellBunny(G,expr).update("CPU","a")
 	case FunCall(fun, args)
-          if fun.isPrefixed               => args.foldLeft(G)(duracellBunny) match { case (g,t) => g.update(fun.name,t) }
+          if fun.isPrefixed               => args.foldLeft(G)(duracellBunny).update(fun.prefix.get, fun.name)
 	// TODO: memoize
 	case FunCall(fun, args)           => G // duracellBunny(args.foldLeft(G)(duracellBunny), -->fun.body <--)
-	case e:NAryExpression             => e.operands.foldLeft(G)(duracellBunny) match { case (g,t) => (g,t+T.e) }
+	case e:NAryExpression             => e.operands.foldLeft(G)(duracellBunny).update("CPU", "e")
 	case _:PrimaryExpression          => G
       }
 

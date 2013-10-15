@@ -37,10 +37,10 @@ package model
  * @author Marc Schoolderman
  * @author Jascha Neutelings
  */
-trait ComponentModel {
+trait ComponentModel { 
+  Model =>
 
   type CState <: ComponentState
-
   trait ComponentState extends PartiallyOrdered[CState] {
 
     val elements: Map[String, ECAValue]
@@ -89,6 +89,9 @@ trait ComponentModel {
         // do not update the timestamp if the state did not change
         EACState(s1, t, e1) -> t2
     }
+ 
+    def lub(that: EACState) =
+      Model.lub(this, that)
   }
 
   val name: String
@@ -98,6 +101,9 @@ trait ComponentModel {
   def E(f: String) = ECAValue.Zero
 
   def T(f: String) = ECAValue.Zero
+
+  def initialEACState(timestamp: ECAValue = 0, energy: ECAValue = 0) =
+    EACState(initialState, timestamp, energy)
 
   def lub(a: EACState, b: EACState): EACState = {
     val EACState(sa, ta, ea) = a
