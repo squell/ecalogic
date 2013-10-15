@@ -90,6 +90,9 @@ trait ComponentModel {
         EACState(s1, t, e1) -> t2
     }
  
+    def r(t1: ECAValue) = EACState(s, t1, e)
+
+    // why not define the lub here in the first place?
     def lub(that: ComponentModel#EACState) =
       // there has to be a better way?
       Model.lub(this, that.asInstanceOf[EACState])
