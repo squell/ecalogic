@@ -103,6 +103,8 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
 
     for(fundef <- program.definitions) {
 
+      val params = fundef.parameters.map(_.name).toSet
+
       /** Determine if all variable references are potentially used uninitialized.
        *
        * @param live Set of variable names that have been assigned
@@ -110,8 +112,6 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
        * @return updated set of live variables
        *
       */
-      val params = fundef.parameters.map(_.name).toSet
-
       def varFlow(live: Set[String], node: ASTNode): Set[String] = node match {
 	case If(pred, thenPart, elsePart) => varFlow(live, pred)
 					     varFlow(live, thenPart) & varFlow(live, elsePart)
