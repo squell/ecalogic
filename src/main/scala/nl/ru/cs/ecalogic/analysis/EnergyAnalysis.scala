@@ -56,8 +56,13 @@ class EnergyAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandle
     */
   def foo() {
 
+    /** Hardcoded for now */
+    val Components = Set(CPU, StubComponent)
+
+    /** A map containing, for each component (identified by name), its current component state */
     type States = Map[String,ComponentModel#EACState]
 
+    /** Using the "Pimp My Library" pattern to define two useful functions on the global state */
     implicit class StateMutator(G: (States,ECAValue)) {
       // why no pattern match on^ this baby?
       final val (c, t) = G
@@ -75,34 +80,37 @@ class EnergyAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandle
       }
     }
 
+    val lookup: Map[String, FunDef] =
+      program.definitions.map(fundef=>fundef.name->fundef).toMap
+
     for(fundef <- program.definitions) {
 
-      val C: States = Map("CPU" ->CPU.initialEACState(), "Stub" -> StubComponent.initialEACState())
-      val t: ECAValue = 0
-
-      // NOTE: do not edit, working on this
-
-      /** bla
+      /** Energy consumption analysis
        *
-       * @param live Set of variable names that have been assigned
-       * @param node AST node under consideration
-       * @return updated set of live variables
+       * @param G	tuple of set-of-componentstates and the global timestamp
+       * @param node	AST node under consideration
+       * @return 	updated tuple of set-of-componentstates and global timestamp
        *
       */
-      // TODO: incorporate cpu (right now we only keep track of time)
       def duracellBunny(G: (States,ECAValue), node: ASTNode): (States,ECAValue) = node match {
 	case Skip()                       => G
 	case If(pred, thenPart, elsePart) => val NG = duracellBunny(G,pred).update("CPU","ite")
 					     val G1 = duracellBunny(NG,thenPart) 
 					     val G2 = duracellBunny(NG,elsePart)
 					     G1 max G2
-	case While(pred, rf, consq)       => throw new ECAException("while not implemented do nothing")
-	case Composition(stms)            => stms.foldLeft(G)(duracellBunny); G
+
+	case While(pred, rf, consq)       => val NG = duracellBunny(G,pred).update("CPU","w")
+					     // this next match will be removed in later versions
+	                                     val iters = rf match { case Literal(x) => x }
+					     // (dont care about nice error msgs at this point)
+					     throw new ECAException("while not implemented do nothing")
+
+	case Composition(stms)            => stms.foldLeft(G)(duracellBunny)
 	case Assignment(_, expr)          => duracellBunny(G,expr).update("CPU","a")
 	case FunCall(fun, args)
           if fun.isPrefixed               => args.foldLeft(G)(duracellBunny).update(fun.prefix.get, fun.name)
-	// TODO: memoize
-	case FunCall(fun, args)           => G // duracellBunny(args.foldLeft(G)(duracellBunny), -->fun.body <--)
+	case FunCall(fun, args)           => val body = lookup(fun.name).body
+	                                     duracellBunny(args.foldLeft(G)(duracellBunny), body)
 	case e:NAryExpression             => e.operands.foldLeft(G)(duracellBunny).update("CPU", "e")
 	case _:PrimaryExpression          => G
       }
