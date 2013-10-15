@@ -73,7 +73,7 @@ class EnergyAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandle
       }
 
       def regress(oldState: (States,ECAValue)) =
-         c.mapValues(_.regress(oldState._2)) -> t
+         c.mapValues(_.regress(oldState._2)) -> oldState._2
 
       // there is a cute problem with this function:
       // Scala doesn't know that the two EACStates are
@@ -94,18 +94,29 @@ class EnergyAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandle
       out.transform((comp,g) => g.setEnergy((in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1)))
     }
 
-    def fixPoint(gamma: (States,ECAValue), expr: Expression, stm: Statement) = {
-      //TODO
-      def fix(st: ComponentModel#EACState, expr: Expression, stm: Statement) = {
-        // "the concatenation of all df applied in S" -- this is too ambiguous to implement
-        // what if a single df is applied multiple times, do we apply it multiple times?
-        // what if one df is used in the 'then' part and the other in 'else', do we apply both?
-        st
-      }
-      gamma._1.transform((comp,g) => fix(g, expr, stm)) -> gamma._2
-    }
-
     for(fundef <- program.definitions) {
+
+      /** Compute fixed points of stats
+      */
+      def fixPoint(gamma: (States,ECAValue), expr: Expression, stm: Statement): (States,ECAValue) = {
+        //TODO
+        def fix(st: ComponentModel#EACState, expr: Expression, stm: Statement) = {
+          // "the concatenation of all df applied in S" -- this is too ambiguous to implement
+          // what if a single df is applied multiple times, do we apply it multiple times?
+          // what if one df is used in the 'then' part and the other in 'else', do we apply both?
+          st
+        }
+        return gamma._1.transform((comp,g) => fix(g, expr, stm)) -> gamma._2
+
+        // but, perhaps this is what they really mean:
+        // note: for milestone #3, add some checks
+        var g_fix = gamma
+        var g_old = gamma
+        do {
+          g_fix = duracellBunny(duracellBunny(g_fix, expr), stm)
+        } while(g_fix != g_old)
+        g_fix.regress(gamma)
+      }
 
       /** Energy consumption analysis
        *
