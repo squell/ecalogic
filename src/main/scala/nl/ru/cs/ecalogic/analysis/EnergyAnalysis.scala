@@ -66,16 +66,20 @@ class EnergyAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandle
     implicit class StateMutator(G: (States,ECAValue)) {
       // why no pattern match on^ this baby?
       final val (c, t) = G
+
       def update(comp: String, fun: String) = {
-	val (g, t1) = c(comp).update(fun, t)
-	c.updated(comp, g) -> t1
+        val (g, t1) = c(comp).update(fun, t)
+        c.updated(comp, g) -> t1
       }
+
+      def regress(oldState: (States,ECAValue)) =
+         c.mapValues(_.regress(oldState._2)) -> t
 
       // there is a cute problem with this function:
       // Scala doesn't know that the two EACStates are
       // the same type.
       def max(that: (States,ECAValue)) = {
-	val (c2, t2) = that
+        val (c2, t2) = that
         c.transform((comp,g)=> g.lub(c2(comp))) -> t.max(t2)
       }
     }
@@ -83,36 +87,58 @@ class EnergyAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandle
     val lookup: Map[String, FunDef] =
       program.definitions.map(fundef=>fundef.name->fundef).toMap
 
+    /** TODO It is unclear from the tech report what the resulting *state* should be 
+        it is probably 'out'. But not sure. I don't trust the specification on this part yet.
+      */
+    def e(out: States, in: States, pre: States, rf: ECAValue) = {
+      out.transform((comp,g) => g.setEnergy((in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1)))
+    }
+
+    def fixPoint(gamma: (States,ECAValue), expr: Expression, stm: Statement) = {
+      //TODO
+      def fix(st: ComponentModel#EACState, expr: Expression, stm: Statement) = {
+        // "the concatenation of all df applied in S" -- this is too ambiguous to implement
+        // what if a single df is applied multiple times, do we apply it multiple times?
+        // what if one df is used in the 'then' part and the other in 'else', do we apply both?
+        st
+      }
+      gamma._1.transform((comp,g) => fix(g, expr, stm)) -> gamma._2
+    }
+
     for(fundef <- program.definitions) {
 
       /** Energy consumption analysis
        *
-       * @param G	tuple of set-of-componentstates and the global timestamp
-       * @param node	AST node under consideration
-       * @return 	updated tuple of set-of-componentstates and global timestamp
+       * @param G       tuple of set-of-componentstates and the global timestamp
+       * @param node    AST node under consideration
+       * @return        updated tuple of set-of-componentstates and global timestamp
        *
       */
       def duracellBunny(G: (States,ECAValue), node: ASTNode): (States,ECAValue) = node match {
-	case Skip()                       => G
-	case If(pred, thenPart, elsePart) => val NG = duracellBunny(G,pred).update("CPU","ite")
-					     val G1 = duracellBunny(NG,thenPart) 
-					     val G2 = duracellBunny(NG,elsePart)
-					     G1 max G2
+        case Skip()                       => G
+        case If(pred, thenPart, elsePart) => val G2 = duracellBunny(G,pred).update("CPU","ite")
+                                             val G3 = duracellBunny(G2,thenPart) 
+                                             val G4 = duracellBunny(G2,elsePart)
+                                             G3 max G4
 
-	case While(pred, rf, consq)       => val NG = duracellBunny(G,pred).update("CPU","w")
-					     // this next match will be removed in later versions
-	                                     val iters = rf match { case Literal(x) => x }
-					     // (dont care about nice error msgs at this point)
-					     throw new ECAException("while not implemented do nothing")
+        case While(pred, rf, consq)       => val G2 = duracellBunny(G,pred).update("CPU","w")
+                                             // this next match will be removed in later versions
+                                             val iters = rf match { case Literal(x) => x }
+                                             // (dont care about nice error msgs at this point)
+                                             val G3 = duracellBunny(G2,consq)
+                                             val G3fix = fixPoint(G3, pred, consq)
+                                             val G4 = duracellBunny(duracellBunny(G3fix, pred), consq)
+                                             // I'm not sure i understand this, but this is what the paper says.
+                                             e(G4.regress(G)._1, G3._1, G._1, iters) -> (G3._2-G._2)*iters
 
-	case Composition(stms)            => stms.foldLeft(G)(duracellBunny)
-	case Assignment(_, expr)          => duracellBunny(G,expr).update("CPU","a")
-	case FunCall(fun, args)
+        case Composition(stms)            => stms.foldLeft(G)(duracellBunny)
+        case Assignment(_, expr)          => duracellBunny(G,expr).update("CPU","a")
+        case FunCall(fun, args)
           if fun.isPrefixed               => args.foldLeft(G)(duracellBunny).update(fun.prefix.get, fun.name)
-	case FunCall(fun, args)           => val body = lookup(fun.name).body
-	                                     duracellBunny(args.foldLeft(G)(duracellBunny), body)
-	case e:NAryExpression             => e.operands.foldLeft(G)(duracellBunny).update("CPU", "e")
-	case _:PrimaryExpression          => G
+        case FunCall(fun, args)           => val body = lookup(fun.name).body
+                                             duracellBunny(args.foldLeft(G)(duracellBunny), body)
+        case e:NAryExpression             => e.operands.foldLeft(G)(duracellBunny).update("CPU", "e")
+        case _:PrimaryExpression          => G
       }
 
     }
