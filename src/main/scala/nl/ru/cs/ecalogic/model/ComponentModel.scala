@@ -90,7 +90,7 @@ trait ComponentModel {
         EACState(s1, t, e1) -> t2
     }
  
-    def regress(t1: ECAValue) = EACState(s, t min t1, e)
+    def regress(t1: ECAValue) = EACState(s, t1, e + td(this,t1))
 
     def setEnergy(energy: ECAValue) = EACState(s, t, energy) 
 
