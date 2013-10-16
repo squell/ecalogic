@@ -103,8 +103,9 @@ class EnergyAnalysis(program: Program) {
         nontemporal(duracellBunny(duracellBunny(st->ECAValue.Zero, expr), stm).gamma)
 
       /** Even though it may not look it, this will always terminate. */
+      var limit = 1000;
       do {
-        if(!seen.add(cur))
+        if(!seen.add(cur) || {limit-=1; limit} <= 0)
           throw new ECAException("Model error: state delta functions not monotone")
         prev = cur
         cur  = f(cur)
