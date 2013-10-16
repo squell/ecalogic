@@ -47,7 +47,7 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
 
   /** Print the prog */
   def printProg() {
-    def printPart(node: ASTNode, depth: Integer) {
+    def printPart(node: ASTNode, depth: Int) {
 
       node match {
         case If(pred, thenPart, elsePart) =>
@@ -108,19 +108,9 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
           println("\nend function\n")
         case Param(name) => print(name)
         case Literal(value) => print(value)
-        case VarRef(name) => print(name)
-        case Or(left, right) =>
-          printPart(left, depth)
-          print(" || ")
-          printPart(right, depth)
-        case Multiply(left, right) =>
-          printPart(left, depth)
-          print(" * ")
-          printPart(right, depth)
-
         case _ =>
       }
-      def printDepth(i : Integer = 0) {
+      def printDepth(i : Int = 0) {
         for (i <- 0 to depth+i) {
           print("    ")
         }
