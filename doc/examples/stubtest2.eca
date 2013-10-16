@@ -1,4 +1,4 @@
-// time usage: 23, energy usage: 0
+// time usage: 0, energy usage: 23
 
 function program(X)
   Stub::zap();
