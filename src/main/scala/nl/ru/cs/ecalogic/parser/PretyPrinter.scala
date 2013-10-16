@@ -53,27 +53,29 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
         case If(pred, thenPart, elsePart) =>
           print("If ");
           printPart(pred, depth)
-          print(" then ");
+          print(" then");
+          printDepthln(1)
           printPart(thenPart, depth + 1)
+          printDepthln()
           print(" else ");
           printPart(elsePart, depth + 1)
+          printDepthln()
           print("end if");
         case While(pred, rf, consq) =>
           print("while ")
           printPart(pred, depth)
           print(" bound ")
           printPart(rf, depth)
-          println(" do")
-          printDepth(1)
-          printPart(consq, depth + 1);
-          println
-          printDepth()
+          print(" do")
+          printDepthln(1)
+          printPart(consq, depth + 1)
+          printDepthln()
           print("end while")
         case Composition(stms) =>
           var fst = true; for (stmt <- stms) {
             if (!fst) {
-              println(";")
-              printDepth()
+              print(";")
+              printDepthln()
             }
             fst = false;
             printPart(stmt, depth)
@@ -81,39 +83,47 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
         case Assignment(ident, expr) =>
           print(ident + " := ")
           printPart(expr, depth)
+        case Skip() =>
+          print("skip");
         case FunCall(fun, args) =>
-          if (fun.isPrefixed) print(fun.prefix + "::") else ""
+          if (fun.isPrefixed) print(fun.prefix.get + "::") else ""
           print(fun.name);
-          args.foreach(printPart(_, depth));
+          printParams(args);
         case VarRef(ident) => print(ident)
-        case e: BinaryExpression => 
+        case e: BinaryExpression =>
           printPart(e.left, depth)
           print(" " + e.operator + " ")
           printPart(e.right, depth)
         case e: UnaryExpression =>
           printPart(e.operand, depth);
           e.operands.foreach(printPart(_, depth))
-        case FunDef(name, param, body) =>
-          print("function " + name + "(")
-          var fst = true; for (par <- param) {
-            if (!fst) {
-              print(", ")
-            }
-            fst = false;
-            printPart(par, depth)
-          }
-          println(")")
-          printDepth()
+        case FunDef(name, params, body) =>
+          print("function " + name)
+          printParams(params)
+          printDepthln()
           printPart(body, depth)
           println("\nend function\n")
         case Param(name) => print(name)
         case Literal(value) => print(value)
         case _ =>
       }
-      def printDepth(i : Int = 0) {
-        for (i <- 0 to depth+i) {
+      def printDepthln(i: Int = 0) {
+        println
+        for (i <- 0 to depth + i) {
           print("    ")
         }
+      }
+      def printParams(params: Seq[ASTNode]) {
+        print("(")
+        var fst = true;
+        for (par <- params) {
+          if (!fst) {
+            print(", ")
+          }
+          fst = false;
+          printPart(par, depth)
+        }
+        print(")")
       }
     }
     program.definitions.foreach(printPart(_, 0))
