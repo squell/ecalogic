@@ -63,18 +63,21 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
           printPart(pred, depth)
           print(" bound ")
           printPart(rf, depth)
-          print(" do ")
+          println(" do")
+          printDepth(1)
           printPart(consq, depth + 1);
+          println
+          printDepth()
+          print("end while")
         case Composition(stms) =>
           var fst = true; for (stmt <- stms) {
             if (!fst) {
               println(";")
-              printDepth
+              printDepth()
             }
             fst = false;
             printPart(stmt, depth)
           }
-          stms.foreach(printPart(_, depth))
         case Assignment(ident, expr) =>
           print(ident + " := ")
           printPart(expr, depth)
@@ -83,7 +86,13 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
           print(fun.name);
           args.foreach(printPart(_, depth));
         case VarRef(ident) => print(ident)
-        case e: Expression => e.operands.foreach(printPart(_, depth))
+        case e: BinaryExpression => 
+          printPart(e.left, depth)
+          print(" " + e.operator + " ")
+          printPart(e.right, depth)
+        case e: UnaryExpression =>
+          printPart(e.operand, depth);
+          e.operands.foreach(printPart(_, depth))
         case FunDef(name, param, body) =>
           print("function " + name + "(")
           var fst = true; for (par <- param) {
@@ -94,14 +103,25 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
             printPart(par, depth)
           }
           println(")")
-          printDepth
+          printDepth()
           printPart(body, depth)
           println("\nend function\n")
         case Param(name) => print(name)
+        case Literal(value) => print(value)
+        case VarRef(name) => print(name)
+        case Or(left, right) =>
+          printPart(left, depth)
+          print(" || ")
+          printPart(right, depth)
+        case Multiply(left, right) =>
+          printPart(left, depth)
+          print(" * ")
+          printPart(right, depth)
+
         case _ =>
       }
-      def printDepth() {
-        for (i <- 0 to depth) {
+      def printDepth(i : Integer = 0) {
+        for (i <- 0 to depth+i) {
           print("    ")
         }
       }
