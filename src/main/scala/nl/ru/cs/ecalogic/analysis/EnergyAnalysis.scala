@@ -53,6 +53,8 @@ import model.examples.DemoComponents.CPU
  */
 class EnergyAnalysis(program: Program) {
 
+  import GlobalState._
+
   /** For debugging (and exposition) purposes, a CPU which computes everything
     * instantly and consumes no power. (You know you want one!)
     */
@@ -66,64 +68,48 @@ class EnergyAnalysis(program: Program) {
     * @return I'll tell you later, once I know. TODO
     */
   def apply() = {
-
     /** Hardcoded for now */
     val components = Set(HyperPentium, StubComponent)
-
-    /** A map containing, for each component (identified by name), its current component state */
-    type States = Map[String,ComponentModel#EACState]
-
-    /** Using the "Pimp My Library" pattern to define two useful functions on the global state 
-      once this code becomes 'settled' down, obviously this is eligible to be promoted as its
-      own class TODO
-      */
-    implicit class StateMutator(G: (States,ECAValue)) {
-      // why no pattern match on^ this baby?
-      final val (c, t) = G
-
-      def update(comp: String, fun: String) = {
-        val (g, t1) = c(comp).update(fun, t)
-        c.updated(comp, g) -> t1
-      }
-
-      def regress(oldState: (States,ECAValue)) =
-         c.mapValues(_.regress(oldState._2)) -> oldState._2
-
-      // there is a cute problem with this function:
-      // Scala doesn't know that the two EACStates are
-      // the same type.
-      def max(that: (States,ECAValue)) = {
-        val (c2, t2) = that
-        c.transform((comp,g)=> g.lub(c2(comp))) -> t.max(t2)
-      }
-
-      def transform[C](fun: (String,ComponentModel#EACState)=>C) = 
-        c.transform(fun) -> t
-    }
 
     val lookup: Map[String, FunDef] =
       program.definitions.map(fundef=>fundef.name->fundef).toMap
 
-    /** TODO It is unclear from the tech report what the resulting *state* should be 
-        it is probably 'out'. But not sure. I don't trust the specification on this part yet.
+    /** Performs the functions of both "r()" and "e()" in the paper 
+      *
+      * @param t The new timestamp for components (should be in the past)
+      * @param out Component states *after* having evaluated the loop condition and loop body
+      * @param in  Component states *after* having evaluated the loop condition, but before evaluating the body
+      * @param pre Component states *before* evaluating the entire while loop
+      * @return A new set of component states with updated time and energy information
       */
-    def e(out: States, in: States, pre: States, rf: ECAValue) = {
-      out.transform((comp,g) => g.setEnergy((in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e))
-    }
+    def computeEnergyBound(t:ECAValue, out: States, in: States, pre: States, rf: ECAValue) =
+      out.transform((comp,g) => g.update(t, (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e))
 
     /** Compute fixed points of stats
       */
-    def fixPoint(gamma: (States,ECAValue), expr: Expression, stm: Statement): (States,ECAValue) = {
+    def fixPoint(init: States, expr: Expression, stm: Statement): States = {
       var seen = mutable.Set.empty[States]
-      var g_fix = gamma
-      var g_old = gamma
+      var cur  = init
+      var prev = init
+
+      /** Throw away the temporal information (time, energy usage) and replace it with
+          that of the initial state */
+      def nontemporal(st: States) = st.mapValues(_.reset)
+
+      /** The function we are going to iterate */
+      def f(st: States) =
+        nontemporal(duracellBunny(duracellBunny(st->ECAValue.Zero, expr), stm).gamma)
+
+      /** Even though it may not look it, this will always terminate. */
       do {
-        if(!seen.add(g_fix._1))
+        if(!seen.add(cur))
           throw new ECAException("Model error: state delta functions not monotone")
-        g_old = g_fix
-        g_fix = duracellBunny(duracellBunny(g_fix, expr), stm)
-      } while(g_fix._1.mapValues(_.s) != g_old._1.mapValues(_.s))
-      g_fix.regress(gamma).transform((name,st)=>st.setEnergy(gamma._1(name).e))
+        prev = cur
+        cur  = f(cur)
+      } while(cur != prev)
+
+      /** Restore the original time and energy info */
+      return cur.transform((name,st)=>st.update(init(name).t, init(name).e))
     }
 
     /** Energy consumption analysis
@@ -133,7 +119,7 @@ class EnergyAnalysis(program: Program) {
      * @return        updated tuple of set-of-componentstates and global timestamp
      *
      */
-    def duracellBunny(G: (States,ECAValue), node: ASTNode): (States,ECAValue) = node match {
+    def duracellBunny(G: GlobalState, node: ASTNode): GlobalState = node match {
       case FunDef(name, parms, body)    => duracellBunny(G,body)
       case Skip()                       => G
       case If(pred, thenPart, elsePart) => val G2 = duracellBunny(G,pred).update("CPU","ite")
@@ -141,15 +127,16 @@ class EnergyAnalysis(program: Program) {
                                            val G4 = duracellBunny(G2,elsePart)
                                            G3 max G4
 
-      case While(pred, rf, consq)       => val G2 = duracellBunny(G,pred).update("CPU","w")
+      case While(pred, rf, consq)       => val Gpre = G.sync
+                                           val G2 = duracellBunny(Gpre,pred).update("CPU","w")
                                            // this next match will be removed in later versions
                                            val iters = rf match { case Literal(x) => x }
                                            // (dont care about nice error msgs at this point)
                                            val G3 = duracellBunny(G2,consq)
-                                           val G3fix = fixPoint(G3, pred, consq)
-                                           val G4 = duracellBunny(duracellBunny(G3, pred), consq)
+                                           val G3fix = fixPoint(G3.gamma, pred, consq) -> G3.t
+                                           val G4 = duracellBunny(duracellBunny(G3fix, pred), consq)
                                            // I'm not sure i understand this, but this is what the paper says.
-                                           e(G4.regress(G)._1, G3._1, G._1, iters) -> (G._2+(G3._2-G._2)*iters)
+                                           computeEnergyBound(G.t, G4.gamma, G3.gamma, Gpre.gamma, iters) -> (G.t+(G3.t-G.t)*iters)
 
       case Composition(stms)            => stms.foldLeft(G)(duracellBunny)
       case Assignment(_, expr)          => duracellBunny(G,expr).update("CPU","a")
@@ -161,8 +148,7 @@ class EnergyAnalysis(program: Program) {
       case _:PrimaryExpression          => G
     }
 
-    val initStates = components.map(x=>(x.name->x.initialEACState())).toMap
-    duracellBunny((initStates,0),lookup("program")).transform((_,gamma)=>gamma.e)
+    duracellBunny(GlobalState.initial(components), lookup("program")).mapValues(_.e)
     // TODO: 'final state' tallying
   }
 }

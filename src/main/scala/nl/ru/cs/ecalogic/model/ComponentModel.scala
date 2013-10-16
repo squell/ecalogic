@@ -74,6 +74,9 @@ trait ComponentModel {
 
   }
 
+  // TODO: depend on program flag
+  var forceUpdate = true
+
   case class EACState(state: CState, timestamp: ECAValue, energy: ECAValue) {
     def s = state
     def t = timestamp
@@ -83,16 +86,19 @@ trait ComponentModel {
       val e1 = e + E(f) 
       val t2 = t1 + T(f)
       val s1 = delta(f)(s)
-      if(s1 != s) {
+      if(s1 != s || forceUpdate) {
         EACState(s1, t1, e1 + td(this,t1)) -> t2
       } else
         // do not update the timestamp if the state did not change
         EACState(s1, t, e1) -> t2
     }
  
-    def regress(t1: ECAValue) = EACState(s, t1, e + td(this,t1))
+    def forward(t1: ECAValue) = 
+      if(forceUpdate) EACState(s, t max t1, e + td(this,t1)) else this
 
-    def setEnergy(energy: ECAValue) = EACState(s, t, energy) 
+    def reset() = EACState(s, 0, 0)
+
+    def update(timestamp: ECAValue, energy: ECAValue) = EACState(s, timestamp, energy) 
 
     // why not define the lub here in the first place?
     def lub(that: ComponentModel#EACState) =
