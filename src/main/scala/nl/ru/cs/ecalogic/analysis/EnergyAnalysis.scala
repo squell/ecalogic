@@ -45,7 +45,7 @@ import java.io.FileNotFoundException
 
 import model._
 // TODO: parametrize these
-import model.examples.StubComponent
+import model.examples._
 import model.examples.DemoComponents.CPU
 
 /**
@@ -69,7 +69,7 @@ class EnergyAnalysis(program: Program) {
     */
   def apply() = {
     /** Hardcoded for now */
-    val components = Set(HyperPentium, StubComponent)
+    val components = Set(HyperPentium, StubComponent, BadComponent)
 
     val lookup: Map[String, FunDef] =
       program.definitions.map(fundef=>fundef.name->fundef).toMap
