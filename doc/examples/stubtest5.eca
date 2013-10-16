@@ -1,0 +1,13 @@
+(*
+   time usage: 23, energy usage: 23
+ 
+ *)
+
+function program(X)
+  Stub::on();
+  while X < 10 bound 23 do
+    Stub::idle();
+    X := X+1;
+  end while;
+  Stub::off();
+end function
