@@ -71,6 +71,8 @@ class EnergyAnalysis(program: Program) {
     /** Hardcoded for now */
     val components = Set(HyperPentium, StubComponent, BadComponent)
 
+    type Environment = Map[String, Expression]
+
     val lookup: Map[String, FunDef] =
       program.definitions.map(fundef=>fundef.name->fundef).toMap
 
@@ -87,7 +89,7 @@ class EnergyAnalysis(program: Program) {
 
     /** Compute fixed points of stats
       */
-    def fixPoint(init: States, expr: Expression, stm: Statement): States = {
+    def fixPoint(init: States, expr: Expression, stm: Statement)(implicit env: Environment): States = {
       var seen = mutable.Set.empty[States]
       var cur  = init
       var prev = init
@@ -119,7 +121,7 @@ class EnergyAnalysis(program: Program) {
      * @return        updated tuple of set-of-componentstates and global timestamp
      *
      */
-    def duracellBunny(G: GlobalState, node: ASTNode): GlobalState = node match {
+    def duracellBunny(G: GlobalState, node: ASTNode)(implicit env: Environment): GlobalState = node match {
       case FunDef(name, parms, body)    => duracellBunny(G,body)
       case Skip()                       => G
       case If(pred, thenPart, elsePart) => val G2 = duracellBunny(G,pred).update("CPU","ite")
@@ -148,7 +150,7 @@ class EnergyAnalysis(program: Program) {
       case _:PrimaryExpression          => G
     }
 
-    duracellBunny(GlobalState.initial(components), lookup("program")).mapValues(_.e)
+    duracellBunny(GlobalState.initial(components), lookup("program"))(Map.empty).mapValues(_.e)
     // TODO: 'final state' tallying
   }
 }
