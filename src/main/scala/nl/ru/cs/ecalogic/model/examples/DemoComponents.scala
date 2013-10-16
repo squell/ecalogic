@@ -54,7 +54,7 @@ object DemoComponents {
 
   object Radio extends DSLModel("radio") {
 
-    define s0 (on = 0)
+    define σ (on = 0)
 
     define T (on = 40, off = 20, queue = 3, send = 100)
     define E (on = 40, off = 20, queue = 3, send = 100)
