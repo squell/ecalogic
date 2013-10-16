@@ -1,19 +1,19 @@
 // time usage: 23, energy usage: 0
 
 function program(X)
-  Stub::idle();
+  Stub::zap();
   if 23 < 281723817 then
     skip
   else
     while 5 > 42 bound 7 do
       if 100 < 1 then
-        Stub::idle();
+        Stub::zap();
       else
-        Stub::idle();
-        Stub::idle();
-        Stub::idle();
+        Stub::zap();
+        Stub::zap();
+        Stub::zap();
       end if;
     end while;
   end if;
-  Stub::idle();
+  Stub::zap();
 end function

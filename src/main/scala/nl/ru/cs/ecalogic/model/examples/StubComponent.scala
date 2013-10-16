@@ -44,6 +44,11 @@ object StubComponent extends ComponentModel {
     def apply(s: String) = elements(s)
   }
 
+  override def E(f:String) = f match {
+    case "zap" => 1
+    case _     => 0
+  }
+
   override def T(f:String) = f match {
     case "idle"=> 1
     case _     => 0

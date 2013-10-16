@@ -41,6 +41,7 @@ import scala.collection.mutable
 import scala.io.Source
 
 import java.io.File
+import java.io.FileNotFoundException
 
 import model._
 // TODO: parametrize these
@@ -96,7 +97,7 @@ class EnergyAnalysis(program: Program) {
         c.transform((comp,g)=> g.lub(c2(comp))) -> t.max(t2)
       }
 
-      def transform(fun: (String,ComponentModel#EACState)=>ComponentModel#EACState) = 
+      def transform[C](fun: (String,ComponentModel#EACState)=>C) = 
         c.transform(fun) -> t
     }
 
@@ -107,7 +108,7 @@ class EnergyAnalysis(program: Program) {
         it is probably 'out'. But not sure. I don't trust the specification on this part yet.
       */
     def e(out: States, in: States, pre: States, rf: ECAValue) = {
-      out.transform((comp,g) => g.setEnergy((in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1)))
+      out.transform((comp,g) => g.setEnergy((in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e))
     }
 
     /** Compute fixed points of stats
@@ -146,9 +147,9 @@ class EnergyAnalysis(program: Program) {
                                            // (dont care about nice error msgs at this point)
                                            val G3 = duracellBunny(G2,consq)
                                            val G3fix = fixPoint(G3, pred, consq)
-                                           val G4 = duracellBunny(duracellBunny(G3fix, pred), consq)
+                                           val G4 = duracellBunny(duracellBunny(G3, pred), consq)
                                            // I'm not sure i understand this, but this is what the paper says.
-                                           e(G4.regress(G)._1, G3._1, G._1, iters) -> (G3._2-G._2)*iters
+                                           e(G4.regress(G)._1, G3._1, G._1, iters) -> (G._2+(G3._2-G._2)*iters)
 
       case Composition(stms)            => stms.foldLeft(G)(duracellBunny)
       case Assignment(_, expr)          => duracellBunny(G,expr).update("CPU","a")
@@ -161,7 +162,7 @@ class EnergyAnalysis(program: Program) {
     }
 
     val initStates = components.map(x=>(x.name->x.initialEACState())).toMap
-    duracellBunny((initStates,0),lookup("program"))._2
+    duracellBunny((initStates,0),lookup("program")).transform((_,gamma)=>gamma.e)
     // TODO: 'final state' tallying
   }
 }
@@ -170,10 +171,11 @@ object EnergyAnalysis {
 
   def main(args: Array[String]) {
     import scala.util.control.Exception._
-    val file = new File(args.headOption.getOrElse(sys.error("Missing argument.")))
-    val source = Source.fromFile(file).mkString
-    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
+    val fileName = args.headOption.getOrElse(sys.error("Missing argument."))
     try {
+      val file = new File(fileName)
+      val source = Source.fromFile(file).mkString
+      val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
       val parser = new Parser(source, errorHandler)
       val program = parser.program()
       errorHandler.successOrElse("Parse errors encountered")
@@ -188,6 +190,7 @@ object EnergyAnalysis {
       println("Success.")
     } catch {
       case e: ECAException => println(s"${e.message}; aborting")
+      case e: FileNotFoundException => println(s"File not found: ${fileName}")
     }
   }
 
