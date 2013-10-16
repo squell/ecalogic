@@ -7,11 +7,11 @@ function program(X)
   else
     while 5 > 42 bound 7 do
       if 100 < 1 then
-	Stub::idle();
+        Stub::idle();
       else
-	Stub::idle();
-	Stub::idle();
-	Stub::idle();
+        Stub::idle();
+        Stub::idle();
+        Stub::idle();
       end if;
     end while;
   end if;
