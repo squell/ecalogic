@@ -57,10 +57,10 @@ case class GlobalState(gamma: GlobalState.States, t: ECAValue) {
   def max(other: GlobalState): GlobalState =
     GlobalState(gamma.transform((comp,st) => st.lub(other.gamma(comp))), t max other.t)
 
-  def transform[C](fun: (String,ComponentModel#EACState)=>C): (Map[String, C], ECAValue) = 
+  def transform[C](fun: (String,ComponentModel#EACState)=>C): (Map[String, C], ECAValue) =
     (gamma.transform(fun), t)
 
-  def mapValues[C](fun: (ComponentModel#EACState=>C)): (Map[String, C], ECAValue) = 
+  def mapValues[C](fun: (ComponentModel#EACState=>C)): (Map[String, C], ECAValue) =
     (gamma.mapValues(fun), t)
 }
 
@@ -70,7 +70,7 @@ object GlobalState {
   /** A map containing, for each component (identified by name), its current component state */
   type States = Map[String,ComponentModel#EACState]
 
-  def initial(components: Set[ComponentModel]): GlobalState = 
+  def initial(components: Set[ComponentModel]): GlobalState =
     GlobalState(components.map(x=>(x.name->x.initialEACState())).toMap, 0)
 
   implicit def tupleToGlobalState(gamma: (States, ECAValue)): GlobalState = GlobalState(gamma._1, gamma._2)

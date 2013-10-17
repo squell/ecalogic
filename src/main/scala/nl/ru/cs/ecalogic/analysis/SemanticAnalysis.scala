@@ -97,7 +97,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
   /** Checks whether all variable references are proper;
       In particular, disallow programs for which it cannot be determined (statically) if references to it
       are preceeded by assignments. Also disallow values constructed at run-time from being used inside
-      ranking funcions. 
+      ranking funcions.
     */
   def variableReferenceHygiene() {
 
@@ -119,10 +119,10 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
                                              rf.foreach {
                                                case _: ArithmeticExpression =>
                                                case Literal(_) =>
-                                               case v@VarRef(ident) => 
+                                               case v@VarRef(ident) =>
                                                  if(!params(ident))
                                                    eh.error(new ECAException(s"Non-parameter '$ident' not allowed in a bound expression.", v.position))
-                                                 if(live(ident)) 
+                                                 if(live(ident))
                                                    eh.warning(new ECAException(s"Variable '$ident' written to before this reference.", v.position))
                                                case e: Expression =>
                                                    eh.error(new ECAException(s"Expression '$e' not suitable for use in a ranking function.", e.position))
@@ -143,7 +143,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
                                                case _: ArithmeticExpression =>
                                                case Literal(_) =>
                                                case VarRef(ident) if !live(ident) && params(ident) =>
-                                               case e: Expression => 
+                                               case e: Expression =>
                                                    eh.error(new ECAException(s"Sorry, not in this version: '$e' as argument to call.", e.position))
                                              })
                                              live

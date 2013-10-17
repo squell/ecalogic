@@ -37,7 +37,7 @@ package model
  * @author Marc Schoolderman
  * @author Jascha Neutelings
  */
-trait ComponentModel { 
+trait ComponentModel {
   Model =>
 
   type CState <: ComponentState
@@ -83,7 +83,7 @@ trait ComponentModel {
     def e = energy
 
     def update(f: String, t1: ECAValue) = {
-      val e1 = e + E(f) 
+      val e1 = e + E(f)
       val t2 = t1 + T(f)
       val s1 = delta(f)(s)
       if(s1 != s || forceUpdate) {
@@ -92,13 +92,13 @@ trait ComponentModel {
         // do not update the timestamp if the state did not change
         EACState(s1, t, e1) -> t2
     }
- 
-    def forward(t1: ECAValue) = 
+
+    def forward(t1: ECAValue) =
       if(forceUpdate) EACState(s, t max t1, e + td(this,t1)) else this
 
     def reset = EACState(s, 0, 0)
 
-    def update(timestamp: ECAValue, energy: ECAValue) = EACState(s, timestamp, energy) 
+    def update(timestamp: ECAValue, energy: ECAValue) = EACState(s, timestamp, energy)
 
     // why not define the lub here in the first place?
     def lub(that: ComponentModel#EACState) =

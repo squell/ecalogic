@@ -75,7 +75,7 @@ class EnergyAnalysis(program: Program) {
     * @return I'll tell you later, once I know. TODO
     */
   def apply(entryPoint: String = "program") = {
-    /** Performs the functions of both "r()" and "e()" in the paper 
+    /** Performs the functions of both "r()" and "e()" in the paper
       *
       * @param t The new timestamp for components (should be in the past)
       * @param out Component states *after* having evaluated the loop condition and loop body
@@ -124,7 +124,7 @@ class EnergyAnalysis(program: Program) {
       case FunDef(name, parms, body)    => duracellBunny(G,body)
       case Skip()                       => G
       case If(pred, thenPart, elsePart) => val G2 = duracellBunny(G,pred).update("CPU","ite")
-                                           val G3 = duracellBunny(G2,thenPart) 
+                                           val G3 = duracellBunny(G2,thenPart)
                                            val G4 = duracellBunny(G2,elsePart)
                                            G3 max G4
 
