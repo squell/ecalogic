@@ -48,3 +48,13 @@ Voordat we richting Milestone #3 kunnen werken moet er nog een keuze gemaakt wor
 Als extra toevoeging voor milestone #4 is voorlopig het streven:
 - Een simpele webinterface
 
+UPDATE:
+
+Planning om nog te completeren voor Milestone #2
+- korte termijn: 
+  Jascha: external DSL pre-ontwerp, internal DSL componentmodel-registratie
+  Marc: variable substitutie bij function calls, mogelijkheid tot expressies als waardes?
+  Dorus: scala-test's 
+
+Daarna (nav. gesprek Rody) re-plannen.
+
