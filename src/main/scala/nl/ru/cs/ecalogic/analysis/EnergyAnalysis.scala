@@ -53,7 +53,7 @@ import model.examples.DemoComponents.CPU
  */
 class EnergyAnalysis(program: Program) {
 
-  import GlobalState._
+  import GlobalState.States
 
   /** For debugging (and exposition) purposes, a CPU which computes everything
     * instantly and consumes no power. (You know you want one!)
@@ -63,19 +63,18 @@ class EnergyAnalysis(program: Program) {
     define E (e = 0, a = 0, w = 0, ite = 0)
   }
 
+  type Environment = Map[String, Expression]
+
+  val components = Set(HyperPentium, StubComponent, BadComponent)
+
+  val lookup: Map[String, FunDef] =
+    program.definitions.map(fundef=>fundef.name->fundef).toMap
+
   /** Performs energy analysis of the function 'program'
     *
     * @return I'll tell you later, once I know. TODO
     */
-  def apply() = {
-    /** Hardcoded for now */
-    val components = Set(HyperPentium, StubComponent, BadComponent)
-
-    type Environment = Map[String, Expression]
-
-    val lookup: Map[String, FunDef] =
-      program.definitions.map(fundef=>fundef.name->fundef).toMap
-
+  def apply(entryPoint: String = "program") = {
     /** Performs the functions of both "r()" and "e()" in the paper 
       *
       * @param t The new timestamp for components (should be in the past)
@@ -90,7 +89,6 @@ class EnergyAnalysis(program: Program) {
     /** Compute fixed points of stats
       */
     def fixPoint(init: States, expr: Expression, stm: Statement)(implicit env: Environment): States = {
-      var seen = mutable.Set.empty[States]
       var cur  = init
       var prev = init
 
@@ -105,7 +103,7 @@ class EnergyAnalysis(program: Program) {
       /** Even though it may not look it, this will always terminate. */
       var limit = 1000;
       do {
-        if(!seen.add(cur) || {limit-=1; limit} <= 0)
+        if({limit-=1; limit} <= 0)
           throw new ECAException("Model error: state delta functions not monotone")
         prev = cur
         cur  = f(cur)
@@ -151,8 +149,7 @@ class EnergyAnalysis(program: Program) {
       case _:PrimaryExpression          => G
     }
 
-    duracellBunny(GlobalState.initial(components), lookup("program"))(Map.empty).mapValues(_.e)
-    // TODO: 'final state' tallying
+    duracellBunny(GlobalState.initial(components), lookup(entryPoint))(Map.empty).sync.mapValues(_.e)
   }
 }
 

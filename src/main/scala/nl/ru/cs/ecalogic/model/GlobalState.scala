@@ -47,21 +47,21 @@ case class GlobalState(gamma: GlobalState.States, t: ECAValue) {
   /* Model the effect of calling fun on component */
   def update(component: String, fun: String): GlobalState = {
     val (state, t1) = gamma(component).update(fun, t)
-    gamma.updated(component, state) -> t1
+    GlobalState(gamma.updated(component, state), t1)
   }
 
   /* Synchronize all components to the global timer */
-  def sync(): GlobalState = mapValues(_.forward(t))
+  def sync: GlobalState = mapValues(_.forward(t))
 
   // Scala doesn't (and can't possibly?) know that the two EACStates are the same type.
   def max(other: GlobalState): GlobalState =
-    gamma.transform((comp,st) => st.lub(other.gamma(comp))) -> (t max other.t)
+    GlobalState(gamma.transform((comp,st) => st.lub(other.gamma(comp))), t max other.t)
 
-  def transform[C](fun: (String,ComponentModel#EACState)=>C) = 
-    gamma.transform(fun) -> t
+  def transform[C](fun: (String,ComponentModel#EACState)=>C): (Map[String, C], ECAValue) = 
+    (gamma.transform(fun), t)
 
-  def mapValues[C](fun: (ComponentModel#EACState=>C)) = 
-    gamma.mapValues(fun) -> t
+  def mapValues[C](fun: (ComponentModel#EACState=>C)): (Map[String, C], ECAValue) = 
+    (gamma.mapValues(fun), t)
 }
 
 object GlobalState {

@@ -96,7 +96,7 @@ trait ComponentModel {
     def forward(t1: ECAValue) = 
       if(forceUpdate) EACState(s, t max t1, e + td(this,t1)) else this
 
-    def reset() = EACState(s, 0, 0)
+    def reset = EACState(s, 0, 0)
 
     def update(timestamp: ECAValue, energy: ECAValue) = EACState(s, timestamp, energy) 
 
