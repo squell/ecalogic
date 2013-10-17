@@ -1,0 +1,14 @@
+component CPU
+
+    on ::= 0
+    queue ::= 0
+    
+    function on(X) 
+	on ::= on * 6 + queue ^ 2 + 9 + X;
+	queue ::= queue - 1;
+	T(3)
+	E(0)
+    end function 
+
+end component
+
