@@ -36,8 +36,8 @@ package examples
 
 object BadComponent extends DSLModel("BUG") {
 
-    define s0 (on = 0)
-
+    define σ (on = 0)
+     
     /* the function toggle is not order preserving */
     define δ (
       inc = s => s(on = s.on+1),

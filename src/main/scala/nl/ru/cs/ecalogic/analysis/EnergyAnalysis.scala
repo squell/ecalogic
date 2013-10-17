@@ -51,21 +51,16 @@ import model.examples.DemoComponents.CPU
 /**
  * @author Marc Schoolderman
  */
-class EnergyAnalysis(program: Program) {
+class EnergyAnalysis(program: Program, components: Set[ComponentModel]) {
 
   import GlobalState.States
 
   /** For debugging (and exposition) purposes, a CPU which computes everything
     * instantly and consumes no power. (You know you want one!)
     */
-  object HyperPentium extends DSLModel("CPU") {
-    define T (e = 0, a = 0, w = 0, ite = 0)
-    define E (e = 0, a = 0, w = 0, ite = 0)
-  }
+
 
   type Environment = Map[String, Expression]
-
-  val components = Set(HyperPentium, StubComponent, BadComponent)
 
   val lookup: Map[String, FunDef] =
     program.definitions.map(fundef=>fundef.name->fundef).toMap
@@ -98,10 +93,10 @@ class EnergyAnalysis(program: Program) {
 
       /** The function we are going to iterate */
       def f(st: States) =
-        nontemporal(duracellBunny(duracellBunny(st->ECAValue.Zero, expr), stm).gamma)
+        nontemporal(analyse(analyse((st,ECAValue.Zero), expr), stm).gamma)
 
       /** Even though it may not look it, this will always terminate. */
-      var limit = 1000;
+      var limit = 1000
       do {
         if({limit-=1; limit} <= 0)
           throw new ECAException("Model error: state delta functions not monotone")
@@ -120,37 +115,42 @@ class EnergyAnalysis(program: Program) {
      * @return        updated tuple of set-of-componentstates and global timestamp
      *
      */
-    def duracellBunny(G: GlobalState, node: ASTNode)(implicit env: Environment): GlobalState = node match {
-      case FunDef(name, parms, body)    => duracellBunny(G,body)
+    def analyse(G: GlobalState, node: ASTNode)(implicit env: Environment): GlobalState = node match {
+      case FunDef(name, parms, body)    => analyse(G,body)
       case Skip()                       => G
-      case If(pred, thenPart, elsePart) => val G2 = duracellBunny(G,pred).update("CPU","ite")
-                                           val G3 = duracellBunny(G2,thenPart)
-                                           val G4 = duracellBunny(G2,elsePart)
+      case If(pred, thenPart, elsePart) => val G2 = analyse(G,pred).update("CPU","ite")
+                                           val G3 = analyse(G2,thenPart)
+                                           val G4 = analyse(G2,elsePart)
                                            G3 max G4
 
       case While(pred, rf, consq)       => val Gpre = G.sync
-                                           val G2 = duracellBunny(Gpre,pred).update("CPU","w")
+                                           val G2 = analyse(Gpre,pred).update("CPU","w")
                                            // this next match will be removed in later versions
                                            val iters = rf match { case Literal(x) => x }
                                            // (dont care about nice error msgs at this point)
-                                           val G3 = duracellBunny(G2,consq)
-                                           val G3fix = fixPoint(G3.gamma, pred, consq) -> G3.t
-                                           val G4 = duracellBunny(duracellBunny(G3fix, pred), consq)
+                                           val G3 = analyse(G2,consq)
+                                           val G3fix = (fixPoint(G3.gamma, pred, consq), G3.t)
+                                           val G4 = analyse(analyse(G3fix, pred), consq)
                                            // I'm not sure i understand this, but this is what the paper says.
-                                           computeEnergyBound(G.t, G4.gamma, G3.gamma, Gpre.gamma, iters) -> (G.t+(G3.t-G.t)*iters)
+                                           (computeEnergyBound(G.t, G4.gamma, G3.gamma, Gpre.gamma, iters), G.t+(G3.t-G.t)*iters)
 
-      case Composition(stms)            => stms.foldLeft(G)(duracellBunny)
-      case Assignment(_, expr)          => duracellBunny(G,expr).update("CPU","a")
+      case Composition(stms)            => stms.foldLeft(G)(analyse)
+      case Assignment(_, expr)          => analyse(G,expr).update("CPU","a")
       case FunCall(fun, args)
-        if fun.isPrefixed               => args.foldLeft(G)(duracellBunny).update(fun.prefix.get, fun.name)
+        if fun.isPrefixed               => args.foldLeft(G)(analyse).update(fun.prefix.get, fun.name)
       case FunCall(fun, args)           => val body = lookup(fun.name).body
-                                           duracellBunny(args.foldLeft(G)(duracellBunny), body)
-      case e:NAryExpression             => e.operands.foldLeft(G)(duracellBunny).update("CPU", "e")
+                                           analyse(args.foldLeft(G)(analyse), body)
+      case e:NAryExpression             => e.operands.foldLeft(G)(analyse).update("CPU", "e")
       case _:PrimaryExpression          => G
     }
 
-    duracellBunny(GlobalState.initial(components), lookup(entryPoint))(Map.empty).sync.mapValues(_.e)
+    analyse(GlobalState.initial(components), lookup(entryPoint))(Map.empty).sync.mapValues(_.e)
   }
+}
+
+object HyperPentium extends DSLModel("CPU") {
+  define T (e = 0, a = 0, w = 0, ite = 0)
+  define E (e = 0, a = 0, w = 0, ite = 0)
 }
 
 object EnergyAnalysis {
@@ -171,7 +171,9 @@ object EnergyAnalysis {
       checker.variableReferenceHygiene()
       errorHandler.successOrElse("Semantic errors; please fix these.")
 
-      val consumptionAnalyser = new EnergyAnalysis(program)
+      val components = Set(StubComponent, BadComponent, HyperPentium)
+
+      val consumptionAnalyser = new EnergyAnalysis(program, components)
       println(consumptionAnalyser().toString)
       println("Success.")
     } catch {
