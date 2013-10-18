@@ -33,6 +33,8 @@
 package nl.ru.cs.ecalogic
 package model
 
+import config.Options.{Model => config}
+
 /**
  * @author Marc Schoolderman
  * @author Jascha Neutelings
@@ -74,27 +76,24 @@ trait ComponentModel {
 
   }
 
-  // TODO: depend on program flag
-  var forceUpdate = true
-
   case class EACState(state: CState, timestamp: ECAValue, energy: ECAValue) {
     def s = state
     def t = timestamp
     def e = energy
 
-    def update(f: String, t1: ECAValue) = {
+    def update(f: String, t1: ECAValue): (EACState, ECAValue) = {
       val e1 = e + E(f)
       val t2 = t1 + T(f)
       val s1 = delta(f)(s)
-      if(s1 != s || forceUpdate) {
-        EACState(s1, t1, e1 + td(this,t1)) -> t2
+      if(s1 != s || config.alwaysForwardTime) {
+        (EACState(s1, t1, e1 + td(this,t1)), t2)
       } else
         // do not update the timestamp if the state did not change
-        EACState(s1, t, e1) -> t2
+        (EACState(s1, t, e1), t2)
     }
 
     def forward(t1: ECAValue) =
-      if(forceUpdate) EACState(s, t max t1, e + td(this,t1)) else this
+      EACState(s, t max t1, e + td(this,t1))
 
     def reset = EACState(s, 0, 0)
 

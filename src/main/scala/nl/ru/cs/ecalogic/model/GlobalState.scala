@@ -47,7 +47,7 @@ case class GlobalState(gamma: GlobalState.States, t: ECAValue) {
   /* Model the effect of calling fun on component */
   def update(component: String, fun: String): GlobalState = {
     if(!gamma.contains(component))
-      throw new ECAException(s"Component not enabled: $component")
+      throw new ECAException(s"Component not found: $component")
 
     val (state, t1) = gamma(component).update(fun, t)
     GlobalState(gamma.updated(component, state), t1)
