@@ -36,6 +36,7 @@ package analysis
 import ast._
 import parser.Parser
 import util.{ErrorHandler, DefaultErrorHandler}
+import config.Options.{Analysis => config}
 
 import scala.collection.mutable
 import scala.io.Source
@@ -55,34 +56,34 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel]) {
 
   import GlobalState.States
 
-  /** For debugging (and exposition) purposes, a CPU which computes everything
-    * instantly and consumes no power. (You know you want one!)
-    */
-
-
   type Environment = Map[String, Expression]
 
   val lookup: Map[String, FunDef] =
     program.definitions.map(fundef=>fundef.name->fundef).toMap
+
+  /** Performs the functions of both "r()" and "e()" in the paper
+    *
+    * @param t The new timestamp for components (should be in the past)
+    * @param out Component states *after* having evaluated the loop condition and loop body
+    * @param in  Component states *after* having evaluated the loop condition, but before evaluating the body
+    * @param pre Component states *before* evaluating the entire while loop
+    * @return A new set of component states with updated time and energy information
+    */
+  def computeEnergyBound(t:ECAValue, out: States, in: States, pre: States, rf: ECAValue) =
+    out.transform((comp,g) => g.update(t, (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e))
 
   /** Performs energy analysis of the function 'program'
     *
     * @return I'll tell you later, once I know. TODO
     */
   def apply(entryPoint: String = "program") = {
-    /** Performs the functions of both "r()" and "e()" in the paper
-      *
-      * @param t The new timestamp for components (should be in the past)
-      * @param out Component states *after* having evaluated the loop condition and loop body
-      * @param in  Component states *after* having evaluated the loop condition, but before evaluating the body
-      * @param pre Component states *before* evaluating the entire while loop
-      * @return A new set of component states with updated time and energy information
-      */
-    def computeEnergyBound(t:ECAValue, out: States, in: States, pre: States, rf: ECAValue) =
-      out.transform((comp,g) => g.update(t, (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e))
-
-    /** Compute fixed points of stats
-      */
+    /** Compute fixed points of componentstates within a while-loop
+     *
+     * @param init set-of-componentstates (without global time)
+     * @param expr controlling condition of while-loop
+     * @param stm  main body of while loop
+     * @param env  current environment mapping variables to expressions (pass-thru variable)
+     */
     def fixPoint(init: States, expr: Expression, stm: Statement)(implicit env: Environment): States = {
       var cur  = init
       var prev = init
@@ -112,18 +113,20 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel]) {
      *
      * @param G       tuple of set-of-componentstates and the global timestamp
      * @param node    AST node under consideration
+     * @param env  current environment mapping variables to expressions (pass-thru variable)
      * @return        updated tuple of set-of-componentstates and global timestamp
      *
      */
     def analyse(G: GlobalState, node: ASTNode)(implicit env: Environment): GlobalState = node match {
       case FunDef(name, parms, body)    => analyse(G,body)
       case Skip()                       => G
-      case If(pred, thenPart, elsePart) => val G2 = analyse(G,pred).update("CPU","ite")
+      case If(pred, thenPart, elsePart) => val Gpre = if (config.alwaysSync) G.sync else G
+                                           val G2 = analyse(Gpre,pred).update("CPU","ite")
                                            val G3 = analyse(G2,thenPart)
                                            val G4 = analyse(G2,elsePart)
                                            G3 max G4
 
-      case While(pred, rf, consq)       => val Gpre = G.sync
+      case While(pred, rf, consq)       => val Gpre = if (config.alwaysSync) G.sync else G
                                            val G2 = analyse(Gpre,pred).update("CPU","w")
                                            // this next match will be removed in later versions
                                            val iters = rf match { case Literal(x) => x }
@@ -147,6 +150,10 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel]) {
     analyse(GlobalState.initial(components), lookup(entryPoint))(Map.empty).sync.mapValues(_.e)
   }
 }
+
+/** For debugging (and exposition) purposes, a CPU which computes everything
+  * instantly and consumes no power. (You know you want one!)
+  */
 
 object HyperPentium extends DSLModel("CPU") {
   define T (e = 0, a = 0, w = 0, ite = 0)
