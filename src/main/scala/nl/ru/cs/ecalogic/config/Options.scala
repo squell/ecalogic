@@ -55,6 +55,9 @@ object Options {
        Technical report: false  -- causes (significant) over-estimations of energy consumption */
 
     var alwaysSync = false
+
+    /* How long should we attempt to find fixpoint? Note that 10000 is a high setting */
+    var fixPointPatience = 10000
   }
 }
 

@@ -52,7 +52,7 @@ import model.examples.DemoComponents.CPU
 /**
  * @author Marc Schoolderman
  */
-class EnergyAnalysis(program: Program, components: Set[ComponentModel]) {
+class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: ErrorHandler = new DefaultErrorHandler()) {
 
   import GlobalState.States
   import Transform._
@@ -99,16 +99,21 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel]) {
         nontemporal(analyse(analyse((st,ECAValue.Zero), expr), stm).gamma)
 
       /** Even though it may not look it, this will always terminate. */
-      var limit = 1000
+      var limit = config.fixPointPatience
       do {
         if({limit-=1; limit} <= 0)
-          throw new ECAException("Model error: state delta functions not monotone")
+          eh.fatalError(new ECAException("Model error: not all component delta functions have fixed points."))
         prev = cur
         cur  = f(cur)
       } while(cur != prev)
 
       /** Restore the original time and energy info */
       return cur.transform((name,st)=>st.update(init(name).t, init(name).e))
+    }
+
+    def resolve(expr: Expression): ECAValue = expr match {
+      case Literal(x) => x
+      case _ => eh.error(new ECAException("Could not resolve this value.", expr.position)); 0
     }
 
     /** Energy consumption analysis
@@ -130,10 +135,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel]) {
 
       case While(pred, rf, consq)       => val Gpre = if (config.alwaysSync) G.sync else G
                                            val G2 = analyse(Gpre,pred).update("CPU","w")
-                                           val iters = foldConstants(rf, env) match { 
-                                             case Literal(x) => x 
-                                             case _ => throw new ECAException("Could not resolve this value.", node.position)
-                                           }
+                                           val iters = resolve(foldConstants(rf, env))
                                            val G3 = analyse(G2,consq)
                                            val G3fix = (fixPoint(G3.gamma, pred, consq), G3.t)
                                            val G4 = analyse(analyse(G3fix, pred), consq)
@@ -144,18 +146,24 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel]) {
 
       case FunCall(fun, args)
         if fun.isPrefixed               => val component = fun.prefix.get
-                                           if(!G.gamma.contains(component))
-                                             throw new ECAException(s"Component not found: $component", node.position)
-                                           args.foldLeft(G)(analyse).update(component, fun.name)
+                                           if(!G.gamma.contains(component)) {
+                                             eh.error(new ECAException(s"Component not found: $component", node.position)); G
+                                           } else
+                                             args.foldLeft(G)(analyse).update(component, fun.name)
 
       case FunCall(fun, args)           => val funDef = lookup(fun.name)
-                                           val binding = funDef.parameters.map(_.name) zip args.map(foldConstants(_, env))
+                                           val resolvedArgs = args.map(foldConstants(_, env))
+                                           val binding = funDef.parameters.map(_.name) zip resolvedArgs
                                            analyse(args.foldLeft(G)(analyse), funDef.body)(env ++ binding)
       case e:NAryExpression             => e.operands.foldLeft(G)(analyse).update("CPU", "e")
       case _:PrimaryExpression          => G
     }
 
-    analyse(GlobalState.initial(Seq(HyperPentium)++components), lookup(entryPoint))(Map.empty).sync.mapValues(_.e)
+    val finalState = analyse(GlobalState.initial(Seq(HyperPentium)++components), lookup(entryPoint))(Map.empty).sync
+    if(eh.errorOccurred) 
+      throw new ECAException("Analysis failed.")
+    else 
+      finalState.mapValues(_.e)
   }
 }
 
@@ -179,7 +187,7 @@ object EnergyAnalysis {
       val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
       val parser = new Parser(source, errorHandler)
       val program = parser.program()
-      errorHandler.successOrElse("Parse errors encountered")
+      errorHandler.successOrElse("Parse errors encountered.")
 
       val checker = new SemanticAnalysis(program, errorHandler)
       checker.functionCallHygiene()
@@ -188,13 +196,15 @@ object EnergyAnalysis {
 
       val components = Set(StubComponent, BadComponent)
 
-      val consumptionAnalyser = new EnergyAnalysis(program, components)
+      val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
       println(consumptionAnalyser().toString)
+
       println("Success.")
     } catch {
-      case e: ECAException => println(s"${e.message}; aborting")
+      case e: ECAException => println(s"${e.message}\nAborted")
       case e: FileNotFoundException => println(s"File not found: ${fileName}")
     }
   }
 
 }
+

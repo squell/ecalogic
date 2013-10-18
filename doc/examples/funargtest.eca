@@ -1,0 +1,10 @@
+function foo(X)
+  while 1 < X bound X do
+    skip
+  end while
+end function
+
+function program (X)
+  foo(5);
+  foo(X);
+end function
