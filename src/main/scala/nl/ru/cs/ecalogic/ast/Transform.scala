@@ -41,7 +41,7 @@ object Transform {
    * @param expr    expression to rewrite
    * @param varmap  map of variable names to expressions (assumed to be constant-folded)
    */
-  def foldConstants(expr: Expression, varmap: Map[String,Expression]): Expression = {
+  def foldConstants(expr: Expression, varmap: Map[String,Expression] = Map.empty): Expression = {
     val pos = expr.position
     expr.transform {
       case Add(Literal(l), Literal(r)) => Literal(l+r)(pos)

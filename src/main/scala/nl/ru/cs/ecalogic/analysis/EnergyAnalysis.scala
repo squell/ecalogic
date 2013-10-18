@@ -55,6 +55,8 @@ import model.examples.DemoComponents.CPU
 class EnergyAnalysis(program: Program, components: Set[ComponentModel]) {
 
   import GlobalState.States
+  import Transform._
+  import EnergyAnalysis._
 
   type Environment = Map[String, Expression]
 
@@ -128,39 +130,45 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel]) {
 
       case While(pred, rf, consq)       => val Gpre = if (config.alwaysSync) G.sync else G
                                            val G2 = analyse(Gpre,pred).update("CPU","w")
-                                           // this next match will be removed in later versions
-                                           val iters = rf match { case Literal(x) => x }
-                                           // (dont care about nice error msgs at this point)
+                                           val iters = foldConstants(rf, env) match { 
+                                             case Literal(x) => x 
+                                             case _ => throw new ECAException("Could not resolve this value.", node.position)
+                                           }
                                            val G3 = analyse(G2,consq)
                                            val G3fix = (fixPoint(G3.gamma, pred, consq), G3.t)
                                            val G4 = analyse(analyse(G3fix, pred), consq)
-                                           // I'm not sure i understand this, but this is what the paper says.
                                            (computeEnergyBound(G.t, G4.gamma, G3.gamma, Gpre.gamma, iters), G.t+(G3.t-G.t)*iters)
 
       case Composition(stms)            => stms.foldLeft(G)(analyse)
       case Assignment(_, expr)          => analyse(G,expr).update("CPU","a")
+
       case FunCall(fun, args)
-        if fun.isPrefixed               => args.foldLeft(G)(analyse).update(fun.prefix.get, fun.name)
-      case FunCall(fun, args)           => val body = lookup(fun.name).body
-                                           analyse(args.foldLeft(G)(analyse), body)
+        if fun.isPrefixed               => val component = fun.prefix.get
+                                           if(!G.gamma.contains(component))
+                                             throw new ECAException(s"Component not found: $component", node.position)
+                                           args.foldLeft(G)(analyse).update(component, fun.name)
+
+      case FunCall(fun, args)           => val funDef = lookup(fun.name)
+                                           val binding = funDef.parameters.map(_.name) zip args.map(foldConstants(_, env))
+                                           analyse(args.foldLeft(G)(analyse), funDef.body)(env ++ binding)
       case e:NAryExpression             => e.operands.foldLeft(G)(analyse).update("CPU", "e")
       case _:PrimaryExpression          => G
     }
 
-    analyse(GlobalState.initial(components), lookup(entryPoint))(Map.empty).sync.mapValues(_.e)
+    analyse(GlobalState.initial(Seq(HyperPentium)++components), lookup(entryPoint))(Map.empty).sync.mapValues(_.e)
   }
 }
 
-/** For debugging (and exposition) purposes, a CPU which computes everything
-  * instantly and consumes no power. (You know you want one!)
-  */
-
-object HyperPentium extends DSLModel("CPU") {
-  define T (e = 0, a = 0, w = 0, ite = 0)
-  define E (e = 0, a = 0, w = 0, ite = 0)
-}
-
 object EnergyAnalysis {
+
+  /** For debugging (and exposition) purposes, a CPU which computes everything
+    * instantly and consumes no power. (You know you want one!)
+    */
+
+  object HyperPentium extends DSLModel("CPU") {
+    define T (e = 0, a = 0, w = 0, ite = 0)
+    define E (e = 0, a = 0, w = 0, ite = 0)
+  }
 
   def main(args: Array[String]) {
     import scala.util.control.Exception._
@@ -178,7 +186,7 @@ object EnergyAnalysis {
       checker.variableReferenceHygiene()
       errorHandler.successOrElse("Semantic errors; please fix these.")
 
-      val components = Set(StubComponent, BadComponent, HyperPentium)
+      val components = Set(StubComponent, BadComponent)
 
       val consumptionAnalyser = new EnergyAnalysis(program, components)
       println(consumptionAnalyser().toString)
