@@ -50,16 +50,17 @@ case class GlobalState(gamma: GlobalState.States, t: ECAValue) {
     GlobalState(gamma.updated(component, state), t1)
   }
 
-  /* Synchronize all components to the global timer */
-  def sync: GlobalState = forward(t)
+  /* Synchronize all components to the global timer; time passes */
+  def sync: GlobalState = mapValues(_.forward(t))
+
+  /* Synchronize all components to the global timer; no time passes */
+  def timeshift: GlobalState = mapValues(st=>st.update(t, st.e))
 
   // Scala doesn't (and can't possibly?) know that the two EACStates are the same type.
   def max(other: GlobalState): GlobalState =
     GlobalState(gamma.transform((comp,st) => st.lub(other.gamma(comp))), t max other.t)
 
   /* pass-thru functions */
-  def forward(t: ECAValue): GlobalState = mapValues(_.forward(t))
-
   def apply(name: String): ComponentModel#EACState = gamma(name)
 
   def transform[C](fun: (String,ComponentModel#EACState)=>C): (Map[String, C], ECAValue) =

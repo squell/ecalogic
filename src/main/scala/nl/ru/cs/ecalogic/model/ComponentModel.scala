@@ -85,11 +85,16 @@ trait ComponentModel {
       val e1 = e + E(f)
       val t2 = t1 + T(f)
       val s1 = delta(f)(s)
-      if(s1 != s || config.alwaysForwardTime) {
-        (EACState(s1, t1, e1 + td(this,t1)), t2)
+      if(s1 != s || config.alwaysUpdate) {
+        val upd = EACState(s1, t1, e1 + td(this,t1))
+        if(config.alwaysForwardTime) 
+          // not only update, but set it to the most recent
+          (EACState(s1, t2, upd.e + td(upd, t2)), t2)
+        else
+          (upd, t2)
       } else
         // do not update the timestamp if the state did not change
-        (EACState(s1, t, e1), t2)
+        (EACState(s, t, e1), t2)
     }
 
     def forward(t1: ECAValue) =

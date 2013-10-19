@@ -72,10 +72,16 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
     * @return A new set of component states with updated time and energy information
     */
   def computeEnergyBound(out: GlobalState, in: GlobalState, pre: GlobalState, rf: ECAValue): GlobalState = {
-    val result_t = pre.t + (in.t-pre.t)*rf
-    val t = if(config.afterSync) result_t else pre.t
-    (out.gamma.transform((comp,g) => g.update(t, (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e)),
-     result_t)
+    val exit_t = pre.t + (in.t-pre.t)*rf
+
+    def newGamma(time: ECAValue, out: GlobalState, in: GlobalState) =
+      out.gamma.transform((comp,g) => g.update(time, (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e))
+
+    if(config.afterSync)
+      // Assume 'pre' is already sync'd. In the future 'beforeSync' and 'afterSync' could become the same flag.
+      (newGamma(exit_t, out.sync, in.sync), exit_t)
+    else
+      (newGamma(pre.t, out, in), exit_t)
   }
 
   /** Performs energy analysis of the function 'program'
@@ -138,9 +144,9 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
                                            val G2 = analyse(Gpre,pred).update("CPU","ite")
                                            val G3 = analyse(G2,thenPart)
                                            val G4 = analyse(G2,elsePart)
-                                           if(config.afterSync)
-                                             G3.forward(G4.t) max G4.forward(G3.t)
-                                           else
+                                           if(config.afterSync) {
+                                             (G3.sync max G4.sync).timeshift
+                                           } else
                                              G3 max G4
 
       case While(pred, rf, consq)       => val Gpre = if (config.beforeSync) G.sync else G

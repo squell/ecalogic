@@ -41,10 +41,20 @@ TODO: adds some code that reads cmdline flags here.
  */
 
 object Options {
+  /* NOTE: there may be some interplay between these options; also, some
+     options may be unnecessary if you enable other options. */
+
   object Model {
-    /* Should a delta-function always forward the energy-aware
+    /* Should a delta-function always update the energy-aware
        state-information even if the component state did not change?
-       Note: if beforeSync and afterSync are set, this setting is useless.
+
+       Technical report: false */
+    var alwaysUpdate = false
+
+    /* Should, on a energy state-update, the component-update also take
+       into account the time the function itself takes? I.e. should the
+       timestamp be set to the most recent time (true) or the last
+       state change (false)
 
        Technical report: false */
     var alwaysForwardTime = false
@@ -56,16 +66,19 @@ object Options {
        results in over-estimations.
 
        Technical report: false */
-    var beforeSync = true
+    var beforeSync = false
 
     /* In the original document, at the exit of a while-loop, all timestamps
        of components get reset to the time before entering the while loop,
        while the global timestamp gets set to a time *after*. This is consistent
        with the if-statement (similar problem), but causes a factor two over-
-       estimation in even the most simple cases.
+       estimation in even simple cases.
+
+       Setting this to true causes much tighter bounds on if and while's, but
+       the question is, is it correct?
 
        Technical report: false */
-    var afterSync = true
+    var afterSync = false
 
     /* How long should we attempt to find fixpoint? Note that 10000 is a high setting */
     var fixPatience = 10000
