@@ -52,11 +52,35 @@ import java.io.File
 final class Parser(input: String, protected val errorHandler: ErrorHandler = new DefaultErrorHandler()) extends BaseParser {
   override protected val ignored = Tokens.Comment | Tokens.Whitespace
   protected val lexer = new Lexer(input)
+  private var lastLineNumber = 0
 
   private def parse[A >: ErrorNode <: ASTNode](expected: Pattern)(follows: Pattern)(parser: PartialFunction[Token, Position => A]): A = {
     val pos = position
     val res = parse[(Position => A), (Position => ErrorNode)]{_ => unexpected(expected); ErrorNode()}(follows)(parser)
     res(pos)
+  }
+
+  override protected def advance() {
+    lastLineNumber = position.line
+    super.advance()
+  }
+
+  // DO NOT USE FOR LOOKAHEAD!
+  private object EndOfLine extends Pattern {
+
+    def unapply(token: Token) = matches(token)
+
+    def matches(token: Token) = position.line > lastLineNumber
+
+    override def toString = "<end-of-line>"
+
+  }
+
+  private def expectSeparator(follows: Pattern) {
+    parse {_ => unexpected(Tokens.Identifier | EndOfLine)} (follows) {
+      case Tokens.Semicolon => advance()
+      case EndOfLine()      =>
+    }
   }
 
   /** Parses an identifier.
@@ -129,19 +153,23 @@ final class Parser(input: String, protected val errorHandler: ErrorHandler = new
     * @return        composition node
     */
   def composition(follows: Pattern): Statement = {
-    val first = statement(follows | Tokens.Semicolon)
+    val first = statement(follows | Tokens.Semicolon | EndOfLine)
 
-    if (current(Tokens.Semicolon) && !lookahead(Tokens.End | Tokens.Else)) {
+    if (!current(Tokens.End | Tokens.Else) && !(current(Tokens.Semicolon) && lookahead(Tokens.End | Tokens.Else))) {
       val statements = Seq.newBuilder += first
 
       do {
-        advance()
-        statements += statement(follows | Tokens.Semicolon)
-      } while (current(Tokens.Semicolon) && !lookahead(Tokens.End | Tokens.Else))
+        expectSeparator(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
+        statements += statement(follows | Tokens.Semicolon | EndOfLine)
+      } while (!current(Tokens.End | Tokens.Else) && !(current(Tokens.Semicolon) && lookahead(Tokens.End | Tokens.Else)))
 
+      optional(Tokens.Semicolon)
       Composition(statements.result())(first.position)
-    } else
+    } else {
+      optional(Tokens.Semicolon)
       first
+    }
+
   }
 
   /** Parses a statement.
@@ -163,12 +191,10 @@ final class Parser(input: String, protected val errorHandler: ErrorHandler = new
         val predicate = expression(follows | Tokens.Then)
 
         expect(Tokens.Then)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
-        val consequent = composition(follows | Tokens.Then | Tokens.Semicolon)
-        optional(Tokens.Semicolon)
+        val consequent = composition(follows | Tokens.Then)
 
         expect(Tokens.Else)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
-        val alternative = composition(follows | Tokens.End | Tokens.Semicolon)
-        optional(Tokens.Semicolon)
+        val alternative = composition(follows | Tokens.End)
 
         expect(Tokens.End)(follows | Tokens.If)
         expect(Tokens.If)(follows)
@@ -182,8 +208,7 @@ final class Parser(input: String, protected val errorHandler: ErrorHandler = new
         val rankingFunction = expression(follows | Tokens.Do)
 
         expect(Tokens.Do)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
-        val consequent = composition(follows | Tokens.End | Tokens.Semicolon)
-        optional(Tokens.Semicolon)
+        val consequent = composition(follows | Tokens.End)
 
         expect(Tokens.End)(follows | Tokens.While)
         expect(Tokens.While)(follows)
