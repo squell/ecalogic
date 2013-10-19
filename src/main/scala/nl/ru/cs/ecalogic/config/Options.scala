@@ -35,29 +35,46 @@ package config
 
 import util.{Positional, Position}
 
-/* 
+/*
   Stub.
+TODO: adds some code that reads cmdline flags here.
  */
 
 object Options {
   object Model {
-    /* should a delta-function always forward the energy-aware state-information even if the component state did not change?
+    /* Should a delta-function always forward the energy-aware
+       state-information even if the component state did not change?
+       Note: if beforeSync and afterSync are set, this setting is useless.
 
-       Technical report: false  -- causes over-estimations of energy consumption */
+       Technical report: false */
     var alwaysForwardTime = false
   }
 
   object Analysis {
-    /* should all component states be forwarded just before a decision in the control flow? (if/while statement)
-       note that this is equivalent(?) to always updating the state after every statement; so this option is more powerful
-       than the above.
+    /* Should all component states be forwarded just before a decision
+       in the control flow? (if/while statement). Setting this to false
+       results in over-estimations.
 
-       Technical report: false  -- causes (significant) over-estimations of energy consumption */
+       Technical report: false */
+    var beforeSync = true
 
-    var alwaysSync = false
+    /* In the original document, at the exit of a while-loop, all timestamps
+       of components get reset to the time before entering the while loop,
+       while the global timestamp gets set to a time *after*. This is consistent
+       with the if-statement (similar problem), but causes a factor two over-
+       estimation in even the most simple cases.
+
+       Technical report: false */
+    var afterSync = true
 
     /* How long should we attempt to find fixpoint? Note that 10000 is a high setting */
-    var fixPointPatience = 10000
+    var fixPatience = 10000
+
+    /* If the ranking function is a concrete value, take that instead of the above global value?
+       This will produce better estimates in exotic cases.
+
+       Technical report: false? -- but not clear on this point */
+    var fixLimit = false
   }
 }
 
