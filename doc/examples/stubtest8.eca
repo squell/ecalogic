@@ -1,0 +1,18 @@
+function waste(X) 
+  while X > 0 bound X do
+    X := X-1;
+    Stub::idle();
+  end while
+end function
+
+function program(X)
+  if 23 < 281723817 then
+    Stub::on();
+    waste(100);
+    Stub::off();
+    Stub::on();
+  else
+    skip;
+  end if;
+  Stub::off();
+end function
