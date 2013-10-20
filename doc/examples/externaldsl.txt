@@ -1,0 +1,23 @@
+component CPU <on: [0..1], queue: [0..100]>
+
+    initial queue ::= 0
+
+    transition on(X) uses 5 time 8 energy
+        on    ::= on * 6 + queue ^ 2 + 9 + X
+        queue ::= queue - 1
+    end transition
+
+    // This is shorthand ...
+    phi ::= 200 * on
+
+    // ... for this
+    function phi()
+        if on then
+            phi := 200
+        else
+            phi := 0
+        end if
+    end function
+
+end component
+
