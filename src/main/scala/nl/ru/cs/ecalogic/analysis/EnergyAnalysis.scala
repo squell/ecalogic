@@ -198,7 +198,8 @@ object EnergyAnalysis {
 
   def main(args: Array[String]) {
     import scala.util.control.Exception._
-    val fileName = args.headOption.getOrElse("program.eca")
+    import nl.ru.cs.ecalogic.config
+    val fileName = config.Options(args).headOption.getOrElse("program.eca")
     try {
       val file = new File(fileName)
       val source = Source.fromFile(file).mkString
