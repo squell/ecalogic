@@ -46,7 +46,7 @@ class ModelLexer(_input: String) extends Lexer(_input) {
 
   private val _parseToken: PartialFunction[Char, (Token, Int)] = {
     case ':' if lookahead(':') && lookahead('=', 2) => (Define  , 3)
-    case ':'                                        => (Colon   , 1)
+    case ':' if !lookahead('=')                     => (Colon   , 1)
     case '.' if lookahead('.')                      => (DotDot  , 2)
 
     case '^'                                        => (Exponent, 1)

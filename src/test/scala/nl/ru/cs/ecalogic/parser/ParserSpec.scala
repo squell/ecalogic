@@ -47,8 +47,11 @@ class ParserSpec extends FlatSpec with ShouldMatchers {
   private def parse(f: File): Program = parse(Source.fromFile(f).mkString, Some(f))
 
   private def parse(s: String, f: Option[File] = None): Program = {
-    val parser = new Parser(s, new DefaultErrorHandler(source = Some(s), file = f))
-    parser.program()
+    val eh = new DefaultErrorHandler(source = Some(s), file = f)
+    val parser = new Parser(s, eh)
+    val res = parser.program()
+    eh.successOrElse("Parsing failed.")
+    res
   }
 
 
