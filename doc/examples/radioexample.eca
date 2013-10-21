@@ -55,7 +55,7 @@ Which is exactly what ECA tells us
 
  *)
 
-function algorithm1(Xn)
+function algorithm1(Xn,Xdiv10)
   radio::on()
   while Xn > 0 bound Xn do
     X1 := sensor::m()
@@ -66,10 +66,10 @@ function algorithm1(Xn)
   radio::off()
 end function
 
-function algorithm2(X)
-  while Xn > 0 bound X do
+function algorithm2(Xn,Xdiv10)
+  while Xn > 0 bound Xdiv10 do
     Xi := 10
-//    while Xi > 0 bound Xi do // <--- cannot resolve Xi yet
+//  while Xi > 0 bound Xi do // <--- not allowed: program variable
     while Xi > 0 bound 10 do
       X1 := sensor::m()
       radio::queue(X1)
@@ -82,7 +82,11 @@ function algorithm2(X)
   end while
 end function
 
+function start (X)
+  algorithm1(X,X*10)
+end function
+
 function program ()
-  algorithm1(10)
+  start(10)
 end function
 
