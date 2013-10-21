@@ -85,6 +85,8 @@ trait ComponentModel {
       val e1 = e + E(f)
       val t2 = t1 + T(f)
       val s1 = delta(f)(s)
+      phiCheck(s, s1)
+
       if(s1 != s || config.alwaysUpdate) {
         val upd = EACState(s1, t1, e1 + td(this,t1))
         if(config.alwaysForwardTime) 
@@ -108,6 +110,15 @@ trait ComponentModel {
     def lub(that: ComponentModel#EACState) =
       // there has to be a better way?
       Model.lub(this, that.asInstanceOf[EACState])
+
+    /* checks if monotonicity of phi holds for s1 => s2 */
+    def phiCheck(s1: CState, s2: CState) {
+      val stOrder  = s1 tryCompareTo s2
+      val phiOrder = phi(s1) compareTo phi(s2)
+      // check if the signs of the comparisons differ
+      if(stOrder.map(_ * phiOrder < 0).getOrElse(false))
+        throw new ECAException(s"${name}::phi not monotone with respect to $s1 and $s2")
+    }
   }
 
   val name: String
