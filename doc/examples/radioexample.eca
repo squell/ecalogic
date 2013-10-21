@@ -1,0 +1,88 @@
+(* algorithm1 back-of-envelope analysis
+
+DIFFERENCES FROM THE EXAMPLE IN TECH REPORT
+
+ - TR has CPU at 55 energy per iteration, but the production rules put it at 30
+   This is probably an error in the production rules.
+
+ - In calculating the final cost for the sensor, the calculation suddenly assumes 
+   each loop body took 200 time (instead of 195)
+
+TIME
+
+per iteration:
+- 2 expressions (20)
+- 2 assignments (10)
+- 1 while check (25)
+- 1 sensor      (10)
+- 1 radioqueue  (30)
+- 1 radiosend   (100)
+-----------------------> 195
+pre/post:
+- 1 radio on (40)
+- 1 radio off (20)
+
+total: 1950 + 60 = 2010 time usage
+
+INCIDENTAL ENERGY:
+
+per iteration:
+- 2 expressions (20)
+- 2 assignments (10)
+- 1 sensor      (40)
+- 1 radioqueue  (30)
+- 1 radiosend   (100)
+------------------------ 200
+pre/post:
+- 1 while check (25) // note the difference
+- 1 radio on (40)
+- 1 radio off (20)
+
+total: CPU=300+25=325, sensor=400, radio=1300+60=1360
+
+CONTINUOUS USAGE:
+
+sensor=2010 * 3 = 6030
+radio =2010 * 202 - 20*(200) = 402020
+
+TOTAL
+
+radio: 403380
+sensor: 6430
+cpu: 325
+
+Which is exactly what ECA tells us
+
+ *)
+
+function algorithm1(Xn)
+  radio::on()
+  while Xn > 0 bound Xn do
+    X1 := sensor::m()
+    radio::queue(X1)
+    radio::send()
+    Xn := Xn-1
+  end while
+  radio::off()
+end function
+
+function algorithm2(X)
+  while Xn > 0 bound X do
+    Xi := 10
+//    while Xi > 0 bound Xi do // <--- cannot resolve Xi yet
+    while Xi > 0 bound 10 do
+      X1 := sensor::m()
+      radio::queue(X1)
+      Xi := Xi - 1
+      Xn := Xn - 1
+    end while
+    radio::on()
+    radio::send()
+    radio::off()
+  end while
+end function
+
+function program ()
+  algorithm1(10)
+end function
+

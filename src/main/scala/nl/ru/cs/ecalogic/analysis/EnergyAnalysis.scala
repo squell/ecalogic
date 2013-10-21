@@ -47,7 +47,7 @@ import java.io.FileNotFoundException
 import model._
 // TODO: parametrize these
 import model.examples._
-import model.examples.DemoComponents.CPU
+import model.examples.DemoComponents._
 
 /**
  * @author Marc Schoolderman
@@ -74,14 +74,14 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
   def computeEnergyBound(out: GlobalState, in: GlobalState, pre: GlobalState, rf: ECAValue): GlobalState = {
     val exit_t = pre.t + (in.t-pre.t)*rf
 
-    def newGamma(time: ECAValue, out: GlobalState, in: GlobalState) =
-      out.gamma.transform((comp,g) => g.update(time, (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e))
+    def newGamma(regress: ECAValue=>ECAValue, out: GlobalState, in: GlobalState) =
+      out.gamma.transform((comp,g) => g.update(regress(g.t), (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e))
 
     if(config.afterSync)
       // Assume 'pre' is already sync'd. In the future 'beforeSync' and 'afterSync' could become the same flag.
-      (newGamma(exit_t, out.sync, in.sync), exit_t)
+      (newGamma(_=>exit_t, out.sync, in.sync), exit_t)
     else
-      (newGamma(pre.t, out, in), exit_t)
+      (newGamma(_ min pre.t, out, in), exit_t)
   }
 
   /** Performs energy analysis of the function 'program'
@@ -171,7 +171,8 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
       case FunCall(fun, args)           => val funDef = lookup(fun.name)
                                            val resolvedArgs = args.map(foldConstants(_, env))
                                            val binding = funDef.parameters.map(_.name) zip resolvedArgs
-                                           analyse(args.foldLeft(G)(analyse), funDef.body)(env ++ binding)
+                                           analyse(G, funDef.body)(env ++ binding)
+
       case e:NAryExpression             => e.operands.foldLeft(G)(analyse).update("CPU", "e")
       case _:PrimaryExpression          => G
     }
@@ -197,7 +198,7 @@ object EnergyAnalysis {
 
   def main(args: Array[String]) {
     import scala.util.control.Exception._
-    val fileName = args.headOption.getOrElse(sys.error("Missing argument."))
+    val fileName = args.headOption.getOrElse("program.eca")
     try {
       val file = new File(fileName)
       val source = Source.fromFile(file).mkString
@@ -211,7 +212,7 @@ object EnergyAnalysis {
       checker.variableReferenceHygiene()
       errorHandler.successOrElse("Semantic errors; please fix these.")
 
-      val components = Set(StubComponent, BadComponent)
+      val components = Set(StubComponent, BadComponent, Sensor, Radio, CPU)
 
       val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
       println(consumptionAnalyser().toString)

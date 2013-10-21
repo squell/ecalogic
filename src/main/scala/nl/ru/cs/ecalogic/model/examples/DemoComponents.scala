@@ -56,15 +56,15 @@ object DemoComponents {
 
     define σ (on = 0)
 
-    define T (on = 40, off = 20, queue = 3, send = 100)
-    define E (on = 40, off = 20, queue = 3, send = 100)
+    define T (on = 40, off = 20, queue = 30, send = 100)
+    define E (on = 40, off = 20, queue = 30, send = 100)
 
     define δ (
       on  = s => s(on = true),
       off = s => s(on = false)
     )
 
-    define ϕ (s => 2 + 100 * s.on)
+    define ϕ (s => 2 + 200 * s.on)
 
   }
 
