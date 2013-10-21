@@ -37,6 +37,7 @@ import util.{Positional, Position, ErrorHandler}
 import BaseLexer.Tokens
 
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 /** Base trait for recursive descent parsers.
   *
@@ -164,6 +165,12 @@ trait BaseParser extends Positional {
   protected def expect(expected: Pattern)(follows: Pattern) {
     parse(_ => unexpected(expected))(follows) {
       case t if expected.matches(t) => advance()
+    }
+  }
+
+  protected def expect[T](expected: Pattern, default: T)(follows: Pattern): T = {
+    parse{_ => unexpected(expected); default}(follows) {
+      case t: VariableToken[T] if expected.matches(t) => advance(); t.value
     }
   }
 

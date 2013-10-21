@@ -47,7 +47,21 @@ class Lexer(protected var input: String) extends BaseLexer {
   import Lexer._
   import Tokens._
 
-  protected val parseToken: PartialFunction[Char, (Token, Int)] = {
+  private val _keywords = Map (
+    "function" -> Function,
+    "end"      -> End,
+    "if"       -> If,
+    "then"     -> Then,
+    "else"     -> Else,
+    "while"    -> While,
+    "bound"    -> Bound,
+    "do"       -> Do,
+    "skip"     -> Skip,
+    "and"      -> And,
+    "or"       -> Or
+  )
+
+  private val _parseToken: PartialFunction[Char, (Token, Int)] = {
     case '+'                   => (Plus, 1)
     case '-'                   => (Minus, 1)
     case '*'                   => (Multiply, 1)
@@ -72,6 +86,12 @@ class Lexer(protected var input: String) extends BaseLexer {
       val value = if (end >= 0) input.substring(2, end) else input.substring(2)
       (Comment(value.trim), value.length + 4)
 
+    case '{' =>
+      val end = input.indexOf("}", 1)
+      //if (end < 0) errorHandler.fatalError(new SPLException("Unterminated comment", position))
+      val value = if (end >= 0) input.substring(1, end) else input.substring(1)
+      (Comment(value.trim), value.length + 2)
+
     case '('                   => (LParen, 1)
     case ')'                   => (RParen, 1)
     case ','                   => (Comma, 1)
@@ -83,27 +103,17 @@ class Lexer(protected var input: String) extends BaseLexer {
 
     case h if isIdHead(h)      =>
       val value = input.takeWhile(isIdTail)
-      val token = value match {
-        case "function" => Function
-        case "end"      => End
-        case "if"       => If
-        case "then"     => Then
-        case "else"     => Else
-        case "while"    => While
-        case "bound"    => Bound
-        case "do"       => Do
-        case "skip"     => Skip
-        case "and"      => And
-        case "or"       => Or
-
-        case v          => Identifier(v)
-      }
+      val token = keywords.applyOrElse(value, Identifier.apply)
       (token, value.length)
 
     case w if isWhitespace(w)  =>
       val value = input.takeWhile(isWhitespace)
       (Whitespace(value), value.length)
   }
+
+  protected def parseToken: PartialFunction[Char, (Token, Int)] = _parseToken
+
+  protected def keywords: PartialFunction[String, Token] = _keywords
 
 }
 

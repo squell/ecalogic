@@ -1,16 +1,8 @@
-function kaas(a, b)
-    y := 5 * a + 5 - 2; (* lalala *)
-    while x < 10 and y < x or dit::dat(2) bound 100 do
-        y := y + 1
-    end while; // ja ja
-    kaas := y
+function phi()
+    phi := 2
+    X   := 0
+    while X < queue do
+        phi := phi * 2
+        X   := X + 1
+    end
 end function
-
-function kaas(a, b)
-    y := 5 * a + 5 - 2; (* lalala *)
-    while x < 10 and y < x or dit::dat(2) bound 100 do
-        y := y + 1
-    end while; // ja ja
-    kaas := y
-end function
-

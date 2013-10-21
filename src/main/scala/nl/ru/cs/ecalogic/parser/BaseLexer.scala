@@ -80,7 +80,7 @@ trait BaseLexer extends Positional {
   /** A partial function that takes the current character and returns the recognized token (if any) and length of the
     * matched string.
     */
-  protected val parseToken: PartialFunction[Char, (Token, Int)]
+  protected def parseToken: PartialFunction[Char, (Token, Int)]
 
 }
 
