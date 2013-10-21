@@ -118,6 +118,8 @@ object Options {
         => alwaysUpdate = true; alwaysForwardTime = true
       case "-?" | "--help" 
         => friendlyHelpMsg(); return Array.empty
+      case s if s.startsWith("-")
+        => throw new ECAException(s"unknown flag: $s")
       case s if argHandler.nonEmpty
         => argHandler.dequeue()(s)
       case s 
