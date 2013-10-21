@@ -1,3 +1,5 @@
+FORMAL GRAMMAR DESCRIPTION:
+
 (* this is a multiline comment *)
 // this is also a comment, but single line
 
@@ -7,7 +9,7 @@ const:
 ident:
    [:alpha:] [:alnum:]*
 
-var:
+var:       
    ident
 
 rf:
@@ -53,3 +55,18 @@ arg: expr ["," expr]
 def-list: $ | fundef def-list
 
 prog: def-list
+
+PRAGMATICS:
+
+Variable's in the grammar can denote both /program variables/ and /parameters/.
+Any variable that is assigned to is a program variable.
+Only variables appearing in function parameter lists are parameters.
+
+It is an error to use uninitialized variables (since they are neither program
+variable nor parameters).
+
+Only parameters may appear in ranking functions ('rf'), since otherwise we
+cannot guarantee that each loop iteration takes the same amount of time.
+
+Similarly, only parameters may appear as arguments to non-component functions.
+
