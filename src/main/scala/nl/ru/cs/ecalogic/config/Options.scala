@@ -34,6 +34,8 @@ package nl.ru.cs.ecalogic
 package config
 
 import util.{Positional, Position}
+import scala.collection.mutable.Queue
+import scala.collection.mutable.ArrayBuilder
 
 /*
   Stub.
@@ -89,5 +91,48 @@ object Options {
        Technical report: false? -- but not clear on this point */
     var fixLimit = false
   }
+
+  def apply(args: Array[String]): Array[String] = {
+    import Analysis._
+    import Model._
+
+    val argHandler: Queue[String=>Unit] = Queue.empty
+    val newArgs = new ArrayBuilder.ofRef[String]
+
+    args.foreach {
+      case "-L" | "--fixLimit" 
+        => fixLimit = true
+      case "-P" | "--fixPatience" 
+        => argHandler += (s => fixPatience = s.toInt)
+      case "-s0" | "--beforeSync" 
+        => beforeSync = true
+      case "-s1" | "--afterSync" 
+        => afterSync = true
+      case "-s" | "--sync" 
+        => beforeSync = true; afterSync = true
+      case "-u0" | "--alwaysUpdate" 
+        => alwaysUpdate = true
+      case "-u1" | "--alwaysForwardTime" 
+        => alwaysForwardTime = true
+      case "-u" | "--update" 
+        => alwaysUpdate = true; alwaysForwardTime = true
+      case "-?" | "--help" 
+        => friendlyHelpMsg(); return Array.empty
+      case s if argHandler.nonEmpty
+        => argHandler.dequeue()(s)
+      case s 
+        => newArgs += s
+    }
+
+    newArgs.result()
+  }
+
+  def friendlyHelpMsg() {
+    println("...")
+  }
+
+  def main(args: Array[String]) = 
+    println(apply(args).reduce(_+", "+_))
+
 }
 
