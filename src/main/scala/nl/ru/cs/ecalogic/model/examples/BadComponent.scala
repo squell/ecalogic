@@ -31,43 +31,17 @@
  */
 
 package nl.ru.cs.ecalogic
-package parser
+package model
+package examples
 
-import ast._
-import util.{Position, DefaultErrorHandler}
+object BadComponent extends DSLModel("BUG") {
 
-import scala.io.Source
-
-import java.io.File
-import org.scalatest.FlatSpec
-import org.scalatest.matchers.{MatchResult, Matcher, ShouldMatchers}
-
-class ParserSpec extends FlatSpec with ShouldMatchers {
-
-  private def parse(f: File): Program = parse(Source.fromFile(f).mkString, Some(f))
-
-  private def parse(s: String, f: Option[File] = None): Program = {
-    val eh = new DefaultErrorHandler(source = Some(s), file = f)
-    val parser = new Parser(s, eh)
-    val res = parser.program()
-    eh.successOrElse("Parsing failed.")
-    res
-  }
-
-
-
-  behavior of "The parser"
-
-  it should "succeed on the test files" in {
-    new File("doc/examples").listFiles().withFilter(_.getName.endsWith(".eca")).foreach { f =>
-      parse(f)
-    }
-  }
-
-  it should "succeed on the empty string" in {
-    val program = parse("")
-    program should not equal (null)
-    program.definitions should be ('empty)
-  }
+    define σ (on = 0)
+     
+    /* the function toggle is not order preserving */
+    define δ (
+      inc = s => s(on = s.on+1),
+      neg = s => s(on = -s.on)
+    )
 
 }

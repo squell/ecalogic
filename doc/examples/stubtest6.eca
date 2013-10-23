@@ -1,7 +1,7 @@
 (*
    time usage: 33, 
    energy usage:
-     - 285 (using ::idle() in the pre-loop), with call to ::off()
+     - 275 (using ::idle() in the pre-loop), with call to ::off()
      -  55 (using ::zap()  in the pre-loop), with call to ::off()
      -  33 (using ::idle() in the pre-loop), without calling ::off()
      -  33 (using ::zap()  in the pre-loop), without calling ::off()

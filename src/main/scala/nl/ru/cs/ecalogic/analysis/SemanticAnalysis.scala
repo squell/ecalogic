@@ -97,7 +97,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
   /** Checks whether all variable references are proper;
       In particular, disallow programs for which it cannot be determined (statically) if references to it
       are preceeded by assignments. Also disallow values constructed at run-time from being used inside
-      ranking funcions. 
+      ranking funcions.
     */
   def variableReferenceHygiene() {
 
@@ -113,45 +113,45 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
        *
       */
       def varFlow(live: Set[String], node: ASTNode): Set[String] = node match {
-	case If(pred, thenPart, elsePart) => varFlow(live, pred)
-					     varFlow(live, thenPart) & varFlow(live, elsePart)
-	case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, consq)
-					     rf.foreach {
-					       case _: ArithmeticExpression =>
-					       case Literal(_) =>
-					       case v@VarRef(ident) => 
-						 if(!params(ident))
-						   eh.error(new ECAException(s"Non-parameter '$ident' not allowed in a bound expression.", v.position))
-						 if(live(ident)) 
-						   eh.warning(new ECAException(s"Variable '$ident' written to before this reference.", v.position))
-					       case e: Expression =>
-						   eh.error(new ECAException(s"Expression '$e' not suitable for use in a ranking function.", e.position))
-					     }
+        case If(pred, thenPart, elsePart) => varFlow(live, pred)
+                                             varFlow(live, thenPart) & varFlow(live, elsePart)
+        case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, consq)
+                                             rf.foreach {
+                                               case _: ArithmeticExpression =>
+                                               case Literal(_) =>
+                                               case v@VarRef(ident) =>
+                                                 if(!params(ident))
+                                                   eh.error(new ECAException(s"Non-parameter '$ident' not allowed in a bound expression.", v.position))
+                                                 if(live(ident))
+                                                   eh.warning(new ECAException(s"Variable '$ident' written to before this reference.", v.position))
+                                               case e: Expression =>
+                                                   eh.error(new ECAException(s"Expression '$e' not suitable for use in a ranking function.", e.position))
+                                             }
                                              live
-	case Composition(stms)            => stms.foldLeft(live)(varFlow)
-	case Assignment(ident, expr)      => varFlow(live, expr)
-					     live + ident
+        case Composition(stms)            => stms.foldLeft(live)(varFlow)
+        case Assignment(ident, expr)      => varFlow(live, expr)
+                                             live + ident
 
-	case FunCall(fun, args)
+        case FunCall(fun, args)
           if fun.isPrefixed               => args.foreach(varFlow(live,_))
-					     live
+                                             live
 
-	// TODO: once we have "annotations", we may be more permissive as to what we can do with function calls. this following restriction severely
-	// restricts the power of our language. we could also determine which parameters may be used as loop bounds and be more permissive about those.
+        // TODO: once we have "annotations", we may be more permissive as to what we can do with function calls. this following restriction severely
+        // restricts the power of our language. we could also determine which parameters may be used as loop bounds and be more permissive about those.
 
-	case FunCall(fun, args)           => args.foreach(_.foreach {
-					       case _: ArithmeticExpression =>
-					       case Literal(_) =>
-					       case VarRef(ident) if !live(ident) && params(ident) =>
-					       case e: Expression => 
-						   eh.error(new ECAException(s"Sorry, not in this version: '$e' as argument to call.", e.position))
-					     })
-					     live
-	case VarRef(ident)                => if(!live(ident) && !params(ident))
-					       eh.warning(new ECAException(s"Variable '$ident' may be used uninitialized.", node.position))
-					     live
-	case e: Expression                => e.operands.foreach(varFlow(live, _)); live
-	case _                            => live
+        case FunCall(fun, args)           => args.foreach(_.foreach {
+                                               case _: ArithmeticExpression =>
+                                               case Literal(_) =>
+                                               case VarRef(ident) if !live(ident) && params(ident) =>
+                                               case e: Expression =>
+                                                   eh.error(new ECAException(s"Sorry, not in this version: '$e' as argument to call.", e.position))
+                                             })
+                                             live
+        case VarRef(ident)                => if(!live(ident) && !params(ident))
+                                               eh.warning(new ECAException(s"Variable '$ident' may be used uninitialized.", node.position))
+                                             live
+        case e: Expression                => e.operands.foreach(varFlow(live, _)); live
+        case _                            => live
       }
 
       varFlow(Set.empty[String], fundef.body)

@@ -33,26 +33,52 @@
 package nl.ru.cs.ecalogic
 package model
 
+import scala.collection.mutable
+
 /**
  * @author Marc Schoolderman
  * @author Jascha Neutelings
  */
-case class GlobalState(t: ECAValue, e: ECAValue) {
 
-  def apply(dT: ECAValue = 0, dE: ECAValue = 0) = copy(time + dT, energy + dE)
 
-  def time = t
-  def energy = e
+case class GlobalState(gamma: GlobalState.States, t: ECAValue) {
+  import GlobalState._
 
-  override def toString = s"(t = $t, e = $e)"
+  /* Model the effect of calling fun on component */
+  def update(component: String, fun: String): GlobalState = {
+    val (state, t1) = gamma(component).update(fun, t)
+    GlobalState(gamma.updated(component, state), t1)
+  }
 
+  /* Synchronize all components to the global timer; time passes */
+  def sync: GlobalState = mapValues(_.forward(t))
+
+  /* Synchronize all components to the global timer; no time passes */
+  def timeshift: GlobalState = mapValues(st=>st.update(t, st.e))
+
+  // Scala doesn't (and can't possibly?) know that the two EACStates are the same type.
+  def max(other: GlobalState): GlobalState =
+    GlobalState(gamma.transform((comp,st) => st.lub(other.gamma(comp))), t max other.t)
+
+  /* pass-thru functions */
+  def apply(name: String): ComponentModel#EACState = gamma(name)
+
+  def transform[C](fun: (String,ComponentModel#EACState)=>C): (Map[String, C], ECAValue) =
+    (gamma.transform(fun), t)
+
+  def mapValues[C](fun: (ComponentModel#EACState=>C)): (Map[String, C], ECAValue) =
+    (gamma.mapValues(fun), t)
 }
 
 object GlobalState {
   import scala.language.implicitConversions
 
-  def initial = GlobalState(ECAValue.Zero, ECAValue.Zero)
+  /** A map containing, for each component (identified by name), its current component state */
+  type States = Map[String,ComponentModel#EACState]
 
-  implicit def tupleToGlobalState(v: (ECAValue, ECAValue)): GlobalState = GlobalState(v._1, v._2)
+  def initial(components: Iterable[ComponentModel]): GlobalState =
+    GlobalState(components.map(x=>(x.name->x.initialEACState())).toMap, 0)
+
+  implicit def tupleToGlobalState(gamma: (States, ECAValue)): GlobalState = GlobalState(gamma._1, gamma._2)
 
 }

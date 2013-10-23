@@ -55,6 +55,8 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
           throw new ECAException(s"State transformer contains undefined elements: ${undefined.mkString(", ")}.")
         }
         new CState(elements ++ newElements)
+      case name =>
+        throw new RuntimeException(s"Undeclared method: $name.")
     }
 
     protected def update(newElements: Map[String, ECAValue]) = new CState(elements ++ newElements)
@@ -146,6 +148,7 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
     private[DSLModel] class VariableDeclaration(val value: ECAValue)
 
+    val σ = s0
     object s0 extends Declaration[ECAValue] {
 
       protected def apply(declarations: Seq[(String, ECAValue)]) {
@@ -173,7 +176,6 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
     }
 
-    val ∂     = d
     val δ     = d
     val delta = d
     object d extends Declaration[DFunction] {

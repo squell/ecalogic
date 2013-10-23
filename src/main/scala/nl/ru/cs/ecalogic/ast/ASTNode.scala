@@ -79,7 +79,7 @@ trait Expression extends ASTNode {
 
   def rewrite(ops: Seq[Expression]): Expression
   def transform(f: PartialFunction[Expression, Expression]): Expression =
-    f.applyOrElse(rewrite(operands.map(_.transform(f))), identity : Expression => Expression)
+    f.applyOrElse(rewrite(operands.map(_.transform(f))), identity[Expression])
 
   def foreach(f: PartialFunction[Expression, Unit]) {
     f.applyOrElse(this, (_:Expression)=>())

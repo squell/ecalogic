@@ -72,8 +72,8 @@ class ECAValue private(private val value: BigInt) extends ScalaNumber with Scala
 
   def underlying  = value
 
-  def toBigInt            = value
-  def toBoolean           = value != ECAValue.False
+  def toBigInt  = value
+  def toBoolean = value != ECAValue.False
 
   override def equals(that: Any) = that match {
     case that: ECAValue   => value == that.value

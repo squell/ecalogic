@@ -33,11 +33,13 @@
 package nl.ru.cs.ecalogic
 package model
 
+import config.Options.{Model => config}
+
 /**
  * @author Marc Schoolderman
  * @author Jascha Neutelings
  */
-trait ComponentModel { 
+trait ComponentModel {
   Model =>
 
   type CState <: ComponentState
@@ -79,25 +81,44 @@ trait ComponentModel {
     def t = timestamp
     def e = energy
 
-    def update(f: String, t1: ECAValue) = {
-      val e1 = e + E(f) 
+    def update(f: String, t1: ECAValue): (EACState, ECAValue) = {
+      val e1 = e + E(f)
       val t2 = t1 + T(f)
       val s1 = delta(f)(s)
-      if(s1 != s) {
-        EACState(s1, t1, e1 + td(this,t1)) -> t2
+      phiCheck(s, s1)
+
+      if(s1 != s || config.alwaysUpdate) {
+        val upd = EACState(s1, t1, e1 + td(this,t1))
+        if(config.alwaysForwardTime) 
+          // not only update, but set it to the most recent
+          (EACState(s1, t2, upd.e + td(upd, t2)), t2)
+        else
+          (upd, t2)
       } else
         // do not update the timestamp if the state did not change
-        EACState(s1, t, e1) -> t2
+        (EACState(s, t, e1), t2)
     }
- 
-    def regress(t1: ECAValue) = EACState(s, t1, e + td(this,t1))
 
-    def setEnergy(energy: ECAValue) = EACState(s, t, energy) 
+    def forward(t1: ECAValue) =
+      EACState(s, t max t1, e + td(this,t1))
+
+    def reset = EACState(s, 0, 0)
+
+    def update(timestamp: ECAValue, energy: ECAValue) = EACState(s, timestamp, energy)
 
     // why not define the lub here in the first place?
     def lub(that: ComponentModel#EACState) =
       // there has to be a better way?
       Model.lub(this, that.asInstanceOf[EACState])
+
+    /* checks if monotonicity of phi holds for s1 => s2 */
+    def phiCheck(s1: CState, s2: CState) {
+      val stOrder  = s1 tryCompareTo s2
+      val phiOrder = phi(s1) compareTo phi(s2)
+      // check if the signs of the comparisons differ
+      if(stOrder.map(_ * phiOrder < 0).getOrElse(false))
+        throw new ECAException(s"${name}::phi not monotone with respect to $s1 and $s2")
+    }
   }
 
   val name: String

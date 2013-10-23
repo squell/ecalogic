@@ -45,19 +45,22 @@ object StubComponent extends ComponentModel {
   }
 
   override def E(f:String) = f match {
-    case "zap" => 1
-    case _     => 0
+    case "zap"   => 1
+    case _       => 0
   }
 
+  // question: are we allowed to make this a function of the state?
   override def T(f:String) = f match {
-    case "idle"=> 1
-    case _     => 0
+    case "idle"  => 1
+    case _       => 0
   }
 
   override def delta(f:String)(s:CState) = f match {
-    case "on"  => CState(1)
-    case "off" => CState(0)
-    case _     => s
+    case "on"    => CState(1)
+    case "off"   => CState(0)
+    case "raise" => CState((s("active")+1) min 100)
+    case "lower" => CState((s("active")-1) max 0)
+    case _       => s
   }
 
   override def phi(s:CState) = s("active")

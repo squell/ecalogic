@@ -1,0 +1,14 @@
+// time usage: 2, energy usage: 2
+// this might not be what you expect, so read on
+
+function program(X)
+  Stub::idle();
+  if 23 < 281723817 then
+    Stub::on();           // now active, so timestamp set to 'Stub::t=1'
+  else
+    skip;                 // state not altered, so Stub::t=0 as before
+  end if;
+                          // now: Stub::active=true, Stub::t=0 ! (== LUB)
+  Stub::idle();
+  Stub::off();
+end function

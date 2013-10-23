@@ -78,8 +78,8 @@ trait ErrorHandler {
       None
   }
 
-  /** Does nothing if no errors occurred; otherwise, throws an exception 
-    * 
+  /** Does nothing if no errors occurred; otherwise, throws an exception
+    *
     * @param  complaint explanation of the error condition
     */
   def successOrElse(complaint: String) {
