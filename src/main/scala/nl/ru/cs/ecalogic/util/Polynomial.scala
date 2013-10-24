@@ -36,9 +36,13 @@ package util
 /**
  * A simple class representing Polynomials
  *
+ * class invariant:
+ * - all Seq's used in the keys of repr must be sorted
+ * - repr has a defaultValue of 0
+ *
  * @author Marc Schoolderman
  */
-class Polynomial private (private val repr: Map[Seq[String],Int]) {
+class Polynomial private (private val repr: Map[Seq[String],Int]) extends PartiallyOrdered[Polynomial] {
 
   import Polynomial._
 
@@ -48,8 +52,30 @@ class Polynomial private (private val repr: Map[Seq[String],Int]) {
   def -(that: Polynomial) = new Polynomial(combine(this.repr, (-that).repr))
 
   def *(that: Polynomial) = new Polynomial(
-    repr.toSeq.map(term1=>that.repr.map(term2=>product(term1,term2))).reduce(combine)
+    repr.map(term1=>that.repr.map(term2=>product(term1,term2))).reduce(combine)
   )
+
+  def max(that: Polynomial) = new Polynomial(
+    repr.transform { case (term,fac) => math.max(fac, that.repr(term)) } withDefaultValue(0)
+  )
+
+  def min(that: Polynomial) = new Polynomial(
+    repr.transform { case (term,fac) => math.min(fac, that.repr(term)) } withDefaultValue(0)
+  )
+
+  override def tryCompareTo[B >: Polynomial <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
+    case that: Polynomial =>
+      val shared = (this.repr++that.repr).keys
+      var sign = 0
+      shared.foreach { term =>
+          val cmp = repr(term) compare that.repr(term)
+          if(sign*cmp < 0) return None 
+          sign |= cmp
+      }
+      Some(sign)
+    case _ =>
+      that.tryCompareTo(this).map(-_)
+  }
 
   override def toString = {
     def nondigit(c: Char) = !('0' to '9' contains c)
@@ -61,7 +87,7 @@ object Polynomial {
   import scala.language.implicitConversions
 
   private def combine(a: Map[Seq[String],Int], b: Map[Seq[String],Int]) =
-    a.repr ++ b.transform(a.repr.getOrElse(_,0)+_)
+    a.repr ++ b.transform(a.repr(_)+_)
 
   private def product(a: (Seq[String],Int), b: (Seq[String],Int)) =
     ((a._1++b._1).sorted, a._2*b._2)
