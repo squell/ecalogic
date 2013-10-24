@@ -44,6 +44,9 @@ class Polynomial private (private val repr: Map[Seq[String],Int]) {
 
   def +(that: Polynomial) = new Polynomial(combine(this.repr, that.repr))
 
+  def unary_- = -1*this
+  def -(that: Polynomial) = new Polynomial(combine(this.repr, (-that).repr))
+
   def *(that: Polynomial) = new Polynomial(
     repr.toSeq.map(term1=>that.repr.map(term2=>product(term1,term2))).reduce(combine)
   )

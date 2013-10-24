@@ -33,7 +33,7 @@
 package nl.ru.cs.ecalogic
 package ast
 
-import util.{Positional, Position}
+import util.{Positional, Position, Polynomial}
 
 object Transform {
 
@@ -51,4 +51,15 @@ object Transform {
     }
   }
 
+  def toPolynomial(expr: Expression, varmap: Map[String,Expression] = Map.empty): Polynomial = {
+      val poly = toPolynomial(_:Expression, varmap)
+      expr match {
+        case Add(l, r) => poly(l) + poly(r)
+        case Subtract(l, r) => poly(l) - poly(r)
+        case Multiply(l, r) => poly(l) * poly(r)
+        case v@VarRef(name) => varmap.andThen(poly).applyOrElse(v.name, identity[String])
+    }
+  }
+
 }
+
