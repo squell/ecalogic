@@ -34,8 +34,7 @@ package nl.ru.cs.ecalogic
 package config
 
 import util.{Positional, Position}
-import scala.collection.mutable.Queue
-import scala.collection.mutable.ArrayBuilder
+import scala.collection.mutable
 
 /*
   Stub.
@@ -43,6 +42,9 @@ TODO: adds some code that reads cmdline flags here.
  */
 
 object Options {
+  /* Disable the simulated CPU; this switch should be deprecated in the future */
+  var noCPU = false
+
   /* NOTE: there may be some interplay between these options; also, some
      options may be unnecessary if you enable other options. */
 
@@ -85,44 +87,47 @@ object Options {
     /* How long should we attempt to find fixpoint? Note that 10000 is a high setting */
     var fixPatience = 10000
 
-    /* If the ranking function is a concrete value, take that instead of the above global value?
-       This will produce better estimates in exotic cases.
+    /* Should we use the while-rule mentioned in the tech-report, or the simplified one
+       mentioned in the paper?
 
-       Technical report: false? -- but not clear on this point */
-    var fixLimit = false
+       Technical report: true */
+    var techReport = false
+
   }
 
   def apply(args: Array[String]): Array[String] = {
     import Analysis._
     import Model._
 
-    val argHandler: Queue[String=>Unit] = Queue.empty
-    val newArgs = new ArrayBuilder.ofRef[String]
+    val argHandler: mutable.Queue[String=>Unit] = mutable.Queue.empty
+    val newArgs = Array.newBuilder[String]
 
     args.foreach {
-      case "-L" | "--fixLimit" 
-        => fixLimit = true
-      case "-P" | "--fixPatience" 
+      case "-0" | "--noCPU"
+        => noCPU = true
+      case "-tr" | "--techReport"
+        => techReport = true
+      case "-P" | "--fixPatience"
         => argHandler += (s => fixPatience = s.toInt)
-      case "-s0" | "--beforeSync" 
+      case "-s0" | "--beforeSync"
         => beforeSync = true
-      case "-s1" | "--afterSync" 
+      case "-s1" | "--afterSync"
         => afterSync = true
-      case "-s" | "--sync" 
+      case "-s" | "--sync"
         => beforeSync = true; afterSync = true
-      case "-u0" | "--alwaysUpdate" 
+      case "-u0" | "--alwaysUpdate"
         => alwaysUpdate = true
-      case "-u1" | "--alwaysForwardTime" 
+      case "-u1" | "--alwaysForwardTime"
         => alwaysForwardTime = true
-      case "-u" | "--update" 
+      case "-u" | "--update"
         => alwaysUpdate = true; alwaysForwardTime = true
-      case "-?" | "--help" 
+      case "-?" | "--help"
         => friendlyHelpMsg(); return Array.empty
       case s if s.startsWith("-")
         => throw new ECAException(s"unknown flag: $s")
       case s if argHandler.nonEmpty
         => argHandler.dequeue()(s)
-      case s 
+      case s
         => newArgs += s
     }
 
@@ -133,7 +138,7 @@ object Options {
     println("...")
   }
 
-  def main(args: Array[String]) = 
+  def main(args: Array[String]) =
     println(apply(args).reduce(_+", "+_))
 
 }

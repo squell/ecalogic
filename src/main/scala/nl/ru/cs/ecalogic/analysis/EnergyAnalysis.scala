@@ -155,12 +155,13 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
                                            else
                                              G3 max G4
 
-      case While(pred, rf, consq)       // this is the *OLD* while routine
-        if config.fixLimit              => val Gpre = if (config.beforeSync) G.sync else G
+      case While(pred, rf, consq)
+        if config.techReport            => val Gpre = if (config.beforeSync) G.sync else G
                                            val G2 = analyse(Gpre,pred).update("CPU","w")
                                            val G3 = analyse(G2,consq)
                                            val G3fix = (fixPoint(G3.gamma, pred, consq), G3.t)
-                                           val G4 = analyse(analyse(G3fix, pred), consq)
+                                           val G4 = analyse(analyse(G3fix, pred).update("CPU","w"), consq)
+                                         //val G4 = analyse(analyse(G3fix, pred), consq) // this is bug-compatible with the TR
                                            val iters = resolve(foldConstants(rf, env))
                                            if(config.afterSync)
                                              computeEnergyBound_TR(G4.sync, G3.sync, Gpre, iters).timeshift
@@ -232,7 +233,7 @@ object EnergyAnalysis {
       checker.variableReferenceHygiene()
       errorHandler.successOrElse("Semantic errors; please fix these.")
 
-      val components = Set(StubComponent, BadComponent, Sensor, Radio, CPU)
+      val components = Set(StubComponent, BadComponent, Sensor, Radio, if(config.Options.noCPU) StubComponent else CPU)
 
       val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
       println(consumptionAnalyser().toString)
