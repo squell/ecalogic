@@ -17,6 +17,6 @@
 function program(X)
   BUG::inc();
   while 1 < 2 bound 5 do
-    BUG::neg()  
+    BUG::inc()  // also try: BUG::neg() and see what happens
   end while
 end function

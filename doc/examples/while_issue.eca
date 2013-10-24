@@ -5,6 +5,7 @@ end while
 end function
 
 (*
+ This problem existed in the original TR (which was 'too clever'), not in the paper.
 
  The time analysis of this program is clear -- (t2-t)*10
  where t2-t1 = T[CPU::e] + T[CPU::w] = 35, so the total time == 350

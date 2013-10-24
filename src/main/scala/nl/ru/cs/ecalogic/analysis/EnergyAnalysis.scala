@@ -63,7 +63,20 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
   val lookup: Map[String, FunDef] =
     program.definitions.map(fundef=>fundef.name->fundef).toMap
 
-  /** Performs the functions of both "r()" and "e()" in the paper
+  /** Performs the functions of both "r()" and "e()" in the FOPARA Paper
+    *
+    * @param t The new timestamp for components (should be in the past)
+    * @param out Component states representing the cost of evaluating the loop-body "many times"
+    * @param pre Component states before evaluating the loop-body
+    * @return A new set of component states with updated time and energy information
+    */
+
+  def computeEnergyBound(out: GlobalState, in: GlobalState, rf: ECAValue): GlobalState = (
+    out.gamma.transform((comp,g) => g.update(g.t min in.t, in(comp).e + (out(comp).e-in(comp).e)*rf)),
+    in.t + (out.t-in.t)*rf
+  )
+
+  /** Performs the functions of both "r()" and "e()" in the *Technical Report*
     *
     * @param t The new timestamp for components (should be in the past)
     * @param out Component states representing the cost of evaluating the loop-body after having done it "many times"
@@ -71,18 +84,11 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
     * @param pre Component states before evaluating the loop-body
     * @return A new set of component states with updated time and energy information
     */
-  def computeEnergyBound(out: GlobalState, in: GlobalState, pre: GlobalState, rf: ECAValue): GlobalState = {
-    val exit_t = pre.t + (in.t-pre.t)*rf
 
-    def newGamma(regress: ECAValue=>ECAValue, out: GlobalState, in: GlobalState) =
-      out.gamma.transform((comp,g) => g.update(regress(g.t), (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e))
-
-    if(config.afterSync)
-      // Assume 'pre' is already sync'd. In the future 'beforeSync' and 'afterSync' could become the same flag.
-      (newGamma(_=>exit_t, out.sync, in.sync), exit_t)
-    else
-      (newGamma(_ min pre.t, out, in), exit_t)
-  }
+  def computeEnergyBound_TR(out: GlobalState, in: GlobalState, pre: GlobalState, rf: ECAValue): GlobalState = (
+    out.gamma.transform((comp,g) => g.update(g.t min pre.t, (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e)),
+    pre.t + (in.t-pre.t)*rf
+  )
 
   /** Performs energy analysis of the function 'program'
     *
@@ -96,11 +102,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
      * @param stm  main body of while loop
      * @param env  current environment mapping variables to expressions (pass-thru variable)
      */
-    def fixPoint(init: States, expr: Expression, stm: Statement, maxIter: Int)(implicit env: Environment): States = {
-      var cur  = init
-      var prev = init
-      var lub  = init
-
+    def fixPoint(init: States, expr: Expression, stm: Statement)(implicit env: Environment): States = {
       /** Throw away the temporal information (time, energy usage) and replace it with
           that of the initial state */
       def nontemporal(st: States) = st.mapValues(_.reset)
@@ -109,15 +111,19 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
       def f(st: States) =
         nontemporal(analyse(analyse((st,ECAValue.Zero), expr), stm).gamma)
 
-      /** Even though it may not look it, this will always terminate. */
-      var limit = maxIter
+      /** Starting values for the iteration */
+      var cur   = nontemporal(init)
+      var lub   = cur
+
+      /** Find the fixpoint */
+      val seen  = mutable.Set(cur)
+      var limit = config.fixPatience
       do {
         if({limit-=1; limit} <= 0)
           eh.fatalError(new ECAException("Model error: not all component delta functions have fixed points."))
-        prev = cur
         cur  = f(cur)
         lub  = lub.transform((name,st)=>st.lub(cur(name)))
-      } while(cur != prev)
+      } while(seen.add(cur))
 
       /** Restore the original time and energy info */
       return lub.transform((name,st)=>st.update(init(name).t, init(name).e))
@@ -144,19 +150,32 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
                                            val G2 = analyse(Gpre,pred).update("CPU","ite")
                                            val G3 = analyse(G2,thenPart)
                                            val G4 = analyse(G2,elsePart)
-                                           if(config.afterSync) {
+                                           if(config.afterSync)
                                              (G3.sync max G4.sync).timeshift
-                                           } else
+                                           else
                                              G3 max G4
 
-      case While(pred, rf, consq)       => val Gpre = if (config.beforeSync) G.sync else G
+      case While(pred, rf, consq)       // this is the *OLD* while routine
+        if config.fixLimit              => val Gpre = if (config.beforeSync) G.sync else G
                                            val G2 = analyse(Gpre,pred).update("CPU","w")
-                                           val iters = resolve(foldConstants(rf, env))
                                            val G3 = analyse(G2,consq)
-                                           val limit = config.fixPatience min (if(config.fixLimit) iters else Int.MaxValue)
-                                           val G3fix = (fixPoint(G3.gamma, pred, consq, limit), G3.t)
+                                           val G3fix = (fixPoint(G3.gamma, pred, consq), G3.t)
                                            val G4 = analyse(analyse(G3fix, pred), consq)
-                                           computeEnergyBound(G4, G3, Gpre, iters)
+                                           val iters = resolve(foldConstants(rf, env))
+                                           if(config.afterSync)
+                                             computeEnergyBound_TR(G4.sync, G3.sync, Gpre, iters).timeshift
+                                           else
+                                             computeEnergyBound_TR(G4, G3, Gpre, iters)
+
+      case While(pred, rf, consq)       => val Gpre = if (config.beforeSync) G.sync else G
+                                           val Gfix = (fixPoint(Gpre.gamma, pred, consq), Gpre.t)
+                                           val G2 = analyse(Gfix,pred).update("CPU","w")
+                                           val G3 = analyse(G2,consq)
+                                           val iters = resolve(foldConstants(rf, env))
+                                           if(config.afterSync)
+                                             computeEnergyBound(G3.sync, Gpre, iters).timeshift
+                                           else
+                                             computeEnergyBound(G3, Gpre, iters)
 
       case Composition(stms)            => stms.foldLeft(G)(analyse)
       case Assignment(_, expr)          => analyse(G,expr).update("CPU","a")
