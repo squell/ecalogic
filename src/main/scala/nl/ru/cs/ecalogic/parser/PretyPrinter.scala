@@ -51,16 +51,16 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
 
       node match {
         case If(pred, thenPart, elsePart) =>
-          print("If ");
+          print("If ")
           printPart(pred, depth)
-          print(" then");
+          print(" then")
           printDepthln(1)
           printPart(thenPart, depth + 1)
           printDepthln()
-          print(" else ");
+          print(" else ")
           printPart(elsePart, depth + 1)
           printDepthln()
-          print("end if");
+          print("end if")
         case While(pred, rf, consq) =>
           print("while ")
           printPart(pred, depth)
@@ -77,25 +77,26 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
               print(";")
               printDepthln()
             }
-            fst = false;
+            fst = false
             printPart(stmt, depth)
           }
         case Assignment(ident, expr) =>
           print(ident + " := ")
           printPart(expr, depth)
         case Skip() =>
-          print("skip");
+          print("skip")
         case FunCall(fun, args) =>
           if (fun.isPrefixed) print(fun.prefix.get + "::") else ""
-          print(fun.name);
-          printParams(args);
+          print(fun.name)
+          printParams(args)
         case VarRef(ident) => print(ident)
         case e: BinaryExpression =>
           printPart(e.left, depth)
           print(" " + e.operator + " ")
           printPart(e.right, depth)
+          // TODO Fix braces
         case e: UnaryExpression =>
-          printPart(e.operand, depth);
+          printPart(e.operand, depth)
           e.operands.foreach(printPart(_, depth))
         case FunDef(name, params, body) =>
           print("function " + name)
@@ -105,22 +106,23 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
           println("\nend function\n")
         case Param(name) => print(name)
         case Literal(value) => print(value)
+          // TODO Comments
         case _ =>
       }
       def printDepthln(i: Int = 0) {
-        println
+        println()
         for (i <- 0 to depth + i) {
           print("    ")
         }
       }
       def printParams(params: Seq[ASTNode]) {
         print("(")
-        var fst = true;
+        var fst = true
         for (par <- params) {
           if (!fst) {
             print(", ")
           }
-          fst = false;
+          fst = false
           printPart(par, depth)
         }
         print(")")
