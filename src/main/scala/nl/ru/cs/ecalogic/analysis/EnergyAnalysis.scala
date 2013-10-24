@@ -73,7 +73,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
     */
   def computeEnergyBound(out: GlobalState, in: GlobalState, pre: GlobalState, rf: ECAValue): GlobalState = {
     val exit_t = pre.t + (in.t-pre.t)*rf
-
+                                // TODO tr behaviour->paper behaviour
     def newGamma(regress: ECAValue=>ECAValue, out: GlobalState, in: GlobalState) =
       out.gamma.transform((comp,g) => g.update(regress(g.t), (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e))
 
@@ -112,6 +112,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
       /** Even though it may not look it, this will always terminate. */
       var limit = maxIter
       do {
+        // states weer toevoegen TODO
         if({limit-=1; limit} <= 0)
           eh.fatalError(new ECAException("Model error: not all component delta functions have fixed points."))
         prev = cur
@@ -153,6 +154,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
                                            val G2 = analyse(Gpre,pred).update("CPU","w")
                                            val iters = resolve(foldConstants(rf, env))
                                            val G3 = analyse(G2,consq)
+                                              // TODO dit is te simpel
                                            val limit = config.fixPatience min (if(config.fixLimit) iters else Int.MaxValue)
                                            val G3fix = (fixPoint(G3.gamma, pred, consq, limit), G3.t)
                                            val G4 = analyse(analyse(G3fix, pred), consq)
@@ -213,7 +215,8 @@ object EnergyAnalysis {
       checker.variableReferenceHygiene()
       errorHandler.successOrElse("Semantic errors; please fix these.")
 
-      val components = Set(StubComponent, BadComponent, Sensor, Radio, CPU)
+      //val components = Set(StubComponent, BadComponent, Sensor, Radio, CPU)
+      val components = Set(StubComponent, BadComponent)
 
       val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
       println(consumptionAnalyser().toString)

@@ -34,8 +34,7 @@ package nl.ru.cs.ecalogic
 package config
 
 import util.{Positional, Position}
-import scala.collection.mutable.Queue
-import scala.collection.mutable.ArrayBuilder
+import scala.collection.mutable
 
 /*
   Stub.
@@ -96,33 +95,33 @@ object Options {
     import Analysis._
     import Model._
 
-    val argHandler: Queue[String=>Unit] = Queue.empty
-    val newArgs = new ArrayBuilder.ofRef[String]
+    val argHandler: mutable.Queue[String=>Unit] = mutable.Queue.empty
+    val newArgs = Array.newBuilder[String]
 
     args.foreach {
-      case "-L" | "--fixLimit" 
+      case "-L" | "--fixLimit"
         => fixLimit = true
-      case "-P" | "--fixPatience" 
+      case "-P" | "--fixPatience"
         => argHandler += (s => fixPatience = s.toInt)
-      case "-s0" | "--beforeSync" 
+      case "-s0" | "--beforeSync"
         => beforeSync = true
-      case "-s1" | "--afterSync" 
+      case "-s1" | "--afterSync"
         => afterSync = true
-      case "-s" | "--sync" 
+      case "-s" | "--sync"
         => beforeSync = true; afterSync = true
-      case "-u0" | "--alwaysUpdate" 
+      case "-u0" | "--alwaysUpdate"
         => alwaysUpdate = true
-      case "-u1" | "--alwaysForwardTime" 
+      case "-u1" | "--alwaysForwardTime"
         => alwaysForwardTime = true
-      case "-u" | "--update" 
+      case "-u" | "--update"
         => alwaysUpdate = true; alwaysForwardTime = true
-      case "-?" | "--help" 
+      case "-?" | "--help"
         => friendlyHelpMsg(); return Array.empty
       case s if s.startsWith("-")
         => throw new ECAException(s"unknown flag: $s")
       case s if argHandler.nonEmpty
         => argHandler.dequeue()(s)
-      case s 
+      case s
         => newArgs += s
     }
 
@@ -133,7 +132,7 @@ object Options {
     println("...")
   }
 
-  def main(args: Array[String]) = 
+  def main(args: Array[String]) =
     println(apply(args).reduce(_+", "+_))
 
 }
