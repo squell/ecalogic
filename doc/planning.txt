@@ -3,23 +3,23 @@ week                  SDR-activiteit
 2013-W36 ( 2- 6 Sep):
 2013-W37 ( 9-13 Sep):
 --------------------------> Milestone #0: aan de slag!
-2013-W38 (16-20 Sep): 
+2013-W38 (16-20 Sep):
 2013-W39 (23-27 Sep):
 --------------------------> Milestone #1: bruikbare AST maken uit een .eca
 2013-W40 (30- 4 Oct): Presentaties voorbereiden
 2013-W41 ( 7-11 Oct): Presentaties "new project requirements"
-2013-W42 (14-18 Oct): presentaties "new project requirements"<-@ THIS IS NOW
-2013-W43 (21-25 Oct):
+2013-W42 (14-18 Oct): presentaties "new project requirements"
+2013-W43 (21-25 Oct): <-@ THIS IS NOW
 --------------------------> Milestone #2: analyse met een hardcoded model
 2013-W44 (28- 1 Nov): *Kwartaalbreak/tentamenperiode?
 2013-W45 ( 4- 8 Nov): *Kwartaalbreak/tentamenperiode?
 2013-W46 (11-15 Nov):
 2013-W47 (18-22 Nov): Presentatie voorbereiden
 2013-W48 (25-29 Nov): Presentaties "global design"
+--------------------------> Milestone #3: component model, moare logic
 2013-W49 ( 2- 6 Dec): Presentaties "global design"
---------------------------> Milestone #3: component model
-2013-W50 ( 9-13 Dec): 
-2013-W51 (16-20 Dec): 
+2013-W50 ( 9-13 Dec):
+2013-W51 (16-20 Dec):
 --------------------------> Milestone #4: PROJECT DEADLINE _|_
 
 2013-W52 (23-27 Dec): *Kerstbreak
@@ -32,7 +32,7 @@ week                  SDR-activiteit
 
 Opmerkingen:
 
-Voor Milestone #1 is het niet nodig dat de syntax/type-regels van de taal al geheel vastligt; 
+Voor Milestone #1 is het niet nodig dat de syntax/type-regels van de taal al geheel vastligt;
 het gaat er hier puur om dat we een begin van het project hebben.
 
 Kleinere milestones voorafgaand aan Milestone #2:
@@ -51,10 +51,31 @@ Als extra toevoeging voor milestone #4 is voorlopig het streven:
 UPDATE:
 
 Planning om nog te completeren voor Milestone #2
-- korte termijn: 
+- korte termijn:
   Jascha: external DSL pre-ontwerp, internal DSL componentmodel-registratie
   Marc: variable substitutie bij function calls, mogelijkheid tot expressies als waardes?
-  Dorus: scala-test's 
+  Dorus: scala-test's
 
 Daarna (nav. gesprek Rody) re-plannen.
 
+REPLANNING:
+
+-?create examples and tests en documentatie
+- polynomials
+- fix while
+-*runtime variable analysis (annotations?)
+- interpreter/transduceerder
+  -*externe DSL implementeren,integreren
+  - interne DSL: return values?
+
+eerste 3 weken:
+-?create examples and tests
+- polynomials
+- fix while
+-*runtime variable analysis (annotations?)
+- interpreter/transduceerder
+-*externe DSL implementeren,integreren
+
+drie weken:
+- annotated program as output(?)
+- documentatie (friendlyHelpMsg)
