@@ -50,7 +50,7 @@ import java.io.File
   * @author Jascha Neutelings
   */
 class Parser(input: String, protected val errorHandler: ErrorHandler = new DefaultErrorHandler()) extends BaseParser {
-  import Parser.First
+  import Parser._
 
   override protected val ignored = Tokens.Comment | Tokens.Whitespace
   protected val lexer = new Lexer(input)
@@ -89,6 +89,10 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     }
   }
 
+  def literal(follows: Pattern): Literal = parse(Tokens.Numeral, Literal(0)) (follows) {
+    case Tokens.Numeral(n) => advance(); Literal(n)
+  }
+
   /** Parses an identifier.
     *
     * Returns "&lt;error&gt;" in case of failure.
@@ -125,32 +129,44 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     expect(Tokens.Function)(follows)
 
     val name = identifier(follows | Tokens.LParen)
-    val params = parameters(follows | First.statement)
-    val body = composition(Tokens.End)(follows | Tokens.End)
+    val params = parameters(follows | Tokens.Assign | First.statement)
 
-    expect(Tokens.End)(follows | Tokens.Function)
-    expect(Tokens.Function)(follows)
+    val body = current match {
+      case Tokens.Assign =>
+        advance()
+        val expr = expression(follows)
+
+        Assignment(name, expr)(expr.position)
+      case _ =>
+        val stmt = composition(Tokens.End)(follows | Tokens.End)
+
+        expect(Tokens.End)(follows | Tokens.Function)
+        expect(Tokens.Function)(follows)
+
+        stmt
+    }
 
     FunDef(name, params, body)(pos)
   }
 
   def parameters(follows: Pattern): Seq[Param] = {
     val params = Seq.newBuilder[Param]
-    expect(Tokens.LParen)(follows | Tokens.Identifier | Tokens.RParen)
-    if (!current(Tokens.RParen)) {
-      var halt = false
-      do {
-        val paramPos = position
-        val paramName = identifier(follows | Tokens.Comma | Tokens.RParen)
+    if (current(Tokens.LParen)) {
+      advance()
+      if (!current(Tokens.RParen)) {
+        var halt = false
+        do {
+          val paramPos = position
+          val paramName = identifier(follows | Tokens.Comma | Tokens.RParen)
 
-        params += Param(paramName)(paramPos)
+          params += Param(paramName)(paramPos)
 
-        if (current(Tokens.Comma)) advance()
-        else halt = true
-      } while (!halt)
+          if (current(Tokens.Comma)) advance()
+          else halt = true
+        } while (!halt)
+      }
+      expect(Tokens.RParen)(follows)
     }
-    expect(Tokens.RParen)(follows)
-
     params.result()
   }
 
@@ -204,8 +220,11 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
       advance()
       val predicate = expression(follows | Tokens.Bound)
 
-      expect(Tokens.Bound)(follows | Tokens.Identifier | Tokens.Numeral | Tokens.LParen)
-      val rankingFunction = expression(follows | Tokens.Do)
+      val rankingFunction = if (current(Tokens.Bound)) {
+        advance()
+        Some(expression(follows | Tokens.Do))
+      } else
+        None
 
       expect(Tokens.Do)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
       val consequent = composition(Tokens.End)(follows | Tokens.End)
@@ -295,6 +314,17 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
       _ => expr
   }
 
+  protected def expDivRightExpr(follows: Pattern) = literal(follows)
+
+  def expExpr(follows: Pattern): Expression = {
+    @tailrec
+    def _expExpr(acc: Expression): Expression = current match {
+      case Tokens.Exponent => advance(); _expExpr(Exponent(acc, expDivRightExpr(follows))(acc.position))
+      case _               => acc
+    }
+    _expExpr(primary(follows))
+  }
+
   /** Parses an optional multiply-expression.
     *
     * @param follows follow set pattern
@@ -303,10 +333,11 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   def multExpr(follows: Pattern): Expression = {
     @tailrec
     def _multExpr(acc: Expression): Expression = current match {
-      case Tokens.Multiply => advance(); _multExpr(Multiply(acc, primary(follows))(acc.position))
+      case Tokens.Multiply => advance(); _multExpr(Multiply(acc, expExpr(follows))(acc.position))
+      case Tokens.Divide   => advance(); _multExpr(Divide(acc, expDivRightExpr(follows))(acc.position))
       case _               => acc
     }
-    _multExpr(primary(follows))
+    _multExpr(expExpr(follows))
   }
 
   /** Parses an optional add- or subtract-expression.
@@ -390,9 +421,6 @@ object Parser {
       Tokens.LParen     % "<parenthesized expression>"
 
   }
-
-  trait ExpressionMode
-  case object Default
 
   def main(args: Array[String]) {
     import scala.util.control.Exception._

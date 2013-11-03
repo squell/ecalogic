@@ -36,26 +36,20 @@ class ModelLexer(_input: String) extends Lexer(_input) {
   import ModelLexer.Tokens._
 
   private val _keywords: Map[String, Token] = Map (
-    "component"  -> Component,
-    "initial"    -> Initial,
-    "transition" -> Transition,
-    "uses"       -> Uses,
-    "time"       -> Time,
-    "energy"     -> Energy
+    "component" -> Component,
+    "uses"      -> Uses,
+    "time"      -> Time,
+    "energy"    -> Energy
   )
 
   private val _parseToken: PartialFunction[Char, (Token, Int)] = {
-    case ':' if lookahead(':') && lookahead('=', 2) => (Define  , 3)
-    case ':' if !lookahead('=')                     => (Colon   , 1)
-    case '.' if lookahead('.')                      => (DotDot  , 2)
-
-    case '^'                                        => (Exponent, 1)
-    case '/'                                        => (Divide  , 1)
+    case ':'                   => (Colon , 1)
+    case '.' if lookahead('.') => (DotDot, 2)
   }
 
-  override protected def parseToken = _parseToken orElse super.parseToken
+  override protected def parseToken = super.parseToken orElse _parseToken
 
-  override protected def keywords = _keywords orElse super.keywords
+  override protected def keywords =  super.keywords orElse _keywords
 
 }
 
@@ -68,19 +62,14 @@ object ModelLexer {
     val Function   = Lexer.Tokens.Function
     val Identifier = Lexer.Tokens.Identifier
     val Numeral    = Lexer.Tokens.Numeral
-//    val LAngle     = Lexer.Tokens.LT
-//    val RAngle     = Lexer.Tokens.GT
     val LParen     = Lexer.Tokens.LParen
     val RParen     = Lexer.Tokens.RParen
     val Comma      = Lexer.Tokens.Comma
-    val Multiply   = Lexer.Tokens.Multiply
     val End        = Lexer.Tokens.End
+    val Assign     = Lexer.Tokens.Assign
 
     case object Component  extends Keyword("component")
 
-    case object Initial    extends Keyword("initial")
-
-    case object Transition extends Keyword("transition")
     case object Uses       extends Keyword("uses")
     case object Time       extends Keyword("time")
     case object Energy     extends Keyword("energy")
@@ -88,8 +77,6 @@ object ModelLexer {
     case object Define     extends FixedToken("::=")
     case object Colon      extends FixedToken(":")
     case object DotDot     extends FixedToken("..")
-    case object Exponent   extends FixedToken("^")
-    case object Divide     extends FixedToken("/")
 
   }
 

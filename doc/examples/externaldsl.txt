@@ -1,19 +1,22 @@
-component CPU (on: 0..1, queue: 0..100)
-    initial queue ::= 0
+// import object nl.ru.cs.ecalogic.Cheese
 
-    transition on(X) uses 5 time 8 energy
-        on    ::= on * 6 + queue ^ 2 ^ 7 + 9 + X / 2
-        queue ::= queue - 1
-    end transition
+component CPU (active: 0..100, queue: 0..100)
+    queue := 50
 
-    phi ::= 200 * on
+    function phi := kaas(2) * kaas(10) + active
 
-    function phi()
-        phi := 2
-        X   := 0
-        while X < queue bound kaas do
-            phi := phi * 2
-            X   := X + 1
+    component function on(X) uses 5 time 8 energy
+        active := active * 6 + queue ^ 2 ^ 7 + 9 + X / 2
+        queue  := queue - 1
+        on     := Cheese::mock(X)
+    end function
+
+    function kaas(X)
+        kaas := 2
+        X    := 0
+        while X < queue do
+            kaas := kaas * 2
+            X    := X + 1
         end while
     end function
 

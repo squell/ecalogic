@@ -1,8 +1,8 @@
 function phi()
     phi := 2
     X   := 0
-    while X < queue do
+    while X < queue bound kaas(6) do
         phi := phi * 2
         X   := X + 1
-    end
+    end while
 end function

@@ -62,19 +62,6 @@ class Lexer(protected var input: String) extends BaseLexer {
   )
 
   private val _parseToken: PartialFunction[Char, (Token, Int)] = {
-    case '+'                   => (Plus, 1)
-    case '-'                   => (Minus, 1)
-    case '*'                   => (Multiply, 1)
-
-    case '='                   => (EQ, 1)
-    case '<' if lookahead('=') => (LE, 2)
-    case '<' if lookahead('>') => (NE, 2)
-    case '<'                   => (LT, 1)
-    case '>' if lookahead('=') => (GE, 2)
-    case '>'                   => (GT, 1)
-    case ':' if lookahead(':') => (ColonColon, 2)
-    case ':' if lookahead('=') => (Assign, 2)
-
     case '/' if lookahead('/') =>
       val end = input.indexOf('\n', 2)
       val value = if (end >= 0) input.substring(2, end) else input.substring(2)
@@ -91,6 +78,21 @@ class Lexer(protected var input: String) extends BaseLexer {
       //if (end < 0) errorHandler.fatalError(new SPLException("Unterminated comment", position))
       val value = if (end >= 0) input.substring(1, end) else input.substring(1)
       (Comment(value.trim), value.length + 2)
+
+    case '+'                   => (Plus, 1)
+    case '-'                   => (Minus, 1)
+    case '*'                   => (Multiply, 1)
+    case '^'                   => (Exponent, 1)
+    case '/'                   => (Divide  , 1)
+
+    case '='                   => (EQ, 1)
+    case '<' if lookahead('=') => (LE, 2)
+    case '<' if lookahead('>') => (NE, 2)
+    case '<'                   => (LT, 1)
+    case '>' if lookahead('=') => (GE, 2)
+    case '>'                   => (GT, 1)
+    case ':' if lookahead(':') => (ColonColon, 2)
+    case ':' if lookahead('=') => (Assign, 2)
 
     case '('                   => (LParen, 1)
     case ')'                   => (RParen, 1)
@@ -155,6 +157,8 @@ object Lexer {
     case object Plus                     extends FixedToken("+")
     case object Minus                    extends FixedToken("-")
     case object Multiply                 extends FixedToken("*")
+    case object Exponent                 extends FixedToken("^")
+    case object Divide                   extends FixedToken("/")
 
     case object EQ                       extends FixedToken("=")
     case object LT                       extends FixedToken("<")

@@ -63,7 +63,7 @@ trait Statement extends ASTNode
 case class If(predicate: Expression, consequent: Statement, alternative: Statement)(val position: Position) extends Statement
 
 // TODO: documentatie afmaken
-case class While(predicate: Expression, rankingFunction: Expression, consequent: Statement)(val position: Position) extends Statement
+case class While(predicate: Expression, rankingFunction: Option[Expression], consequent: Statement)(val position: Position) extends Statement
 
 case class Assignment(variable: String, value: Expression)(val position: Position) extends Statement
 
@@ -121,13 +121,13 @@ trait UnaryExpression extends NAryExpression {
 trait LogicalExpression extends NAryExpression
 
 case class Or(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with LogicalExpression {
-  def operator = "||"
+  def operator = "or"
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
 }
 
 case class And(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with LogicalExpression {
-  def operator = "&&"
+  def operator = "and"
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
 }
@@ -149,6 +149,18 @@ case class Subtract(left: Expression, right: Expression)(val position: Position)
 
 case class Multiply(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with ArithmeticExpression {
   def operator = "*"
+
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+}
+
+case class Divide(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with ArithmeticExpression {
+  def operator = "/"
+
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+}
+
+case class Exponent(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with ArithmeticExpression {
+  def operator = "^"
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
 }

@@ -30,20 +30,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.parser
+package nl.ru.cs.ecalogic
+package util
 
-import nl.ru.cs.ecalogic.ast.Program
-import nl.ru.cs.ecalogic.util._
+import parser.Parser
 import nl.ru.cs.ecalogic.ast._
-import nl.ru.cs.ecalogic.ECAException
-import java.io.File
+
 import scala.io.Source
-import scala.util.control.Exception._
+
+import java.io.File
 
 /**
  * @author Dorus Peelen
  */
-class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler()) {
+class PrettyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler()) {
 
   /** Print the prog */
   def printProg() {
@@ -64,8 +64,10 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
         case While(pred, rf, consq) =>
           print("while ")
           printPart(pred, depth)
-          print(" bound ")
-          printPart(rf, depth)
+          rf.foreach { rf =>
+            print(" bound ")
+            printPart(rf, depth)
+          }
           print(" do")
           printDepthln(1)
           printPart(consq, depth + 1)
@@ -130,17 +132,22 @@ class PretyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler(
     }
     program.definitions.foreach(printPart(_, 0))
   }
+
 }
 
-object PretyPrint {
+object PrettyPrinter {
+
   def main(args: Array[String]) {
+    import scala.util.control.Exception._
+
     val file = new File(args.headOption.getOrElse("doc/examples/test.eca"))
     val source = Source.fromFile(file).mkString
     val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
     val parser = new Parser(source, errorHandler)
     val program = catching(classOf[ECAException]).opt(parser.program()).filterNot(_ => errorHandler.errorOccurred)
-    val pretyPrinter = new PretyPrinter(program.getOrElse(sys.exit(1)), errorHandler)
+    val pretyPrinter = new PrettyPrinter(program.getOrElse(sys.exit(1)), errorHandler)
     pretyPrinter.printProg()
     println("Done")
   }
+
 }

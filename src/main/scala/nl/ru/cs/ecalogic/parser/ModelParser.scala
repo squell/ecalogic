@@ -49,10 +49,6 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
 
   def numeral(follows: Pattern): BigInt = expect(Tokens.Numeral, BigInt(0))(follows)
 
-  def literal(follows: Pattern): Literal = parse(Tokens.Numeral, Literal(0)) (follows) {
-    case Tokens.Numeral(n) => advance(); Literal(n)
-  }
-
   def model(follows: Pattern = Pattern.empty) {
     expect(Tokens.Component)(follows | Tokens.Identifier)
     val name = identifier(follows | Tokens.LParen)
@@ -80,33 +76,26 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
   }
 
   def modelDefinition(follows: Pattern) = parse(First.modelDefinition)(follows) {
-    case Tokens.Initial =>
+    case Tokens.Identifier(name) =>
       advance()
-      identifier(follows | Tokens.Define)
-      expect(Tokens.Define)(follows | Tokens.Numeral)
+      expect(Tokens.Assign)(follows | Tokens.Numeral)
       numeral(follows)
 
       ErrorNode()
-    case Tokens.Identifier("phi") =>
-      advance()
-      expect(Tokens.Define)(follows | Tokens.Numeral)
-      expression(follows)
+    case Tokens.Component =>
+      _ => componentFunDef(follows)
 
-      ErrorNode()
-    case Tokens.Transition =>
-      _ => transition(follows)
-    case Tokens.Function if lookahead(Tokens.Identifier("phi")) =>
-      val phi = funDef(follows)
-      if (!phi.parameters.isEmpty) {
-        errorHandler.error(new ECAException("Phi function should not have any parameters."))
-      }
+    case Tokens.Function =>
+      funDef(follows)
 
-      //_ => phi
       ErrorNode()
   }
 
-  def transition(follows: Pattern): ErrorNode = {
-    expect(Tokens.Transition)(follows | Tokens.Identifier)
+  def componentFunDef(follows: Pattern): ErrorNode = {
+    val pos = position
+
+    expect(Tokens.Component)(follows | Tokens.Function)
+    expect(Tokens.Function)(follows | Tokens.Identifier)
     identifier(follows | Tokens.LParen)
     parameters(follows | Tokens.Uses | Tokens.Identifier)
 
@@ -134,38 +123,12 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
       }
     }
 
-    sequenceOf(transitionPart, First.transitionPart, Tokens.End)(follows | Tokens.End)
+    composition(Tokens.End)(follows | Tokens.End)
 
-    expect(Tokens.End)(follows | Tokens.Transition)
-    expect(Tokens.Transition)(follows)
+    expect(Tokens.End)(follows | Tokens.Function)
+    expect(Tokens.Function)(follows)
 
-    ErrorNode()(position)
-  }
-
-  def transitionPart(follows: Pattern): ErrorNode = {
-    identifier(follows | Tokens.Define)
-    expect(Tokens.Define)(follows | Parser.First.expression)
-    expression(follows)
-    ErrorNode()(position)
-  }
-
-  def expExpr(follows: Pattern): Expression = {
-    @tailrec
-    def _expExpr(acc: Expression): Expression = current match {
-      case Tokens.Exponent => advance(); _expExpr(Multiply(acc, literal(follows))(acc.position)) // FIXME
-      case _               => acc
-    }
-    _expExpr(primary(follows))
-  }
-
-  override def multExpr(follows: Pattern): Expression = {
-    @tailrec
-    def _multExpr(acc: Expression): Expression = current match {
-      case Tokens.Multiply => advance(); _multExpr(Multiply(acc, expExpr(follows))(acc.position))
-      case Tokens.Divide   => advance(); _multExpr(Multiply(acc, literal(follows))(acc.position)) // FIXME
-      case _               => acc
-    }
-    _multExpr(expExpr(follows))
+    ErrorNode()(pos)
   }
 
 }
@@ -175,10 +138,10 @@ object ModelParser {
   object First {
 
     val modelDefinition =
-      Tokens.Initial           % "<initial value definition>" |
-      Tokens.Transition        % "<transition definition>"    |
-      Tokens.Identifier("phi") % "<phi expression>"           |
-      Tokens.Function          % "<phi function>"
+      Tokens.Identifier        % "<initial value definition>"      |
+      Tokens.Identifier        % "<function expression>"
+      Tokens.Component         % "<component function definition>" |
+      Tokens.Function          % "<local function definition>"
 
     val transitionPart =
       Tokens.Identifier % "<variable transition>"

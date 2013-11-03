@@ -116,7 +116,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
         case If(pred, thenPart, elsePart) => varFlow(live, pred)
                                              varFlow(live, thenPart) & varFlow(live, elsePart)
         case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, consq)
-                                             rf.foreach {
+                                             rf.fold(eh.error(new ECAException("While loop needs a bound expression.", node.position))) {
                                                case _: ArithmeticExpression =>
                                                case Literal(_) =>
                                                case v@VarRef(ident) =>
@@ -125,7 +125,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
                                                  if(live(ident))
                                                    eh.warning(new ECAException(s"Variable '$ident' written to before this reference.", v.position))
                                                case e: Expression =>
-                                                   eh.error(new ECAException(s"Expression '$e' not suitable for use in a ranking function.", e.position))
+                                                   eh.error(new ECAException(s"Expression not suitable for use in a ranking function.", e.position))
                                              }
                                              live
         case Composition(stms)            => stms.foldLeft(live)(varFlow)

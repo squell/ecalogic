@@ -155,7 +155,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
                                            else
                                              G3 max G4
 
-      case While(pred, rf, consq)
+      case While(pred, Some(rf), consq)
         if config.techReport            => val Gpre = if (config.beforeSync) G.sync else G
                                            val G2 = analyse(Gpre,pred).update("CPU","w")
                                            val G3 = analyse(G2,consq)
@@ -168,7 +168,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
                                            else
                                              computeEnergyBound_TR(G4, G3, Gpre, iters)
 
-      case While(pred, rf, consq)       => val Gpre = if (config.beforeSync) G.sync else G
+      case While(pred, Some(rf), consq) => val Gpre = if (config.beforeSync) G.sync else G
                                            val Gfix = (fixPoint(Gpre.gamma, pred, consq), Gpre.t)
                                            val G2 = analyse(Gfix,pred).update("CPU","w")
                                            val G3 = analyse(G2,consq)
