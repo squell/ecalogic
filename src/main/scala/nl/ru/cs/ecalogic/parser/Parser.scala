@@ -83,7 +83,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   }
 
   private def expectSeparator(follows: Pattern) {
-    parse {_ => unexpected(Tokens.Identifier | EndOfLine)} (follows) {
+    parse {_ => unexpected(Tokens.Semicolon | EndOfLine)} (follows) {
       case Tokens.Semicolon => advance()
       case EndOfLine()      =>
     }
@@ -106,16 +106,13 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
 
   /** Parses a program.
     *
-    * @param follows follow set pattern
     * @return        program node
     */
-  def program(follows: Pattern = Pattern.empty): Program = {
+  def program(): Program = { // TODO: Make me reusable
     val pos = position
-    val definitions = Seq.newBuilder[FunDef]
-    while (!current(Tokens.EndOfFile)) {
-      definitions += funDef(follows)
-    }
-    Program(definitions.result())(pos)
+    val definitions = sequenceOf(funDef, Tokens.Function % "<function definition>")(Pattern.empty)
+    expect(Tokens.EndOfFile)(Pattern.empty)
+    Program(definitions)(pos)
   }
 
   /** Parses a function definition.
@@ -138,7 +135,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
 
         Assignment(name, expr)(expr.position)
       case _ =>
-        val stmt = composition(Tokens.End)(follows | Tokens.End)
+        val stmt = composition(follows | Tokens.End)
 
         expect(Tokens.End)(follows | Tokens.Function)
         expect(Tokens.Function)(follows)
@@ -175,19 +172,21 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     * @param follows follow set pattern
     * @return        composition node
     */
-  def composition(end: Pattern)(follows: Pattern): Statement = {
-    sequenceOf[Statement](statement, First.statement, end)(follows) match {
+  def composition(follows: Pattern): Statement = {
+    sequenceOf[Statement](statement, First.statement)(follows) match {
+      case Seq()              => Skip()(position)//errorHandler.error(new ECAException("Statement list can not be empty.", position)); ErrorNode()(position)
       case Seq(first)         => first
       case seq @ (first +: _) => Composition(seq)(first.position)
     }
   }
 
-  def sequenceOf[T <: ASTNode](f: (Pattern) => T, first: Pattern, end: Pattern)(follows: Pattern): Seq[T] = {
-    val nodes = Seq.newBuilder += f(follows | Tokens.Semicolon | EndOfLine)
+  def sequenceOf[T <: ASTNode](f: (Pattern) => T, first: Pattern)(follows: Pattern): Seq[T] = {
+    val nodes = Seq.newBuilder[T]
 
-    while (!current(end) && !(current(Tokens.Semicolon) && lookahead(end))) {
-      expectSeparator(follows | first)
-      nodes += f(follows | Tokens.Semicolon | EndOfLine)
+    while (current(first)) {
+      nodes += f(follows | Tokens.Semicolon)
+      if (current(first) || (current(Tokens.Semicolon) && lookahead(first)))
+        expectSeparator(follows | first)
     }
 
     optional(Tokens.Semicolon)
@@ -207,10 +206,10 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
       val predicate = expression(follows | Tokens.Then)
 
       expect(Tokens.Then)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
-      val consequent = composition(Tokens.Else)(follows | Tokens.Else)
+      val consequent = composition(follows | Tokens.Else)
 
       expect(Tokens.Else)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
-      val alternative = composition(Tokens.End)(follows | Tokens.End)
+      val alternative = composition(follows | Tokens.End)
 
       expect(Tokens.End)(follows | Tokens.If)
       expect(Tokens.If)(follows)
@@ -227,7 +226,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
         None
 
       expect(Tokens.Do)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
-      val consequent = composition(Tokens.End)(follows | Tokens.End)
+      val consequent = composition(follows | Tokens.End)
 
       expect(Tokens.End)(follows | Tokens.While)
       expect(Tokens.While)(follows)

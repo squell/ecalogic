@@ -92,7 +92,7 @@ trait BaseParser extends Positional {
 
   private def fill(buf: mutable.Queue[(Token, Position)]) {
     while (buf.size < k + 1) lexer.next() match {
-      case (Tokens.Unknown(t), p)       => errorHandler.error(new ECAException(s"Unrecognized token: '$t'", p))
+      case (Tokens.Unknown(t), p)       => errorHandler.error(new ECAException(s"Unrecognized token: '$t'.", p))
       case (t, _) if ignored.matches(t) =>
       case tp                           => buf += tp
     }
@@ -119,7 +119,7 @@ trait BaseParser extends Positional {
     */
   protected def unexpected(expected: Pattern) {
     if (current(Tokens.EndOfFile))
-      errorHandler.fatalError(new ECAException("Unexpected end of file", position))
+      errorHandler.fatalError(new ECAException(s"Unexpected end of file; expected: $expected.", position))
     else if (!recovering)
       errorHandler.error(new ECAException(s"Expected: $expected; found: $current", position))
   }

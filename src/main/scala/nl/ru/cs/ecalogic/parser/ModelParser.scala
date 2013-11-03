@@ -61,11 +61,8 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
       } while(current(Tokens.Comma))
       expect(Tokens.RParen)(follows | First.modelDefinition | Tokens.End)
     }
-    val definitions = Seq.newBuilder
-    while (!current(Tokens.End)) {
-      modelDefinition(follows | Tokens.End)
-    }
-    advance()
+    val definitions = sequenceOf(modelDefinition, First.modelDefinition)(follows | Tokens.End)
+    expect(Tokens.End)(follows | Tokens.Component)
     expect(Tokens.Component)(follows)
   }
 
@@ -123,7 +120,7 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
       }
     }
 
-    composition(Tokens.End)(follows | Tokens.End)
+    composition(follows | Tokens.End)
 
     expect(Tokens.End)(follows | Tokens.Function)
     expect(Tokens.Function)(follows)
@@ -138,10 +135,9 @@ object ModelParser {
   object First {
 
     val modelDefinition =
-      Tokens.Identifier        % "<initial value definition>"      |
-      Tokens.Identifier        % "<function expression>"
-      Tokens.Component         % "<component function definition>" |
-      Tokens.Function          % "<local function definition>"
+      Tokens.Identifier % "<initial value definition>"      |
+      Tokens.Component  % "<component function definition>" |
+      Tokens.Function   % "<local function definition>"
 
     val transitionPart =
       Tokens.Identifier % "<variable transition>"
