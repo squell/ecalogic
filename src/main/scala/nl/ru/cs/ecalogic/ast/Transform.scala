@@ -44,9 +44,9 @@ object Transform {
   def foldConstants(expr: Expression, varmap: Map[String,Expression] = Map.empty): Expression = {
     val pos = expr.position
     expr.transform {
-      case Add(Literal(l), Literal(r)) => Literal(l+r)(pos)
-      case Subtract(Literal(l), Literal(r)) => Literal(l-r)(pos)
-      case Multiply(Literal(l), Literal(r)) => Literal(l*r)(pos)
+      case Add(Literal(l), Literal(r)) => Literal(l+r).withPosition(pos)
+      case Subtract(Literal(l), Literal(r)) => Literal(l-r).withPosition(pos)
+      case Multiply(Literal(l), Literal(r)) => Literal(l*r).withPosition(pos)
       case v@VarRef(name) => varmap.getOrElse(v.name, v)
     }
   }

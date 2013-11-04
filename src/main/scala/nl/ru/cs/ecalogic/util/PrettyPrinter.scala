@@ -130,7 +130,7 @@ class PrettyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler
         print(")")
       }
     }
-    program.definitions.foreach(printPart(_, 0))
+    program.functions.foreach(printPart(_, 0))
   }
 
 }

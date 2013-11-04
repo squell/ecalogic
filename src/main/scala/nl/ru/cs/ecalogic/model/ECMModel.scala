@@ -30,44 +30,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic
-package parser
+package nl.ru.cs.ecalogic.model
 
-import ast._
-import util.{Position, DefaultErrorHandler}
+class ECMModel private(val name: String) extends ComponentModel {
 
-import scala.io.Source
+  class CState(val elements: Map[String, ECAValue]) extends ComponentState {
 
-import java.io.File
-import org.scalatest.FlatSpec
-import org.scalatest.matchers.{MatchResult, Matcher, ShouldMatchers}
+    protected def update(newElements: Map[String, ECAValue]) = ???
 
-class ParserSpec extends FlatSpec with ShouldMatchers {
-
-  private def parse(f: File): Program = parse(Source.fromFile(f).mkString, Some(f))
-
-  private def parse(s: String, f: Option[File] = None): Program = {
-    val eh = new DefaultErrorHandler(source = Some(s), file = f)
-    val parser = new Parser(s, eh)
-    val res = parser.program()
-    eh.successOrElse("Parsing failed.")
-    res
   }
 
-
-
-  behavior of "The parser"
-
-  it should "succeed on the test files" in {
-    new File("doc/examples").listFiles().withFilter(_.getName.endsWith(".eca")).foreach { f =>
-      parse(f)
-    }
-  }
-
-  it should "succeed on the empty string" in {
-    val program = parse("")
-    program should not equal (null)
-    program.functions should be ('empty)
-  }
+  val initialState = new CState(Map.empty)
 
 }

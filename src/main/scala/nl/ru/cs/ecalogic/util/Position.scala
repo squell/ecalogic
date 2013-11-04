@@ -53,6 +53,12 @@ case class Position(line: Int, column: Int) extends Ordered[Position] {
 
 }
 
+object Position {
+
+  def default = Position(0, 0)
+
+}
+
 /**
  * Trait for classes that have a [[nl.ru.cs.ecalogic.util.Position]].
  *

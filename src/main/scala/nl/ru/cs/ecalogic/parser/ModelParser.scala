@@ -80,7 +80,7 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
 
       ErrorNode()
     case Tokens.Component =>
-      _ => componentFunDef(follows)
+      componentFunDef(follows)
 
     case Tokens.Function =>
       funDef(follows)
@@ -125,7 +125,7 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
     expect(Tokens.End)(follows | Tokens.Function)
     expect(Tokens.Function)(follows)
 
-    ErrorNode()(pos)
+    ErrorNode().withPosition(pos)
   }
 
 }
@@ -138,9 +138,6 @@ object ModelParser {
       Tokens.Identifier % "<initial value definition>"      |
       Tokens.Component  % "<component function definition>" |
       Tokens.Function   % "<local function definition>"
-
-    val transitionPart =
-      Tokens.Identifier % "<variable transition>"
 
   }
 

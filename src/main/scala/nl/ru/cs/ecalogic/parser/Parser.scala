@@ -56,14 +56,14 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   protected val lexer = new Lexer(input)
   private var lastLineNumber = 0
 
-  protected def parse[A <: ASTNode](expected: Pattern, default: Position => A)(follows: Pattern)(parser: PartialFunction[Token, Position => A]): A = {
+  protected def parse[A <: ASTNode](expected: Pattern, default: A)(follows: Pattern)(parser: PartialFunction[Token, A]): A = {
     val pos = position
     val res = parse {_ => unexpected(expected); default}(follows)(parser)
-    res(pos)
+    res.withPosition(pos)
   }
 
-  protected def parse[A >: ErrorNode <: ASTNode](expected: Pattern)(follows: Pattern)(parser: PartialFunction[Token, Position => A]): A =
-    parse[A](expected, ErrorNode() _)(follows)(parser)
+  protected def parse[A >: ErrorNode <: ASTNode](expected: Pattern)(follows: Pattern)(parser: PartialFunction[Token, A]): A =
+    parse[A](expected, ErrorNode())(follows)(parser)
 
 
   override protected def advance() {
@@ -112,7 +112,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     val pos = position
     val definitions = sequenceOf(funDef, Tokens.Function % "<function definition>")(Pattern.empty)
     expect(Tokens.EndOfFile)(Pattern.empty)
-    Program(definitions)(pos)
+    Program(definitions).withPosition(pos)
   }
 
   /** Parses a function definition.
@@ -133,7 +133,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
         advance()
         val expr = expression(follows)
 
-        Assignment(name, expr)(expr.position)
+        Assignment(name, expr).withPosition(expr.position)
       case _ =>
         val stmt = composition(follows | Tokens.End)
 
@@ -143,7 +143,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
         stmt
     }
 
-    FunDef(name, params, body)(pos)
+    FunDef(name, params, body).withPosition(pos)
   }
 
   def parameters(follows: Pattern): Seq[Param] = {
@@ -156,7 +156,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
           val paramPos = position
           val paramName = identifier(follows | Tokens.Comma | Tokens.RParen)
 
-          params += Param(paramName)(paramPos)
+          params += Param(paramName).withPosition(paramPos)
 
           if (current(Tokens.Comma)) advance()
           else halt = true
@@ -174,9 +174,9 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     */
   def composition(follows: Pattern): Statement = {
     sequenceOf[Statement](statement, First.statement)(follows) match {
-      case Seq()              => Skip()(position)//errorHandler.error(new ECAException("Statement list can not be empty.", position)); ErrorNode()(position)
+      case Seq()              => Skip().withPosition(position)//errorHandler.error(new ECAException("Statement list can not be empty.", position)); ErrorNode()(position)
       case Seq(first)         => first
-      case seq @ (first +: _) => Composition(seq)(first.position)
+      case seq @ (first +: _) => Composition(seq).withPosition(first.position)
     }
   }
 
@@ -233,7 +233,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
 
       While(predicate, rankingFunction, consequent)
     case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon) =>
-      _ => funCall(follows)
+      funCall(follows)
     case Tokens.Identifier(n) if lookahead(Tokens.Assign) =>
       advance(2)
       val expr = expression(follows)
@@ -276,7 +276,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     }
     expect(Tokens.RParen)(follows)
 
-    FunCall(name, arguments.result())(pos)
+    FunCall(name, arguments.result()).withPosition(pos)
   }
 
   /** Parses a expression.
@@ -295,7 +295,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     */
   def primary(follows: Pattern) = parse[Expression](First.expression) (follows) {
     case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon) =>
-      _ => funCall(follows)
+      funCall(follows)
     case Tokens.Identifier(n) =>
       advance()
 
@@ -310,7 +310,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
       val expr = expression(follows | Tokens.RParen)
       expect(Tokens.RParen)(follows)
 
-      _ => expr
+      expr
   }
 
   protected def expDivRightExpr(follows: Pattern) = literal(follows)
@@ -318,7 +318,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   def expExpr(follows: Pattern): Expression = {
     @tailrec
     def _expExpr(acc: Expression): Expression = current match {
-      case Tokens.Exponent => advance(); _expExpr(Exponent(acc, expDivRightExpr(follows))(acc.position))
+      case Tokens.Exponent => advance(); _expExpr(Exponent(acc, expDivRightExpr(follows)).withPosition(acc.position))
       case _               => acc
     }
     _expExpr(primary(follows))
@@ -332,8 +332,8 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   def multExpr(follows: Pattern): Expression = {
     @tailrec
     def _multExpr(acc: Expression): Expression = current match {
-      case Tokens.Multiply => advance(); _multExpr(Multiply(acc, expExpr(follows))(acc.position))
-      case Tokens.Divide   => advance(); _multExpr(Divide(acc, expDivRightExpr(follows))(acc.position))
+      case Tokens.Multiply => advance(); _multExpr(Multiply(acc, expExpr(follows)).withPosition(acc.position))
+      case Tokens.Divide   => advance(); _multExpr(Divide(acc, expDivRightExpr(follows)).withPosition(acc.position))
       case _               => acc
     }
     _multExpr(expExpr(follows))
@@ -347,8 +347,8 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   def addExpr(follows: Pattern): Expression = {
     @tailrec
     def _addExpr(acc: Expression): Expression = current match {
-      case Tokens.Plus  => advance(); _addExpr(Add     (acc, multExpr(follows))(acc.position))
-      case Tokens.Minus => advance(); _addExpr(Subtract(acc, multExpr(follows))(acc.position))
+      case Tokens.Plus  => advance(); _addExpr(Add     (acc, multExpr(follows)).withPosition(acc.position))
+      case Tokens.Minus => advance(); _addExpr(Subtract(acc, multExpr(follows)).withPosition(acc.position))
       case _            => acc
     }
     _addExpr(multExpr(follows))
@@ -362,12 +362,12 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   def relExpr(follows: Pattern): Expression = {
     val left = addExpr(follows)
     current match {
-      case Tokens.LT => advance(); LT(left, addExpr(follows))(left.position)
-      case Tokens.LE => advance(); LE(left, addExpr(follows))(left.position)
-      case Tokens.GT => advance(); GT(left, addExpr(follows))(left.position)
-      case Tokens.GE => advance(); GE(left, addExpr(follows))(left.position)
-      case Tokens.EQ => advance(); EQ(left, addExpr(follows))(left.position)
-      case Tokens.NE => advance(); NE(left, addExpr(follows))(left.position)
+      case Tokens.LT => advance(); LT(left, addExpr(follows)).withPosition(left.position)
+      case Tokens.LE => advance(); LE(left, addExpr(follows)).withPosition(left.position)
+      case Tokens.GT => advance(); GT(left, addExpr(follows)).withPosition(left.position)
+      case Tokens.GE => advance(); GE(left, addExpr(follows)).withPosition(left.position)
+      case Tokens.EQ => advance(); EQ(left, addExpr(follows)).withPosition(left.position)
+      case Tokens.NE => advance(); NE(left, addExpr(follows)).withPosition(left.position)
       case _         => left
     }
   }
@@ -380,7 +380,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   def andExpr(follows: Pattern): Expression = {
    @tailrec
     def _andExpr(acc: Expression): Expression = current match {
-      case Tokens.And => advance(); _andExpr(And(acc, relExpr(follows))(acc.position))
+      case Tokens.And => advance(); _andExpr(And(acc, relExpr(follows)).withPosition(acc.position))
       case _          => acc
     }
     _andExpr(relExpr(follows))
@@ -394,7 +394,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   def orExpr(follows: Pattern): Expression = {
     @tailrec
     def _orExpr(acc: Expression): Expression = current match {
-      case Tokens.Or => advance(); _orExpr(Or(acc, andExpr(follows))(acc.position))
+      case Tokens.Or => advance(); _orExpr(Or(acc, andExpr(follows)).withPosition(acc.position))
       case _         => acc
     }
     _orExpr(andExpr(follows))

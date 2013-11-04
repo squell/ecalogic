@@ -39,20 +39,30 @@ import util.{Positional, Position}
   *
   * @author Jascha Neutelings
   */
-sealed trait ASTNode extends Positional
+sealed trait ASTNode extends Positional {
+  private var _position = Position.default
+
+  def position = _position
+
+  def withPosition(p: Position): this.type = {
+    _position = p
+    this
+  }
+
+}
 
 /** Dummy class representing an error during parsing. */
-case class ErrorNode()(val position: Position) extends PrimaryExpression with Statement
+case class ErrorNode() extends PrimaryExpression with Statement
 
 
 /** Class representing an entire ECA program. */
-case class Program(definitions: Seq[FunDef])(val position: Position) extends ASTNode
+case class Program(functions: Seq[FunDef]) extends ASTNode
 
 /** Class representing a parameter in function definition. */
-case class Param(name: String)(val position: Position) extends ASTNode
+case class Param(name: String) extends ASTNode
 
 /** Class representing a function definition. */
-case class FunDef(name: String, parameters: Seq[Param], body: Statement)(val position: Position) extends ASTNode
+case class FunDef(name: String, parameters: Seq[Param], body: Statement) extends ASTNode
 
 
 
@@ -60,16 +70,16 @@ case class FunDef(name: String, parameters: Seq[Param], body: Statement)(val pos
 trait Statement extends ASTNode
 
 /** Class representing a function definition. */
-case class If(predicate: Expression, consequent: Statement, alternative: Statement)(val position: Position) extends Statement
+case class If(predicate: Expression, consequent: Statement, alternative: Statement) extends Statement
 
 // TODO: documentatie afmaken
-case class While(predicate: Expression, rankingFunction: Option[Expression], consequent: Statement)(val position: Position) extends Statement
+case class While(predicate: Expression, rankingFunction: Option[Expression], consequent: Statement) extends Statement
 
-case class Assignment(variable: String, value: Expression)(val position: Position) extends Statement
+case class Assignment(variable: String, value: Expression) extends Statement
 
-case class Composition(statements: Seq[Statement])(val position: Position) extends Statement
+case class Composition(statements: Seq[Statement]) extends Statement
 
-case class Skip()(val position: Position) extends Statement
+case class Skip() extends Statement
 
 
 
@@ -95,9 +105,9 @@ trait PrimaryExpression extends Expression {
   def rewrite(ops: Seq[Expression]) = this
 }
 
-case class Literal(value: BigInt)(val position: Position) extends PrimaryExpression
+case class Literal(value: BigInt) extends PrimaryExpression
 
-case class VarRef(name: String)(val position: Position) extends PrimaryExpression
+case class VarRef(name: String) extends PrimaryExpression
 
 
 trait NAryExpression extends Expression {
@@ -120,88 +130,88 @@ trait UnaryExpression extends NAryExpression {
 
 trait LogicalExpression extends NAryExpression
 
-case class Or(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with LogicalExpression {
+case class Or(left: Expression, right: Expression) extends BinaryExpression with LogicalExpression {
   def operator = "or"
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
-case class And(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with LogicalExpression {
+case class And(left: Expression, right: Expression) extends BinaryExpression with LogicalExpression {
   def operator = "and"
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 
 trait ArithmeticExpression extends NAryExpression
 
-case class Add(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with ArithmeticExpression {
+case class Add(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
   def operator = "+"
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
-case class Subtract(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with ArithmeticExpression {
+case class Subtract(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
   def operator = "-"
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
-case class Multiply(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with ArithmeticExpression {
+case class Multiply(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
   def operator = "*"
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
-case class Divide(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with ArithmeticExpression {
+case class Divide(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
   def operator = "/"
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
-case class Exponent(left: Expression, right: Expression)(val position: Position) extends BinaryExpression with ArithmeticExpression {
+case class Exponent(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
   def operator = "^"
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 
 trait RelationalExpression extends BinaryExpression
 
-case class EQ(left: Expression, right: Expression)(val position: Position) extends RelationalExpression {
+case class EQ(left: Expression, right: Expression) extends RelationalExpression {
   def operator = "="
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
-case class NE(left: Expression, right: Expression)(val position: Position) extends RelationalExpression {
+case class NE(left: Expression, right: Expression) extends RelationalExpression {
   def operator = "<>"
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
-case class LT(left: Expression, right: Expression)(val position: Position) extends RelationalExpression {
+case class LT(left: Expression, right: Expression) extends RelationalExpression {
   def operator = "<"
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
-case class LE(left: Expression, right: Expression)(val position: Position) extends RelationalExpression {
+case class LE(left: Expression, right: Expression) extends RelationalExpression {
   def operator = "<="
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
-case class GT(left: Expression, right: Expression)(val position: Position) extends RelationalExpression {
+case class GT(left: Expression, right: Expression) extends RelationalExpression {
   def operator = ">"
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
-case class GE(left: Expression, right: Expression)(val position: Position) extends RelationalExpression {
+case class GE(left: Expression, right: Expression) extends RelationalExpression {
   def operator = ">="
 
-  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1))(position)
+  def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class FunName(name: String, prefix: Option[String] = None) {
@@ -211,10 +221,20 @@ case class FunName(name: String, prefix: Option[String] = None) {
   override def toString = qualified
 }
 
-case class FunCall(name: FunName, arguments: Seq[Expression])(val position: Position) extends NAryExpression with Statement {
+case class FunCall(name: FunName, arguments: Seq[Expression]) extends NAryExpression with Statement {
   def operator = name.qualified
   def arity = arguments.size
   def operands = arguments
 
-  def rewrite(ops: Seq[Expression]) = copy(arguments = ops)(position)
+  def rewrite(ops: Seq[Expression]) = copy(arguments = ops).withPosition(position)
 }
+
+
+
+
+
+trait ModelASTNode extends ASTNode
+
+case class Component(name: String, initializers: Seq[Assignment], componentFunctions: Seq[CompFunDef], functions: Seq[FunDef]) extends ModelASTNode
+
+case class CompFunDef(name: String, energy: BigInt, time: BigInt, parameters: Seq[Param], body: Statement) extends ModelASTNode

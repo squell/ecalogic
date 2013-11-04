@@ -51,7 +51,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
     * Number of argument should match number of parameters, no recursion
     */
   def functionCallHygiene() {
-    val defs = program.definitions
+    val defs = program.functions
 
     val funNames = mutable.Set.empty[String]
     defs.foreach { f =>
@@ -101,7 +101,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
     */
   def variableReferenceHygiene() {
 
-    for(fundef <- program.definitions) {
+    for(fundef <- program.functions) {
 
       val params = fundef.parameters.map(_.name).toSet
 
