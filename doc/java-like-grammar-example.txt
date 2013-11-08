@@ -1,0 +1,49 @@
+function derp(a, b) {
+    c = a * b && 5 ^ 2 + !89
+    x = 0
+
+    @bound(b) // ja
+    while (x < b) {
+        if (a == b) {
+            // lege block statement omdat het kan
+        } else {
+            skip
+        }
+    }
+
+    return c; // Geen return statement? Geen probleem, neem de waarde 0 aan (zie ook de definitie van rv)
+}
+
+// Begin nieuwe file...
+component Foo {
+
+        // zoiets? of oude stijl behouden? of prefixen met "var" of "variable"? type erachter a la Scala?
+        // rechte haken weg?
+        [0..1] active
+        [0..500] queue = 50
+
+        // Dit heeft momenteel mijn voorkeur
+        // variable active: 0..1
+        // variable queue: 0..500 = 50
+
+        @energy(5) @time(1) // Lelijk, maar dit zijn gewoon versimpelde Java annotaties
+        function on() {
+            active = 1
+        }
+
+        @energy(5) @time(1)
+        function assign() {} // bijvoorbeeld CPU::assign
+
+        // of ???
+        @energy(5) @time(1)
+        function assign();
+
+        @energy(65)
+        function blaat(X) = X + 10 // short-hand notatie behouden? is het eigenlijk nog nodig?
+
+        @private // dit is geen component function en verbruikt dus geen tijd/energie
+        function dinges(X) {
+            return (0 == 0);
+        }
+
+}
