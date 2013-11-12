@@ -1,0 +1,21 @@
+// time usage: 23, energy usage: 0
+
+function program(X)
+  Stub::idle();
+  if 23 < 281723817 then
+    skip
+  else
+    while 5 > 42 bound 7 do
+      if 100 < 1 then
+        Stub::idle();
+      else
+        i := 0;
+        while i < 3 bound 3 do
+          i := i + 1;
+          Stub::idle()
+        end while
+      end if;
+    end while;
+  end if;
+  Stub::idle();
+end function
