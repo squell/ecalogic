@@ -197,7 +197,9 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
       case _:PrimaryExpression          => G
     }
 
-    val finalState = analyse(GlobalState.initial(Seq(HyperPentium)++components), lookup(entryPoint))(Map.empty).sync
+    val initialState = GlobalState.initial(Seq(HyperPentium)++components)
+    val root         = lookup.getOrElse(entryPoint, throw new ECAException(s"No ${entryPoint} function to analyse."))
+    val finalState   = analyse(initialState, root)(Map.empty).sync
     if(eh.errorOccurred)
       throw new ECAException("Analysis failed.")
     else
