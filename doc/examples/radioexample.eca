@@ -55,6 +55,7 @@ Which is exactly what ECA tells us
 
  *)
 
+{ expect: (Map(Stub -> 0, BUG -> 0, radio -> 403380, sensor -> 6430, CPU -> 550),2010) }
 function algorithm1(Xn,Xdiv10)
   radio::on()
   while Xn > 0 bound Xn do

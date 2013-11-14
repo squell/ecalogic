@@ -1,6 +1,7 @@
 // time usage: 2, energy usage: 1
 // lesson: sometimes you need to force a state change
 
+{ expect: (Map(Stub -> 1, BUG -> 0, radio -> 74, sensor -> 111, CPU -> 35),37) }
 function program(X)
   Stub::idle();
   if 23 < 281723817 then

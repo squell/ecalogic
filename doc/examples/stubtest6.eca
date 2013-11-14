@@ -22,6 +22,7 @@ Note:
  
  *)
 
+{ expect: (Map(Stub -> 11883, BUG -> 0, radio -> 3986, sensor -> 5979, CPU -> 1960),1993) }
 function program(X)
   Stub::on();
 

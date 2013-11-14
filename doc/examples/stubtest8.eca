@@ -1,4 +1,5 @@
-function waste(X) 
+{ expect: (Map(Stub -> 10235, BUG -> 0, radio -> 10270, sensor -> 15405, CPU -> 5035),5135) }
+function waste(X)
   while X > 0 bound X do
     X := X-1;
     Stub::idle();
