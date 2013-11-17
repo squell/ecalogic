@@ -12,7 +12,7 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.2" % "test"
 
 unmanagedResourceDirectories in Test <+= (baseDirectory) { _ / "src/main/webapp" }
 
-scalacOptions ++= Seq("-deprecation", "-unchecked")
+scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
 
 libraryDependencies ++= {
   val liftVersion = "2.6-M2"
