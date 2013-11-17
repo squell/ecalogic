@@ -42,7 +42,6 @@ import nl.ru.cs.ecalogic.parser.Lexer.Tokens
 import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
 import nl.ru.cs.ecalogic.model.examples.{BadComponent, StubComponent}
 import nl.ru.cs.ecalogic.model.examples.DemoComponents.{CPU, Radio, Sensor}
-import nl.ru.cs.ecalogic.config.Options.Analysis
 import nl.ru.cs.ecalogic.util.DefaultErrorHandler
 
 /**

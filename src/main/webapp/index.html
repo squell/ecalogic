@@ -1,23 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Lift From Scratch</title>
+    <title>Ecalogic online</title>
 </head>
-<body>
-<script id="jquery" src="/classpath/jquery.js" type="text/javascript"></script>
-<h1>Welcome, you now have a working Lift installation</h1>
-<div id="main" class="lift:surround?with=default&at=content">
-    <div>
-        An example of doing forms with Ajax.
+<body data-lift-content-id="main">
+
+<div id="main" data-lift="surround?with=default;at=content">
+
+    <script src="/classpath/jlift.js" data-lift="tail"></script>
+    <script type="text/javascript" src="/ajax_request/liftAjax.js"></script>
+
+    <h1>Please insert your code:</h1>
+
+    <div data-lift="JsonForm">
+        <script id="jsonScript" data-lift="tail"></script>
+        <div id="jsonForm">
+            <textarea name="code" cols="40" rows="5">Insert code here</textarea>
+            <br>
+            <input type="submit" value="Send" />
+        </div>
     </div>
 
-    <form class="lift:form.ajax">
-        <div class="lift:AjaxExample">
-            Name: <input name="name"><br>
-            Age: <span class="lift:Msg?id=age&errorClass=error">error</span><input name="age" id="the_age" value="0"><br>
-            <input type="submit" value="Submit">
-        </div>
-    </form>
+    <div id="result">
+    </div>
 </div>
 
 </body>
