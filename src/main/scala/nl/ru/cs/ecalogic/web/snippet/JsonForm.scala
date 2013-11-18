@@ -58,12 +58,12 @@ object JsonForm {
   object AnalyseServer extends JsonHandler {
     def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, String], all) =>
-        try {
           val code = params.getOrElse("code", "")
 
           val baos = new ByteArrayOutputStream()
           val pw = new PrintWriter(baos)
           val errorHandler = new DefaultErrorHandler(source = Some(code), writer = pw)
+        try {
           val parser = new Parser(code, errorHandler)
           val program = parser.program()
           if (errorHandler.errorOccurred) {
@@ -89,7 +89,7 @@ object JsonForm {
           SetHtml("result", scala.xml.Unparsed("The code is %s".format(consumptionAnalyser().toString)))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
-            SetHtml("result", scala.xml.Unparsed("Fatal analyse error: <pre><code>%s</pre></code>".format(e.getMessage)))
+            SetHtml("result", scala.xml.Unparsed("Fatal analyse error: <pre><code>%s</pre></code>".format(baos.toString())))
         }
     }
   }
