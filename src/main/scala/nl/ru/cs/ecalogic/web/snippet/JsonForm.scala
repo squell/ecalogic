@@ -46,6 +46,8 @@ import nl.ru.cs.ecalogic.model.examples.{BadComponent, StubComponent}
 import nl.ru.cs.ecalogic.model.examples.DemoComponents.{CPU, Radio, Sensor}
 import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
 import nl.ru.cs.ecalogic.config
+import java.io.ByteArrayOutputStream
+import java.io.PrintWriter
 
 object JsonForm {
 
@@ -58,22 +60,34 @@ object JsonForm {
       case JsonCmd("processForm", target, params: Map[String, String], all) =>
         val code = params.getOrElse("code", "")
 
-        val errorHandler = new DefaultErrorHandler(source = Some(code))
+      val baos = new ByteArrayOutputStream()
+      val pw = new PrintWriter(baos)
+        val errorHandler = new DefaultErrorHandler(source = Some(code), writer = pw)
         val parser = new Parser(code, errorHandler)
         val program = parser.program()
-        errorHandler.successOrElse("Parse errors encountered.")
+       if (errorHandler.errorOccurred) {
+         return SetHtml("result", Text("Parse error: %s".format(baos.toString)))
+       }
 
         val checker = new SemanticAnalysis(program, errorHandler)
         checker.functionCallHygiene()
         checker.variableReferenceHygiene()
-        errorHandler.successOrElse("Semantic errors; please fix these.")
+        if (errorHandler.errorOccurred) {
+          return SetHtml("result", Text("Semantic error: %s".format(baos.toString)))
+        }
 
         val components = Set(StubComponent, BadComponent, Sensor, Radio, if(config.Options.noCPU) StubComponent else CPU)
 
         val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
 
+        if (errorHandler.errorOccurred) {
+          // TODO do we need this?
+          return SetHtml("result", Text("Analyse error: %s".format(baos.toString)))
+        }
+
         SetHtml("result",
-          Text("The code is %s".format(consumptionAnalyser().toString)) )
+          Text("The code is %s/nThe error is %s".format(consumptionAnalyser().toString,
+            baos.toString)) )
     }
   }
 }
