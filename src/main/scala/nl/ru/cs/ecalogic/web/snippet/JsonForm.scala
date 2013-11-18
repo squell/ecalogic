@@ -86,12 +86,15 @@ object JsonForm {
             // TODO do we need this?
             return SetHtml("result", scala.xml.Unparsed("Analyse error: %s".format(baos.toString)))
           }
-
-
           SetHtml("result", scala.xml.Unparsed("The code is %s".format(consumptionAnalyser().toString)))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
-            return SetHtml("result", scala.xml.Unparsed("Fatal analyse error: %s".format(e.getMessage)))
+            var msg = e.getMessage
+            if ((e.getCause) != null) {
+              msg += "<br>By: " + e.getCause.getMessage}
+              }
+            }
+            SetHtml("result", scala.xml.Unparsed("Fatal analyse error: %s".format(msg)))
         }
     }
   }
