@@ -89,11 +89,7 @@ object JsonForm {
           SetHtml("result", scala.xml.Unparsed("The code is %s".format(consumptionAnalyser().toString)))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
-            var msg = e.getMessage
-            if ((e.getCause) != null) {
-              msg += "<br>" + e.getCause.getMessage
-            }
-            SetHtml("result", scala.xml.Unparsed("Fatal analyse error: <pre><code>%s</pre></code>".format(msg)))
+            SetHtml("result", scala.xml.Unparsed("Fatal analyse error: <pre><code>%s</pre></code>".format(e.getMessage)))
         }
     }
   }
