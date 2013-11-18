@@ -58,35 +58,41 @@ object JsonForm {
   object AnalyseServer extends JsonHandler {
     def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, String], all) =>
-        val code = params.getOrElse("code", "")
+        try {
+          val code = params.getOrElse("code", "")
 
-        val baos = new ByteArrayOutputStream()
-        val pw = new PrintWriter(baos)
-        val errorHandler = new DefaultErrorHandler(source = Some(code), writer = pw)
-        val parser = new Parser(code, errorHandler)
-        val program = parser.program()
-        if (errorHandler.errorOccurred) {
-          // TODO is this safe?
-          return SetHtml("result", scala.xml.Unparsed("Parse error: %s".format(baos.toString).replace("\n", "<br>")))
+          val baos = new ByteArrayOutputStream()
+          val pw = new PrintWriter(baos)
+          val errorHandler = new DefaultErrorHandler(source = Some(code), writer = pw)
+          val parser = new Parser(code, errorHandler)
+          val program = parser.program()
+          if (errorHandler.errorOccurred) {
+            // TODO is this safe?
+            return SetHtml("result", scala.xml.Unparsed("Parse error: %s".format(baos.toString).replace("\n", "<br>")))
+          }
+
+          val checker = new SemanticAnalysis(program, errorHandler)
+          checker.functionCallHygiene()
+          checker.variableReferenceHygiene()
+          if (errorHandler.errorOccurred) {
+            return SetHtml("result", scala.xml.Unparsed("Semantic error: %s".format(baos.toString)))
+          }
+
+          val components = Set(StubComponent, BadComponent, Sensor, Radio, if (config.Options.noCPU) StubComponent else CPU)
+
+          val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
+
+          if (errorHandler.errorOccurred) {
+            // TODO do we need this?
+            return SetHtml("result", scala.xml.Unparsed("Analyse error: %s".format(baos.toString)))
+          }
+
+
+          SetHtml("result", scala.xml.Unparsed("The code is %s".format(consumptionAnalyser().toString)))
+        } catch {
+          case e: nl.ru.cs.ecalogic.ECAException =>
+            return SetHtml("result", scala.xml.Unparsed("Fatal analyse error: %s".format(e.getMessage)))
         }
-
-        val checker = new SemanticAnalysis(program, errorHandler)
-        checker.functionCallHygiene()
-        checker.variableReferenceHygiene()
-        if (errorHandler.errorOccurred) {
-          return SetHtml("result", scala.xml.Unparsed("Semantic error: %s".format(baos.toString)))
-        }
-
-        val components = Set(StubComponent, BadComponent, Sensor, Radio, if (config.Options.noCPU) StubComponent else CPU)
-
-        val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
-
-        if (errorHandler.errorOccurred) {
-          // TODO do we need this?
-          return SetHtml("result", scala.xml.Unparsed("Analyse error: %s".format(baos.toString)))
-        }
-
-        SetHtml("result", scala.xml.Unparsed("The code is %s".format(consumptionAnalyser().toString)))
     }
   }
 
