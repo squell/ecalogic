@@ -83,7 +83,7 @@ trait ErrorHandler {
     * @param  complaint explanation of the error condition
     */
   def successOrElse(complaint: String) {
-    if(errorOccurred) throw new ECAException(complaint)
+    if(errorOccurred) fatalError(new ECAException(complaint))
   }
 
 }
@@ -135,14 +135,14 @@ class DefaultErrorHandler(maxErrorCount: Int = 10,
   def fatalError(exception: ECAException) {
     printMessage("Fatal error", exception.message, exception.position)
     errorCount += 1
-    throw new ECAException("Fatal error occurred", exception)
+    throw new ECAException(s"Fatal error occurred: ${exception.message}", exception)
   }
 
   def error(exception: ECAException) {
     printMessage("Error", exception.message, exception.position)
     errorCount += 1
     if (maxErrorCount > 0 && errorCount >= maxErrorCount) {
-      throw new ECAException("Maximum number of errors reached")
+      fatalError(new ECAException("Maximum number of errors reached"))
     }
   }
 
