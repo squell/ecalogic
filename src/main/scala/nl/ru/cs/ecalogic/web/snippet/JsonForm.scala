@@ -68,14 +68,14 @@ object JsonForm {
           val program = parser.program()
           if (errorHandler.errorOccurred) {
             // TODO is this safe?
-            return SetHtml("result", scala.xml.Unparsed("Parse error: %s".format(baos.toString).replace("\n", "<br>")))
+            return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(baos.toString).replace("\n", "<br>")))
           }
 
           val checker = new SemanticAnalysis(program, errorHandler)
           checker.functionCallHygiene()
           checker.variableReferenceHygiene()
           if (errorHandler.errorOccurred) {
-            return SetHtml("result", scala.xml.Unparsed("Semantic error: %s".format(baos.toString)))
+            return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(baos.toString)))
           }
 
           val components = Set(StubComponent, BadComponent, Sensor, Radio, if (config.Options.noCPU) StubComponent else CPU)
@@ -84,17 +84,16 @@ object JsonForm {
 
           if (errorHandler.errorOccurred) {
             // TODO do we need this?
-            return SetHtml("result", scala.xml.Unparsed("Analyse error: %s".format(baos.toString)))
+            return SetHtml("result", scala.xml.Unparsed("Analyse error: <pre><code>%s</pre></code>".format(baos.toString)))
           }
           SetHtml("result", scala.xml.Unparsed("The code is %s".format(consumptionAnalyser().toString)))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
             var msg = e.getMessage
             if ((e.getCause) != null) {
-              msg += "<br>By: " + e.getCause.getMessage}
-              }
+              msg += "<br>" + e.getCause.getMessage
             }
-            SetHtml("result", scala.xml.Unparsed("Fatal analyse error: %s".format(msg)))
+            SetHtml("result", scala.xml.Unparsed("Fatal analyse error: <pre><code>%s</pre></code>".format(msg)))
         }
     }
   }
