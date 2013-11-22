@@ -32,8 +32,7 @@
 
 package nl.ru.cs.ecalogic.web.snippet
 
-import scala.xml.{Text, NodeSeq}
-
+import scala.xml.NodeSeq
 import net.liftweb.util.Helpers._
 import net.liftweb.util.JsonCmd
 import net.liftweb.http.SHtml.jsonForm
@@ -49,13 +48,12 @@ import nl.ru.cs.ecalogic.config
 import java.io.ByteArrayOutputStream
 import java.io.PrintWriter
 import net.liftmodules.textile._
-import net.liftmodules.textile._
 
-object JsonForm {
+object CodeForm {
 
   def render =
-    "#jsonForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, ns)) &
-      "#jsonScript" #> Script(AnalyseServer.jsCmd)
+    "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, ns)) &
+      "#codeScript" #> Script(AnalyseServer.jsCmd)
 
   object AnalyseServer extends JsonHandler {
     def apply(in: Any): JsCmd = in match {
@@ -84,13 +82,12 @@ object JsonForm {
           val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
 
           if (errorHandler.errorOccurred) {
-            // TODO do we need this?
             return SetHtml("result", scala.xml.Unparsed("Analyse error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
           }
-          SetHtml("result", scala.xml.Unparsed("The code is %s".format(TextileParser.toHtml(consumptionAnalyser().toString))))
+          SetHtml("result", scala.xml.Unparsed("The result is %s".format(TextileParser.toHtml(consumptionAnalyser.toString))))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
-            SetHtml("result", scala.xml.Unparsed("Fatal analyse error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString()))))
+            return SetHtml("result", scala.xml.Unparsed("Fatal error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
         }
     }
   }

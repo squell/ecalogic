@@ -1,29 +1,33 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Ecalogic online</title>
-</head>
-<body data-lift-content-id="main">
-
 <div id="main" data-lift="surround?with=default;at=content">
-
     <script src="/classpath/jlift.js" data-lift="tail"></script>
     <script type="text/javascript" src="/ajax_request/liftAjax.js"></script>
-
     <h1>Please insert your code:</h1>
 
-    <div data-lift="JsonForm">
-        <script id="jsonScript" data-lift="tail"></script>
-        <div id="jsonForm">
-            <textarea name="code" cols="80" rows="35">Insert code here</textarea>
-            <br>
-            <input type="submit" value="Send" />
+    <div style="float: left;">
+        <div data-lift="CodeForm">
+            <script id="codeScript" data-lift="tail"></script>
+            <div id="codeForm">
+                <textarea name="code" cols="80" rows="35" id="code">Insert code here</textarea>
+                <br>
+                <input type="submit" value="Send"/>
+            </div>
+        </div>
+
+        <div id="result">
+        </div>
+        <div id="result2">
         </div>
     </div>
-
-    <div id="result">
+    <div style="float: left; margin: 10px">
+        <div data-lift="LoadForm">
+            <script id="loadScript" data-lift="tail"></script>
+            <div id="loadForm">
+                <input type="radio" name="load" value="errormodel.eca">errormodel.eca</option><br>
+                <input type="radio" name="load" value="fixtest.eca">fixtest.eca</option><br>
+                <input type="radio" name="load" value="fixtest2.eca">fixtest2.eca</option><br>
+                <input type="radio" name="load" value="fixtest3.eca">fixtest3.eca</option><br>
+                <input type="submit" value="Send"/>
+            </div>
+        </div>
     </div>
 </div>
-
-</body>
-</html>
