@@ -48,6 +48,8 @@ import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
 import nl.ru.cs.ecalogic.config
 import java.io.ByteArrayOutputStream
 import java.io.PrintWriter
+import net.liftmodules.textile._
+import net.liftmodules.textile._
 
 object JsonForm {
 
@@ -67,15 +69,14 @@ object JsonForm {
           val parser = new Parser(code, errorHandler)
           val program = parser.program()
           if (errorHandler.errorOccurred) {
-            // TODO is this safe?
-            return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(baos.toString).replace("\n", "<br>")))
+            return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
           }
 
           val checker = new SemanticAnalysis(program, errorHandler)
           checker.functionCallHygiene()
           checker.variableReferenceHygiene()
           if (errorHandler.errorOccurred) {
-            return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(baos.toString)))
+            return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
           }
 
           val components = Set(StubComponent, BadComponent, Sensor, Radio, if (config.Options.noCPU) StubComponent else CPU)
@@ -84,12 +85,12 @@ object JsonForm {
 
           if (errorHandler.errorOccurred) {
             // TODO do we need this?
-            return SetHtml("result", scala.xml.Unparsed("Analyse error: <pre><code>%s</pre></code>".format(baos.toString)))
+            return SetHtml("result", scala.xml.Unparsed("Analyse error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
           }
-          SetHtml("result", scala.xml.Unparsed("The code is %s".format(consumptionAnalyser().toString)))
+          SetHtml("result", scala.xml.Unparsed("The code is %s".format(TextileParser.toHtml(consumptionAnalyser().toString))))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
-            SetHtml("result", scala.xml.Unparsed("Fatal analyse error: <pre><code>%s</pre></code>".format(baos.toString())))
+            SetHtml("result", scala.xml.Unparsed("Fatal analyse error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString()))))
         }
     }
   }
