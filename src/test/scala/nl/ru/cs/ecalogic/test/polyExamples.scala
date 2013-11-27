@@ -1,7 +1,7 @@
 /*
- * ecalogic: a tool for performing energy consumption analysis.
+ * ecalogic: A tool for performing energy consumption analysis.
  *
- * Copyright (c) 2013, J. Neutelings, D. Peelen, M. Schoolderman
+ * Copyright (C) 2013, J. Neutelings, D. Peelen, M. Schoolderman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -50,9 +50,45 @@ class polyExamples extends FlatSpec with ShouldMatchers {
 
   behavior of "The Polynomial class"
 
-  it should "succeed for" in {
-    val x = (Polynomial(5) * "x") * (Polynomial(2) * "y")
-    x.toString should equal("10*x*y")
+  val zero = Polynomial(0)
+  val one  = Polynomial(1)
+  val x    = Polynomial("x")
+  val y    = Polynomial("y")
+  val z    = Polynomial("z")
+  val A    = 5*x + 42*y
+  val B    = 37*x + 23*z
+  lazy val C = A*B
+
+  it should "not throw exceptions" in {
+    noException should be thrownBy (A+B)
+    noException should be thrownBy (A*B)
+  }
+
+  it should "have neutral elements" in {
+    A + zero should equal(A)
+    zero + A should equal(A)
+    A * one  should equal(A)
+    one * A  should equal(A)
+  }
+
+  it should "have commutative operations" in {
+    A + B should equal(B + A)
+    A * B should equal(B * A)
+  }
+
+  it should "have A negative element" in {
+    A - A should equal(zero)
+    B - B should equal(zero)
+    A + (B-A) should equal(B)
+    B + (A-B) should equal(A)
+  }
+
+  it should "have associative operations" in {
+    A+(B+C) should equal ((A+B) + C)
+  }
+
+  it should "distribute * over +" in {
+    A * (B+C) should equal (A*B + A*C)
   }
 
 
