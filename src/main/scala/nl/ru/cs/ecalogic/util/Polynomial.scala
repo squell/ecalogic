@@ -42,25 +42,25 @@ package util
  *
  * @author Marc Schoolderman
  */
-class Polynomial private (private val repr: Map[Seq[String],Int]) extends PartiallyOrdered[Polynomial] {
+class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends PartiallyOrdered[Polynomial] {
 
   import Polynomial._
 
-  def +(that: Polynomial) = new Polynomial(combine(this.repr, that.repr))
+  def +(that: Polynomial) = new Polynomial(combine(this.repr, that.repr).withDefaultValue(0))
 
   def unary_- = -1*this
-  def -(that: Polynomial) = new Polynomial(combine(this.repr, (-that).repr))
+  def -(that: Polynomial) = this + -that
 
   def *(that: Polynomial) = new Polynomial(
-    repr.map(term1=>that.repr.map(term2=>product(term1,term2))).reduce(combine)
+    repr.map(term1=>that.repr.map(term2=>product(term1,term2))).reduce(combine).withDefaultValue(0)
   )
 
   def max(that: Polynomial) = new Polynomial(
-    repr.transform { case (term,fac) => math.max(fac, that.repr(term)) } withDefaultValue(0)
+    repr.transform { case (term,fac) => fac max that.repr(term) } withDefaultValue(0)
   )
 
   def min(that: Polynomial) = new Polynomial(
-    repr.transform { case (term,fac) => math.min(fac, that.repr(term)) } withDefaultValue(0)
+    repr.transform { case (term,fac) => fac min that.repr(term) } withDefaultValue(0)
   )
 
   override def tryCompareTo[B >: Polynomial <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
@@ -77,6 +77,13 @@ class Polynomial private (private val repr: Map[Seq[String],Int]) extends Partia
       that.tryCompareTo(this).map(-_)
   }
 
+  override def equals(that: Any) = that match {
+    case that: Polynomial => repr == that.repr
+    case x: BigInt        => this == Polynomial(x)
+    case x: Int           => this == Polynomial(x)
+    case _                => false
+  }
+
   override def toString = {
     def nondigit(c: Char) = !('0' to '9' contains c)
     repr.toSeq.map { term=>(term._2 +: term._1) mkString "*" } sortBy {-_.count(nondigit)} mkString " + "
@@ -86,19 +93,23 @@ class Polynomial private (private val repr: Map[Seq[String],Int]) extends Partia
 object Polynomial {
   import scala.language.implicitConversions
 
-  private def combine(a: Map[Seq[String],Int], b: Map[Seq[String],Int]) =
+  private def combine(a: Map[Seq[String],BigInt], b: Map[Seq[String],BigInt]) =
     a.repr ++ b.transform(a.repr(_)+_)
 
-  private def product(a: (Seq[String],Int), b: (Seq[String],Int)) =
+  private def product(a: (Seq[String],BigInt), b: (Seq[String],BigInt)) =
     ((a._1++b._1).sorted, a._2*b._2)
 
-  implicit def constToPoly(value: Int): Polynomial =
+  implicit def intToPoly(value: Int): Polynomial =
+    new Polynomial(Map(Seq.empty[String]->BigInt(value)).withDefaultValue(0))
+    
+  implicit def bigIntToPoly(value: BigInt): Polynomial =
     new Polynomial(Map(Seq.empty[String]->value).withDefaultValue(0))
     
   implicit def stringToPoly(name: String): Polynomial =
-    new Polynomial(Map(Seq(name)->1).withDefaultValue(0))
+    new Polynomial(Map(Seq(name)->BigInt(1)).withDefaultValue(0))
 
   def apply(value: Int): Polynomial = value
+  def apply(value: BigInt): Polynomial = value
   def apply(variable: String): Polynomial = variable
 
   def main(args: Array[String]) {
