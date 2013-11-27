@@ -86,7 +86,8 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends Par
 
   override def toString = {
     def nondigit(c: Char) = !('0' to '9' contains c)
-    (for((term, coef)<-repr.toSeq if coef != 0) yield coef+:term mkString "*") sortBy(-_.count(nondigit)) mkString " + "
+    val str = (for((term, coef)<-repr.toSeq if coef != 0) yield coef+:term mkString "*") sortBy(-_.count(nondigit)) mkString " + "
+    if(str.isEmpty) "0" else str
   }
 }
 
@@ -115,7 +116,7 @@ object Polynomial {
   def main(args: Array[String]) {
     val x = (Polynomial(5) * "x" + 0) * (Polynomial(2)+"x")
     println(x + 2*Polynomial("x") - Polynomial("x") - Polynomial("x")  )
-
+    println(Polynomial(0))
   }
 }
 
