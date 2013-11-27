@@ -14,6 +14,7 @@ unmanagedResourceDirectories in Test <+= (baseDirectory) { _ / "src/main/webapp"
 
 scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
 
+// Hebben we echt ZOVEEL dependencies nodig? Of is dit copy-paste?
 libraryDependencies ++= {
   val liftVersion = "2.6-M2"
   Seq(
@@ -28,5 +29,3 @@ libraryDependencies ++= {
     "com.h2database"    % "h2"                  % "1.3.167"
   )
 }
-
-

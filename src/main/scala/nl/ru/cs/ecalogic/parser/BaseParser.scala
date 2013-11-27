@@ -33,11 +33,11 @@
 package nl.ru.cs.ecalogic
 package parser
 
+import ast.ASTNode
 import util.{Positional, Position, ErrorHandler}
 import BaseLexer.Tokens
 
 import scala.collection.mutable
-import scala.reflect.ClassTag
 
 /** Base trait for recursive descent parsers.
   *
@@ -45,6 +45,8 @@ import scala.reflect.ClassTag
   */
 trait BaseParser extends Positional {
   private var recovering = false
+
+  type ResultT <: ASTNode
 
   private lazy val buffer = {
     val buf = mutable.Queue.empty[(Token, Position)]
@@ -140,7 +142,7 @@ trait BaseParser extends Positional {
     * @tparam B        the return type pf the fallback function
     * @return          value returned by parsing function or fallback function
     */
-  protected def parse[A, B <: A](fallback: Token => B)(follows: Pattern)(parser: PartialFunction[Token, A]): A = {
+  protected def tryParse[A, B <: A](fallback: Token => B)(follows: Pattern)(parser: PartialFunction[Token, A]): A = {
     if (recovering && parser.isDefinedAt(current)) // Kan beter?
       recovering = false
 
@@ -163,15 +165,19 @@ trait BaseParser extends Positional {
     * @param follows  follow set pattern
     */
   protected def expect(expected: Pattern)(follows: Pattern) {
-    parse(_ => unexpected(expected))(follows) {
+    tryParse(_ => unexpected(expected))(follows) {
       case t if expected.matches(t) => advance()
     }
   }
 
   protected def expect[T](expected: Pattern, default: T)(follows: Pattern): T = {
-    parse{_ => unexpected(expected); default}(follows) {
+    tryParse{_ => unexpected(expected); default}(follows) {
       case t: VariableToken[T] if expected.matches(t) => advance(); t.value
     }
+  }
+
+  def expectEndOfFile() {
+    expect(Tokens.EndOfFile)(Pattern.empty)
   }
 
   /** Advances the token stream if the current token matches the given pattern
