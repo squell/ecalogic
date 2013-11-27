@@ -46,21 +46,21 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends Par
 
   import Polynomial._
 
-  def +(that: Polynomial) = new Polynomial(combine(this.repr, that.repr).withDefaultValue(0))
+  def +(that: Polynomial) = new Polynomial(combine(this.repr, that.repr))
 
   def unary_- = -1*this
   def -(that: Polynomial) = this + -that
 
   def *(that: Polynomial) = new Polynomial(
-    repr.map(term1=>that.repr.map(term2=>product(term1,term2))).reduce(combine).withDefaultValue(0)
+    repr.map(term1=>that.repr.map(term2=>product(term1,term2))).reduce(combine)
   )
 
   def max(that: Polynomial) = new Polynomial(
-    repr.transform { case (term,fac) => fac max that.repr(term) } withDefaultValue(0)
+    repr.transform { case (term,fac) => fac max that.repr.getOrElse(term, BigInt(0)) }
   )
 
   def min(that: Polynomial) = new Polynomial(
-    repr.transform { case (term,fac) => fac min that.repr(term) } withDefaultValue(0)
+    repr.transform { case (term,fac) => fac min that.repr.getOrElse(term, BigInt(0)) }
   )
 
   override def tryCompareTo[B >: Polynomial <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
@@ -68,7 +68,7 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends Par
       val shared = (this.repr++that.repr).keys
       var sign = 0
       shared.foreach { term =>
-          val cmp = repr(term) compare that.repr(term)
+          val cmp = repr.getOrElse(term, BigInt(0)) compare that.repr.getOrElse(term, BigInt(0))
           if(sign*cmp < 0) return None 
           sign |= cmp
       }
@@ -78,7 +78,7 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends Par
   }
 
   override def equals(that: Any) = that match {
-    case that: Polynomial => repr == that.repr
+    case that: Polynomial => tryCompareTo(that).exists(_==0)
     case x: BigInt        => this == Polynomial(x)
     case x: Int           => this == Polynomial(x)
     case _                => false
@@ -94,19 +94,19 @@ object Polynomial {
   import scala.language.implicitConversions
 
   private def combine(a: Map[Seq[String],BigInt], b: Map[Seq[String],BigInt]) =
-    a.repr ++ b.transform(a.repr(_)+_)
+    (a.repr ++ b.transform(a.repr.getOrElse(_,BigInt(0))+_))
 
   private def product(a: (Seq[String],BigInt), b: (Seq[String],BigInt)) =
     ((a._1++b._1).sorted, a._2*b._2)
 
   implicit def intToPoly(value: Int): Polynomial =
-    new Polynomial(Map(Seq.empty[String]->BigInt(value)).withDefaultValue(0))
+    new Polynomial(Map(Seq.empty[String]->BigInt(value)))
     
   implicit def bigIntToPoly(value: BigInt): Polynomial =
-    new Polynomial(Map(Seq.empty[String]->value).withDefaultValue(0))
+    new Polynomial(Map(Seq.empty[String]->value))
     
   implicit def stringToPoly(name: String): Polynomial =
-    new Polynomial(Map(Seq(name)->BigInt(1)).withDefaultValue(0))
+    new Polynomial(Map(Seq(name)->BigInt(1)))
 
   def apply(value: Int): Polynomial = value
   def apply(value: BigInt): Polynomial = value

@@ -59,6 +59,11 @@ class polyExamples extends FlatSpec with ShouldMatchers {
   val B    = 37*x + 23*z
   lazy val C = A*B
 
+  it should "have equality" in {
+    A should equal(A)
+    A should not equal(B)
+  }
+
   it should "not throw exceptions" in {
     noException should be thrownBy (A+B)
     noException should be thrownBy (A*B)
@@ -89,6 +94,17 @@ class polyExamples extends FlatSpec with ShouldMatchers {
 
   it should "distribute * over +" in {
     A * (B+C) should equal (A*B + A*C)
+  }
+
+  it should "distribute - over +" in {
+    A-(B-C) should equal ((A-B)+C)
+  }
+
+  it should "have true maximums and minimums" in {
+    A <= (A max B) should be (true)
+    A >  (A max B) should not be (true)
+    A >= (A min B) should be (true)
+    A <  (A min B) should not be (true)
   }
 
 
