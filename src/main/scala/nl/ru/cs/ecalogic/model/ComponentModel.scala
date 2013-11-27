@@ -90,7 +90,7 @@ trait ComponentModel {
 
       if(s1 != s || config.alwaysUpdate) {
         val upd = EACState(s1, t1, e1 + td(this,t1))
-        if(config.alwaysForwardTime) 
+        if(config.alwaysForwardTime)
           // not only update, but set it to the most recent
           (EACState(s1, t2, upd.e + td(upd, t2)), t2)
         else
@@ -117,8 +117,8 @@ trait ComponentModel {
       val stOrder  = s1 tryCompareTo s2
       val phiOrder = phi(s1) compareTo phi(s2)
       // check if the signs of the comparisons differ
-      if(stOrder.map(_ * phiOrder < 0).getOrElse(false))
-        throw new ECAException(s"${name}::phi not monotone with respect to $s1 and $s2")
+      if(stOrder.exists(_ * phiOrder < 0))
+        throw new ECAException(s"$name::phi not monotone with respect to $s1 and $s2")
     }
   }
 
@@ -153,6 +153,8 @@ trait ComponentModel {
   def delta(f: String)(s: CState) = s
 
   def phi(s: CState) = ECAValue.Zero
+
+  def rv(f: String)(s: CState, a: Seq[ECAValue]) = ECAValue.Zero
 
 }
 

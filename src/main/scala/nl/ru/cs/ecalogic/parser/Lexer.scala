@@ -98,6 +98,7 @@ class Lexer(protected var input: String) extends BaseLexer {
     case ')'                   => (RParen, 1)
     case ','                   => (Comma, 1)
     case ';'                   => (Semicolon, 1)
+    case '.'                   => (Period, 1)
 
     case d if isDigit(d)       =>
       val value = input.takeWhile(isDigit)
@@ -176,6 +177,7 @@ object Lexer {
     case object Comma                    extends FixedToken(",")
     case object Semicolon                extends FixedToken(";")
 
+    case object Period                   extends FixedToken(".")
     case object ColonColon               extends FixedToken("::")
 
     case class Comment(value: String)    extends VariableToken[String]("comment")

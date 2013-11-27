@@ -145,8 +145,8 @@ object PrettyPrinter {
     val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
     val parser = new Parser(source, errorHandler)
     val program = catching(classOf[ECAException]).opt(parser.program()).filterNot(_ => errorHandler.errorOccurred)
-    val pretyPrinter = new PrettyPrinter(program.getOrElse(sys.exit(1)), errorHandler)
-    pretyPrinter.printProg()
+    val prettyPrinter = new PrettyPrinter(program.getOrElse(sys.exit(1)), errorHandler)
+    prettyPrinter.printProg()
     println("Done")
   }
 
