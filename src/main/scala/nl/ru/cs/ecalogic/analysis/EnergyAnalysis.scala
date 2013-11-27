@@ -130,8 +130,12 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
     }
 
     /** Convert an Expression to ECAValue, and complain if this is not possible */
-    def resolve(expr: Expression): ECAValue = expr match {
+    def resolve(expr: Expression): Polynomial = expr match {
       case Literal(x) => x
+      case VarRef(x) => x
+      case Add(l, r) => resolve(l) + resolve(r)
+      case Subtract(l, r) => resolve(l) - resolve(r)
+      case Multiply(l, r) => resolve(l) * resolve(r)
       case _ => eh.error(new ECAException("Could not resolve this value.", expr.position)); 0
     }
 
