@@ -41,6 +41,7 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
   type LUBFunction = (EACState, EACState) => EACState
   type PHIFunction = CState => ECAValue
   type DFunction   = CState => CState
+  type RVFunction  = (CState, Seq[ECAValue]) => ECAValue
 
   class CState private[DSLModel](val elements: Map[String, ECAValue]) extends ComponentState with Dynamic {
     import scala.language.dynamics
@@ -67,6 +68,7 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
   private val energyConstants          = mutable.Map.empty[String, ECAValue].withDefault(super.E)
   private val timeConstants            = mutable.Map.empty[String, ECAValue].withDefault(super.T)
   private val deltaFunctions           = mutable.Map.empty[String, DFunction].withDefault(super.delta)
+  private val rvFunctions              = mutable.Map.empty[String, RVFunction].withDefault(super.rv)
   private var tdFunction: TDFunction   = super.td
   private var lubFunction: LUBFunction = super.lub
   private var phiFunction: PHIFunction = super.phi
@@ -116,6 +118,8 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
   override def T(f: String) = timeConstants(f)
 
   override def delta(f: String)(s: CState) = deltaFunctions(f)(s)
+
+  override def rv(f: String)(s: CState, a: Seq[ECAValue]) = rvFunctions(f)(s, a)
 
   override def td(s: EACState, t: ECAValue) = tdFunction(s, t)
 
@@ -183,6 +187,15 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
       protected def apply(declarations: Seq[(String, DFunction)]) {
         checkDuplicates(declarations, "state update functions", false)
         deltaFunctions ++= declarations.toMap
+      }
+
+    }
+
+    object rv extends Declaration[RVFunction] {
+
+      protected def apply(declarations: Seq[(String, RVFunction)]) {
+        checkDuplicates(declarations, "result value functions", false)
+        rvFunctions ++= declarations.toMap
       }
 
     }

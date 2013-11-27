@@ -235,6 +235,10 @@ case class FunCall(name: FunName, arguments: Seq[Expression]) extends NAryExpres
 
 trait ModelASTNode extends ASTNode
 
-case class Component(name: String, initializers: Seq[Assignment], componentFunctions: Seq[CompFunDef], functions: Seq[FunDef]) extends ModelASTNode
+case class CompVarDecl(name: String, lower: BigInt, upper: BigInt) extends ModelASTNode
+
+case class Component(name: String, variables: Seq[CompVarDecl], initializers: Seq[Assignment], componentFunctions: Seq[CompFunDef], functions: Seq[FunDef]) extends ModelASTNode
 
 case class CompFunDef(name: String, parameters: Seq[Param], energy: BigInt, time: BigInt, body: Statement) extends ModelASTNode
+
+case class Import(className: String) extends ModelASTNode

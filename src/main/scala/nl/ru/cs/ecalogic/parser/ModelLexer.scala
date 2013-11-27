@@ -45,14 +45,13 @@ class ModelLexer(_input: String) extends Lexer(_input) {
   )
 
   private val _parseToken: PartialFunction[Char, (Token, Int)] = {
-    case ':'                   => (Colon       , 1)
-    case '.' if lookahead('.') => (PeriodPeriod, 2)
-    case '.'                   => (Period      , 1)
+    case ':' if !lookahead('=') && !lookahead(':') => (Colon       , 1)
+    case '.' if lookahead('.')                     => (PeriodPeriod, 2)
   }
 
-  override protected def parseToken = super.parseToken orElse _parseToken
+  override protected def parseToken = _parseToken orElse super.parseToken
 
-  override protected def keywords =  super.keywords orElse _keywords
+  override protected def keywords =  _keywords orElse super.keywords
 
 }
 
@@ -81,7 +80,6 @@ object ModelLexer {
     case object Energy       extends Keyword("energy")
 
     case object Colon        extends FixedToken(":")
-    case object Period       extends FixedToken(".")
     case object PeriodPeriod extends FixedToken("..")
 
   }

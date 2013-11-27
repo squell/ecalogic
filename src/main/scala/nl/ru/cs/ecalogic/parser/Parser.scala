@@ -234,7 +234,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
       expect(Tokens.While)(follows)
 
       While(predicate, rankingFunction, consequent)
-    case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon) =>
+    case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon | Tokens.Period) =>
       funCall(follows)
     case Tokens.Identifier(n) if lookahead(Tokens.Assign) =>
       advance(2)
@@ -257,13 +257,28 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
 
     val compOrNamePart = identifier(follows | Tokens.ColonColon | Tokens.LParen)
 
-    val name = if (current(Tokens.ColonColon)) {
-      advance()
-      val namePart = identifier(follows | Tokens.LParen)
+    val name = current match {
+      case Tokens.ColonColon =>
+        advance()
+        val namePart = identifier(follows | Tokens.LParen)
 
-      FunName(namePart, Some(compOrNamePart))
-    } else
-      FunName(compOrNamePart)
+        FunName(namePart, Some(compOrNamePart))
+      case Tokens.Period =>
+        val className = StringBuilder.newBuilder ++= compOrNamePart
+        do {
+          advance()
+          className += '.'
+          className ++= identifier(follows | Tokens.Period | Tokens.ColonColon)
+        } while (current(Tokens.Period))
+
+        expect(Tokens.ColonColon)(follows | Tokens.Identifier)
+
+        val namePart = identifier(follows | Tokens.LParen)
+
+        FunName(namePart, Some(className.result()))
+      case _ =>
+        FunName(compOrNamePart)
+    }
 
     expect(Tokens.LParen)(follows | Tokens.Identifier | Tokens.Numeral | Tokens.LParen | Tokens.RParen)
     val arguments = Seq.newBuilder[Expression]
@@ -296,7 +311,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     * @return        expression node
     */
   def primary(follows: Pattern) = tryParse[Expression](First.expression) (follows) {
-    case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon) =>
+    case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon | Tokens.Period) =>
       funCall(follows)
     case Tokens.Identifier(n) =>
       advance()

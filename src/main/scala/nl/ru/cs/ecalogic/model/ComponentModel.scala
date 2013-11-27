@@ -149,7 +149,7 @@ trait ComponentModel {
 
   def phi(s: CState) = ECAValue.Zero
 
-  def rv(f: String)(s: CState, a: Seq[String]) = ECAValue.Zero
+  def rv(f: String)(s: CState, a: Seq[ECAValue]) = ECAValue.Zero
 
 }
 
