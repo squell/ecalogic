@@ -36,6 +36,8 @@ class ModelLexer(_input: String) extends Lexer(_input) {
   import ModelLexer.Tokens._
 
   private val _keywords: Map[String, Token] = Map (
+    //"import"    -> Import,
+    "object"    -> Object,
     "component" -> Component,
     "uses"      -> Uses,
     "time"      -> Time,
@@ -43,8 +45,9 @@ class ModelLexer(_input: String) extends Lexer(_input) {
   )
 
   private val _parseToken: PartialFunction[Char, (Token, Int)] = {
-    case ':'                   => (Colon , 1)
-    case '.' if lookahead('.') => (DotDot, 2)
+    case ':'                   => (Colon       , 1)
+    case '.' if lookahead('.') => (PeriodPeriod, 2)
+    case '.'                   => (Period      , 1)
   }
 
   override protected def parseToken = super.parseToken orElse _parseToken
@@ -68,15 +71,18 @@ object ModelLexer {
     val End        = Lexer.Tokens.End
     val Assign     = Lexer.Tokens.Assign
 
-    case object Component  extends Keyword("component")
+    //case object Import     extends Keyword("import")
+    case object Object       extends Keyword("object")
 
-    case object Uses       extends Keyword("uses")
-    case object Time       extends Keyword("time")
-    case object Energy     extends Keyword("energy")
+    case object Component    extends Keyword("component")
 
-    case object Define     extends FixedToken("::=")
-    case object Colon      extends FixedToken(":")
-    case object DotDot     extends FixedToken("..")
+    case object Uses         extends Keyword("uses")
+    case object Time         extends Keyword("time")
+    case object Energy       extends Keyword("energy")
+
+    case object Colon        extends FixedToken(":")
+    case object Period       extends FixedToken(".")
+    case object PeriodPeriod extends FixedToken("..")
 
   }
 

@@ -45,7 +45,7 @@ import java.io.File
 /** Parser for ECA programs.
   *
   * @param input        input string to parse
-  * @param errorHandler error handler for resporting error messages
+  * @param errorHandler error handler for reporting error messages
   *
   * @author Jascha Neutelings
   */
@@ -56,14 +56,14 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   protected val lexer = new Lexer(input)
   private var lastLineNumber = 0
 
-  protected def parse[A <: ASTNode](expected: Pattern, default: A)(follows: Pattern)(parser: PartialFunction[Token, A]): A = {
+  protected def tryParse[A <: ASTNode](expected: Pattern, default: A)(follows: Pattern)(parser: PartialFunction[Token, A]): A = {
     val pos = position
-    val res = parse {_ => unexpected(expected); default}(follows)(parser)
+    val res = tryParse {_ => unexpected(expected); default}(follows)(parser)
     res.withPosition(pos)
   }
 
-  protected def parse[A >: ErrorNode <: ASTNode](expected: Pattern)(follows: Pattern)(parser: PartialFunction[Token, A]): A =
-    parse[A](expected, ErrorNode())(follows)(parser)
+  protected def tryParse[A >: ErrorNode <: ASTNode](expected: Pattern)(follows: Pattern)(parser: PartialFunction[Token, A]): A =
+    tryParse[A](expected, ErrorNode())(follows)(parser)
 
 
   override protected def advance() {
@@ -83,13 +83,13 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   }
 
   private def expectSeparator(follows: Pattern) {
-    parse {_ => unexpected(Tokens.Semicolon | EndOfLine)} (follows) {
+    tryParse {_ => unexpected(Tokens.Semicolon | EndOfLine)} (follows) {
       case Tokens.Semicolon => advance()
       case EndOfLine()      =>
     }
   }
 
-  def literal(follows: Pattern): Literal = parse(Tokens.Numeral, Literal(0)) (follows) {
+  def literal(follows: Pattern): Literal = tryParse(Tokens.Numeral, Literal(0)) (follows) {
     case Tokens.Numeral(n) => advance(); Literal(n)
   }
 
@@ -102,16 +102,13 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     */
   def identifier(follows: Pattern): String = expect(Tokens.Identifier, "<error>")(follows)
 
-
-
   /** Parses a program.
     *
     * @return        program node
     */
-  def program(): Program = { // TODO: Make me reusable
+  def program(follows: Pattern = Pattern.empty): Program = { // TODO: Make me reusable
     val pos = position
     val definitions = sequenceOf(funDef, Tokens.Function % "<function definition>")(Pattern.empty)
-    expect(Tokens.EndOfFile)(Pattern.empty)
     Program(definitions).withPosition(pos)
   }
 
@@ -128,20 +125,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     val name = identifier(follows | Tokens.LParen)
     val params = parameters(follows | Tokens.Assign | First.statement)
 
-    val body = current match {
-      case Tokens.Assign =>
-        advance()
-        val expr = expression(follows)
-
-        Assignment(name, expr).withPosition(expr.position)
-      case _ =>
-        val stmt = composition(follows | Tokens.End)
-
-        expect(Tokens.End)(follows | Tokens.Function)
-        expect(Tokens.Function)(follows)
-
-        stmt
-    }
+    val body = funBody(name)(follows)
 
     FunDef(name, params, body).withPosition(pos)
   }
@@ -165,6 +149,24 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
       expect(Tokens.RParen)(follows)
     }
     params.result()
+  }
+
+  def funBody(funName: String)(follows: Pattern): Statement = tryParse[Statement](First.funBody)(follows) {
+    case Tokens.Semicolon =>
+      // Don't remove it
+      Skip()
+    case Tokens.Assign =>
+      advance()
+      val expr = expression(follows)
+
+      Assignment(funName, expr)
+    case t if First.statement.matches(t) =>
+      val stmt = composition(follows | Tokens.End)
+
+      expect(Tokens.End)(follows | Tokens.Function)
+      expect(Tokens.Function)(follows)
+
+      stmt
   }
 
   /** Parses a list of one or more statements.
@@ -200,7 +202,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     * @param follows follow set pattern
     * @return        statement node
     */
-  def statement(follows: Pattern) = parse[Statement](First.statement)(follows) {
+  def statement(follows: Pattern) = tryParse[Statement](First.statement)(follows) {
     case Tokens.If =>
       advance()
       val predicate = expression(follows | Tokens.Then)
@@ -293,7 +295,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     * @param follows follow set pattern
     * @return        expression node
     */
-  def primary(follows: Pattern) = parse[Expression](First.expression) (follows) {
+  def primary(follows: Pattern) = tryParse[Expression](First.expression) (follows) {
     case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon) =>
       funCall(follows)
     case Tokens.Identifier(n) =>
@@ -418,6 +420,8 @@ object Parser {
       Tokens.Identifier % "<function call>"            |
       Tokens.Identifier % "<variable reference>"       |
       Tokens.LParen     % "<parenthesized expression>"
+
+    val funBody = statement | Tokens.Assign | Tokens.Semicolon
 
   }
 

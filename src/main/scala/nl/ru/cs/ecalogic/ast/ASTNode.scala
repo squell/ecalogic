@@ -237,4 +237,4 @@ trait ModelASTNode extends ASTNode
 
 case class Component(name: String, initializers: Seq[Assignment], componentFunctions: Seq[CompFunDef], functions: Seq[FunDef]) extends ModelASTNode
 
-case class CompFunDef(name: String, energy: BigInt, time: BigInt, parameters: Seq[Param], body: Statement) extends ModelASTNode
+case class CompFunDef(name: String, parameters: Seq[Param], energy: BigInt, time: BigInt, body: Statement) extends ModelASTNode
