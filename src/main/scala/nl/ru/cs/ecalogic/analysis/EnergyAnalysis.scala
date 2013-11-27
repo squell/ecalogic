@@ -35,7 +35,7 @@ package analysis
 
 import ast._
 import parser.Parser
-import util.{ErrorHandler, DefaultErrorHandler}
+import util.{ErrorHandler, DefaultErrorHandler, Polynomial}
 import config.Options.{Analysis => config}
 
 import scala.collection.mutable
@@ -71,7 +71,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
     * @return A new set of component states with updated time and energy information
     */
 
-  def computeEnergyBound(out: GlobalState, in: GlobalState, rf: ECAValue): GlobalState = (
+  def computeEnergyBound(out: GlobalState, in: GlobalState, rf: Polynomial): GlobalState = (
     out.gamma.transform((comp,g) => g.update(g.t min in.t, in(comp).e + (out(comp).e-in(comp).e)*rf)),
     in.t + (out.t-in.t)*rf
   )
@@ -85,7 +85,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
     * @return A new set of component states with updated time and energy information
     */
 
-  def computeEnergyBound_TR(out: GlobalState, in: GlobalState, pre: GlobalState, rf: ECAValue): GlobalState = (
+  def computeEnergyBound_TR(out: GlobalState, in: GlobalState, pre: GlobalState, rf: Polynomial): GlobalState = (
     out.gamma.transform((comp,g) => g.update(g.t min pre.t, (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e)),
     pre.t + (in.t-pre.t)*rf
   )
@@ -109,7 +109,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
 
       /** The function we are going to iterate */
       def f(st: States) =
-        nontemporal(analyse(analyse((st,ECAValue.Zero), expr), stm).gamma)
+        nontemporal(analyse(analyse((st,Polynomial(0)), expr), stm).gamma)
 
       /** Starting values for the iteration */
       var cur   = nontemporal(init)

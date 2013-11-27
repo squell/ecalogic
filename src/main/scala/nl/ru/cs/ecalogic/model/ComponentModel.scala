@@ -33,6 +33,7 @@
 package nl.ru.cs.ecalogic
 package model
 
+import util.Polynomial
 import config.Options.{Model => config}
 
 /**
@@ -76,12 +77,12 @@ trait ComponentModel {
 
   }
 
-  case class EACState(state: CState, timestamp: ECAValue, energy: ECAValue) {
+  case class EACState(state: CState, timestamp: Polynomial, energy: Polynomial) {
     def s = state
     def t = timestamp
     def e = energy
 
-    def update(f: String, t1: ECAValue): (EACState, ECAValue) = {
+    def update(f: String, t1: Polynomial): (EACState, Polynomial) = {
       val e1 = e + E(f)
       val t2 = t1 + T(f)
       val s1 = delta(f)(s)
@@ -99,12 +100,12 @@ trait ComponentModel {
         (EACState(s, t, e1), t2)
     }
 
-    def forward(t1: ECAValue) =
+    def forward(t1: Polynomial) =
       EACState(s, t max t1, e + td(this,t1))
 
     def reset = EACState(s, 0, 0)
 
-    def update(timestamp: ECAValue, energy: ECAValue) = EACState(s, timestamp, energy)
+    def update(timestamp: Polynomial, energy: Polynomial) = EACState(s, timestamp, energy)
 
     // why not define the lub here in the first place?
     def lub(that: ComponentModel#EACState) =
@@ -143,7 +144,11 @@ trait ComponentModel {
     )
   }
 
-  def td(g: EACState, t: ECAValue): ECAValue = if (t > g.t) (t - g.t) * phi(g.s) else ECAValue.Zero
+  // comparing t >= g.t is dubious since Polynomials are not totally ordered. 
+  // this next code is the only spot that requires a comparison on them.
+  // we should figure out if we *really* need this
+
+  def td(g: EACState, t: Polynomial): Polynomial = if (t >= g.t) (t - g.t) * phi(g.s) else ECAValue.Zero
 
   def delta(f: String)(s: CState) = s
 

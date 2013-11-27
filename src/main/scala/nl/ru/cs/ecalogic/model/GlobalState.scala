@@ -33,6 +33,8 @@
 package nl.ru.cs.ecalogic
 package model
 
+import util.Polynomial
+
 import scala.collection.mutable
 
 /**
@@ -41,7 +43,7 @@ import scala.collection.mutable
  */
 
 
-case class GlobalState(gamma: GlobalState.States, t: ECAValue) {
+case class GlobalState(gamma: GlobalState.States, t: Polynomial) {
   import GlobalState._
 
   /* Model the effect of calling fun on component */
@@ -63,10 +65,10 @@ case class GlobalState(gamma: GlobalState.States, t: ECAValue) {
   /* pass-thru functions */
   def apply(name: String): ComponentModel#EACState = gamma(name)
 
-  def transform[C](fun: (String,ComponentModel#EACState)=>C): (Map[String, C], ECAValue) =
+  def transform[C](fun: (String,ComponentModel#EACState)=>C): (Map[String, C], Polynomial) =
     (gamma.transform(fun), t)
 
-  def mapValues[C](fun: (ComponentModel#EACState=>C)): (Map[String, C], ECAValue) =
+  def mapValues[C](fun: (ComponentModel#EACState=>C)): (Map[String, C], Polynomial) =
     (gamma.mapValues(fun), t)
 }
 
@@ -79,6 +81,6 @@ object GlobalState {
   def initial(components: Iterable[ComponentModel]): GlobalState =
     GlobalState(components.map(x=>(x.name->x.initialEACState())).toMap, 0)
 
-  implicit def tupleToGlobalState(gamma: (States, ECAValue)): GlobalState = GlobalState(gamma._1, gamma._2)
+  implicit def tupleToGlobalState(gamma: (States, Polynomial)): GlobalState = GlobalState(gamma._1, gamma._2)
 
 }

@@ -33,6 +33,8 @@
 package nl.ru.cs.ecalogic
 package model
 
+import util.Polynomial
+
 import scala.math.{ScalaNumericConversions, ScalaNumber}
 import scala.collection.immutable.NumericRange
 
@@ -73,6 +75,7 @@ class ECAValue private(private val value: BigInt) extends ScalaNumber with Scala
   def underlying  = value
 
   def toBigInt  = value
+  def toPolynomial = Polynomial(value)
   def toBoolean = value != ECAValue.False
 
   override def equals(that: Any) = that match {
@@ -95,6 +98,7 @@ object ECAValue {
   private val True  = One
   private val False = Zero
 
+  implicit def valueToPoly(v: ECAValue): Polynomial = v.toPolynomial
   implicit def valueToBigInt(v: ECAValue): BigInt   = v.toBigInt
   implicit def valueToInt(v: ECAValue): Int         = v.toInt
   implicit def valueToBoolean(v: ECAValue): Boolean = v.toBoolean

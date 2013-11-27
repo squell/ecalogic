@@ -33,11 +33,13 @@
 package nl.ru.cs.ecalogic
 package model
 
+import util.Polynomial
+
 import scala.collection.mutable
 
 abstract class DSLModel(val name: String) extends ComponentModel with DelayedInit {
 
-  type TDFunction  = (EACState, ECAValue) => ECAValue
+  type TDFunction  = (EACState, Polynomial) => Polynomial
   type LUBFunction = (EACState, EACState) => EACState
   type PHIFunction = CState => ECAValue
   type DFunction   = CState => CState
@@ -117,7 +119,7 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
   override def delta(f: String)(s: CState) = deltaFunctions(f)(s)
 
-  override def td(s: EACState, t: ECAValue) = tdFunction(s, t)
+  override def td(s: EACState, t: Polynomial) = tdFunction(s, t)
 
   override def lub(a: EACState, b: EACState) = lubFunction(a, b)
 
