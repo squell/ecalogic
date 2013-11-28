@@ -34,18 +34,8 @@ package test
 
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers
-import java.io.File
-import scala.io.Source
-import nl.ru.cs.ecalogic.parser.{Parser, Lexer}
-import nl.ru.cs.ecalogic.parser.Lexer.Tokens
-import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
-import nl.ru.cs.ecalogic.model.examples.{BadComponent, StubComponent}
-import nl.ru.cs.ecalogic.model.examples.DemoComponents.{CPU, Radio, Sensor}
-import nl.ru.cs.ecalogic.util.{Polynomial, DefaultErrorHandler}
+import nl.ru.cs.ecalogic.util.Polynomial
 
-/**
- * @Author: Dorus Peelen
- */
 class polyExamples extends FlatSpec with ShouldMatchers {
 
   behavior of "The Polynomial class"
