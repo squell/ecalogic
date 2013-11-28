@@ -14,4 +14,4 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.2" % "test"
 
 scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
 
-mainClass := Some("nl.ru.cs.ecalogic.analysis.EnergyAnalysis")
+mainClass in (Compile, packageBin) := Some("nl.ru.cs.ecalogic.analysis.EnergyAnalysis")
