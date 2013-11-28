@@ -37,12 +37,6 @@ import scala.collection.mutable
 
 abstract class DSLModel(val name: String) extends ComponentModel with DelayedInit {
 
-  type TDFunction  = (EACState, ECAValue) => ECAValue
-  type LUBFunction = (EACState, EACState) => EACState
-  type PHIFunction = CState => ECAValue
-  type DFunction   = CState => CState
-  type RVFunction  = (CState, Seq[ECAValue]) => ECAValue
-
   class CState private[DSLModel](val elements: Map[String, ECAValue]) extends ComponentState with Dynamic {
     import scala.language.dynamics
 

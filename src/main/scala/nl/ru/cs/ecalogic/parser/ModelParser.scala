@@ -40,7 +40,6 @@ import ModelLexer.Tokens
 import scala.io.Source
 
 import java.io.File
-import scala.annotation.tailrec
 
 class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorHandler()) extends Parser(input, _errorHandler) {
   import ModelParser.First

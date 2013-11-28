@@ -30,9 +30,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic.model
+package nl.ru.cs.ecalogic
+package model
 
-class ECMModel private(val name: String) extends ComponentModel {
+import ast._
+import parser.ModelParser
+import util.DefaultErrorHandler
+
+import scala.collection.mutable
+import scala.io.Source
+
+import java.io.File
+
+trait ECMModel extends ComponentModel {
 
   class CState(val elements: Map[String, ECAValue]) extends ComponentState {
 
@@ -41,5 +51,30 @@ class ECMModel private(val name: String) extends ComponentModel {
   }
 
   val initialState = new CState(Map.empty)
+  private val elements                 = Map.empty[String, ECAValue].withDefault(n => throw new ECAException(s"Undefined element: '$n'."))
+  private val compFunctions            = Map.empty[String, CompFunDef]
+  private val functions                = Map.empty[String, FunDef]
+//  private val tdFunction: TDFunction   = functions.get("td").map(evalFunction(_, )
+//  private var lubFunction: LUBFunction = super.lub
+//  private var phiFunction: PHIFunction = super.phi
+//
+  private def evalFunction(fun: BasicFunction, arguments: Seq[ECAValue]): ECAValue = {
+    0
+  }
+
+}
+
+object ECMModel {
+
+  def fromNode(node: Component): ECMModel = ???
+
+  def fromFile(file: File): ECMModel = {
+    val source = Source.fromFile(file).mkString
+    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
+    val parser = new ModelParser(source, errorHandler)
+    val node = parser.component()
+    errorHandler.successOrElse("Parsing failed.")
+    fromNode(node)
+  }
 
 }

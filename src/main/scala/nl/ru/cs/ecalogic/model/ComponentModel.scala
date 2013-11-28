@@ -39,8 +39,14 @@ import config.Options.{Model => config}
  * @author Marc Schoolderman
  * @author Jascha Neutelings
  */
-trait ComponentModel {
-  Model =>
+trait ComponentModel { model =>
+
+  // Utility types
+  type TDFunction  = (EACState, ECAValue) => ECAValue
+  type LUBFunction = (EACState, EACState) => EACState
+  type PHIFunction = CState => ECAValue
+  type DFunction   = CState => CState
+  type RVFunction  = (CState, Seq[ECAValue]) => ECAValue
 
   type CState <: ComponentState
   trait ComponentState extends PartiallyOrdered[CState] {
@@ -109,7 +115,7 @@ trait ComponentModel {
     // why not define the lub here in the first place?
     def lub(that: ComponentModel#EACState) =
       // there has to be a better way?
-      Model.lub(this, that.asInstanceOf[EACState])
+      model.lub(this, that.asInstanceOf[EACState])
 
     /* checks if monotonicity of phi holds for s1 => s2 */
     def phiCheck(s1: CState, s2: CState) {
