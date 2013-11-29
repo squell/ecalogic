@@ -52,7 +52,7 @@ object LoadForm {
       var i = -1;
       new File("doc\\examples\\").listFiles().foreach({f => sb append (
         "<input type=\"radio\" name=\"load\" value=\"" + {i+=1;i} /* scala does not support i++, what?!? */ + "\">" + f.getName + "<br>\n")})
-      sb.append("<input type=\"submit\" value=\"Send\"/>")
+      sb.append("<input type=\"submit\" value=\"Load\"/>")
       scala.xml.Unparsed(sb.toString())
     })) &
       "#loadScript" #> Script(AnalyseServer.jsCmd)

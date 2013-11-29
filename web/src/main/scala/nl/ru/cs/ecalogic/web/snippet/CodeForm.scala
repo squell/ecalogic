@@ -67,14 +67,14 @@ object CodeForm {
           val parser = new Parser(code, errorHandler)
           val program = parser.program()
           if (errorHandler.errorOccurred) {
-            return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
+            return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(TextileParser.formatted(baos.toString))))
           }
 
           val checker = new SemanticAnalysis(program, errorHandler)
           checker.functionCallHygiene()
           checker.variableReferenceHygiene()
           if (errorHandler.errorOccurred) {
-            return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
+            return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(TextileParser.formatted(baos.toString))))
           }
 
           val components = Set(StubComponent, BadComponent, Sensor, Radio, if (config.Options.noCPU) StubComponent else CPU)
@@ -82,12 +82,12 @@ object CodeForm {
           val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
 
           if (errorHandler.errorOccurred) {
-            return SetHtml("result", scala.xml.Unparsed("Analyse error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
+            return SetHtml("result", scala.xml.Unparsed("Analyse error: <pre><code>%s</pre></code>".format(TextileParser.formatted(baos.toString))))
           }
-          SetHtml("result", scala.xml.Unparsed("The result is %s".format(TextileParser.toHtml(consumptionAnalyser.toString))))
+          SetHtml("result", scala.xml.Unparsed("The result is %s".format(TextileParser.formatted(consumptionAnalyser().toString))))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
-            return SetHtml("result", scala.xml.Unparsed("Fatal error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
+            return SetHtml("result", scala.xml.Unparsed("Fatal error: <pre><code>%s</pre></code>".format(TextileParser.formatted(baos.toString))))
         }
     }
   }
