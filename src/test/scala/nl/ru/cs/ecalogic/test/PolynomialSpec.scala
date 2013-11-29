@@ -32,11 +32,11 @@
 package nl.ru.cs.ecalogic
 package test
 
-import org.scalatest.FlatSpec
-import org.scalatest.matchers.ShouldMatchers
-import nl.ru.cs.ecalogic.util.Polynomial
+import util.Polynomial
 
-class polyExamples extends FlatSpec with ShouldMatchers {
+import org.scalatest.{FlatSpec, Matchers}
+
+class PolynomialSpec extends FlatSpec with Matchers {
 
   behavior of "The Polynomial class"
 

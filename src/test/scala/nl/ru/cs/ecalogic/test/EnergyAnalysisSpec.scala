@@ -33,8 +33,7 @@
 package nl.ru.cs.ecalogic
 package test
 
-import org.scalatest.FlatSpec
-import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.{FlatSpec, Matchers}
 import java.io.File
 import scala.io.Source
 import nl.ru.cs.ecalogic.parser.{Parser, Lexer}
@@ -47,7 +46,7 @@ import nl.ru.cs.ecalogic.util.DefaultErrorHandler
 /**
  * @Author: Dorus Peelen
  */
-class testExamples extends FlatSpec with ShouldMatchers {
+class EnergyAnalysisSpec extends FlatSpec with Matchers {
 
   behavior of "The Energy Analysis"
 

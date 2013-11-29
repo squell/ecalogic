@@ -62,8 +62,8 @@ function norror(X,P)
     A := P
   end if;
 
-  while Y <= A bound A do 
-    component::doSomething()
+  while Y <= A bound A do
+    component_::doSomething()
   end while;
 
   horror := X

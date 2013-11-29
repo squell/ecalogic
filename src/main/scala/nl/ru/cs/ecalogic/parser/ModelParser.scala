@@ -48,36 +48,8 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
 
   def numeral(follows: Pattern): BigInt = expect(Tokens.Numeral, BigInt(0))(follows)
 
-//  def uses(follows: Pattern) {
-//    sequenceOf(use, Tokens.Uses % "<uses declaration>")(follows).foldLeft(Map.empty[String, String]) {
-//      case (m, Import(className)) =>
-//        val lastPeriod = className.lastIndexOf('.')
-//        val name = if (lastPeriod >= 0) className.substring(lastPeriod + 1) else className
-//        if (m.contains(name)) {
-//          errorHandler.error(new ECAException())
-//        }
-//    }
-//  }
-//
-//  def use(follows: Pattern): Import = {
-//    val pos = position
-//
-//    expect(Tokens.Uses)(follows | Tokens.Object)
-//    expect(Tokens.Object)(follows | Tokens.Identifier)
-//
-//    val name = StringBuilder.newBuilder
-//    name ++= identifier(follows | Tokens.Period)
-//    while (current(Tokens.Period)) {
-//      advance()
-//      name += '.'
-//      name ++= identifier(follows | Tokens.Period)
-//    }
-//
-//    Import(name.toString()).withPosition(pos)
-//  }
-
-  def component(follows: Pattern = Pattern.empty): Component = {
-    val pos = position
+  def component(follows: Pattern = Pattern.empty): Component = nodeWithPosition {
+    val imps = parseSequenceOf(import_(Tokens.Object), Tokens.Import % "<import declaration>")(follows)
 
     expect(Tokens.Component)(follows | Tokens.Identifier)
     val name = identifier(follows | Tokens.LParen)
@@ -95,7 +67,7 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
       } while(current(Tokens.Comma))
       expect(Tokens.RParen)(follows | First.member | Tokens.End)
     }
-    val definitions = sequenceOf(member, First.member)(follows | Tokens.End)
+    val definitions = parseSequenceOf(member, First.member)(follows | Tokens.End)
     expect(Tokens.End)(follows | Tokens.Component)
     expect(Tokens.Component)(follows)
 
@@ -103,7 +75,7 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
     val componentFunctions = definitions.collect { case c: CompFunDef => c }
     val functions          = definitions.collect { case f: FunDef     => f }
 
-    Component(name, variables.result(), initializers, componentFunctions, functions).withPosition(pos)
+    Component(name, variables.result(), initializers, componentFunctions, functions)
   }
 
   def range(follows: Pattern): (BigInt, BigInt) = {
@@ -128,9 +100,7 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
       funDef(follows)
   }
 
-  def componentFunDef(follows: Pattern): CompFunDef = {
-    val pos = position
-
+  def componentFunDef(follows: Pattern): CompFunDef = nodeWithPosition {
     expect(Tokens.Component)(follows | Tokens.Function)
     expect(Tokens.Function)(follows | Tokens.Identifier)
     val name = identifier(follows | Tokens.LParen)
@@ -162,7 +132,7 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
 
     val body = funBody(name)(follows)
 
-    CompFunDef(name, params, energy, time, body).withPosition(pos)
+    CompFunDef(name, params, energy, time, body)
   }
 
 }
