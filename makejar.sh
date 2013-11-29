@@ -6,7 +6,7 @@ select main in $(grep -l "main" `find nl -name "*.scala"` | sed 's:/:.:g;s:[.]sc
 done
 
 # compile either linearly...
-scalac `find -name "*.scala" | grep -v web`
+scalac `find -name "*.scala"`
 
 # or by abusing the system for a bit
 #for file in `find -name "*.scala"`; do scalac "$file" & done
