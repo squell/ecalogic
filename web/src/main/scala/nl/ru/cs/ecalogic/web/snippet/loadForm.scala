@@ -32,7 +32,7 @@
 
 package nl.ru.cs.ecalogic.web.snippet
 
-import scala.xml.{Text, NodeSeq}
+import scala.xml.{Elem, Text, NodeSeq, Node}
 
 import net.liftweb.util.Helpers._
 import net.liftweb.util.JsonCmd
@@ -40,39 +40,41 @@ import net.liftweb.http.SHtml.jsonForm
 import net.liftweb.http.JsonHandler
 import net.liftweb.http.js.JsCmd
 import net.liftweb.http.js.JsCmds.{SetHtml, Script}
-import nl.ru.cs.ecalogic.parser.Parser
-import nl.ru.cs.ecalogic.util.DefaultErrorHandler
-import nl.ru.cs.ecalogic.model.examples.{BadComponent, StubComponent}
-import nl.ru.cs.ecalogic.model.examples.DemoComponents.{CPU, Radio, Sensor}
-import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
-import nl.ru.cs.ecalogic.config
-import java.io.{FileNotFoundException, File, ByteArrayOutputStream, PrintWriter}
-import net.liftmodules.textile._
+import java.io.{FileNotFoundException, File}
 import scala.io.Source
+import scala.xml.transform.RewriteRule
 
 object LoadForm {
 
   def render =
-    "#loadForm" #> ((ns:NodeSeq) => jsonForm(AnalyseServer, ns)) &
+    "#loadForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, {
+      val sb = new StringBuilder
+      var i = -1;
+      new File("doc\\examples\\").listFiles().foreach({f => sb append (
+        "<input type=\"radio\" name=\"load\" value=\"" + {i+=1;i} /* scala does not support i++, what?!? */ + "\">" + f.getName + "<br>\n")})
+      sb.append("<input type=\"submit\" value=\"Send\"/>")
+      scala.xml.Unparsed(sb.toString())
+    })) &
       "#loadScript" #> Script(AnalyseServer.jsCmd)
 
   object AnalyseServer extends JsonHandler {
-      def apply(in: Any): JsCmd = in match {
+    def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, String], all) =>
         val load = params.getOrElse("load", "")
 
-      // TODO: Find file
-      try {
-        val file = new File("/doc/examples/" + load)
+        // TODO: Find file
+        try {
+          val file = new File("doc\\examples\\").listFiles()(load.toInt)
 
-        val source = Source.fromFile(file).mkString
+          val source = Source.fromFile(file).mkString
 
-        SetHtml("result2", Text(source))
-      } catch {
-        case e: FileNotFoundException =>
-          return SetHtml("result", scala.xml.Unparsed("File not found: %s".format(e.getMessage)))
-      }
+          SetHtml("code", Text(source))
+        } catch {
+          case e: FileNotFoundException =>
+            return SetHtml("result", scala.xml.Unparsed("File not found: %s".format(e.getMessage)))
+        }
     }
+
     //def apply(in: Any): JsCmd = SetHtml("code", Text("Bla"))
   }
 

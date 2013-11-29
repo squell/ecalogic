@@ -58,11 +58,11 @@ object CodeForm {
   object AnalyseServer extends JsonHandler {
     def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, String], all) =>
-          val code = params.getOrElse("code", "")
+        val code = params.getOrElse("code", "")
 
-          val baos = new ByteArrayOutputStream()
-          val pw = new PrintWriter(baos)
-          val errorHandler = new DefaultErrorHandler(source = Some(code), writer = pw)
+        val baos = new ByteArrayOutputStream()
+        val pw = new PrintWriter(baos)
+        val errorHandler = new DefaultErrorHandler(source = Some(code), writer = pw)
         try {
           val parser = new Parser(code, errorHandler)
           val program = parser.program()
