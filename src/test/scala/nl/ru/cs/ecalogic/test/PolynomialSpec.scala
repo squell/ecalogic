@@ -48,6 +48,7 @@ class PolynomialSpec extends FlatSpec with Matchers {
   val A    = 5*x + 42*y
   val B    = 37*x + 23*z
   lazy val C = A*B
+  val D    = 77*y + 7*z
 
   it should "have equality" in {
     A should equal(A)
@@ -86,7 +87,7 @@ class PolynomialSpec extends FlatSpec with Matchers {
     A * (B+C) should equal (A*B + A*C)
   }
 
-  it should "distribute - over +" in {
+  it should "turn double negation into +" in {
     A-(B-C) should equal ((A-B)+C)
   }
 
@@ -97,5 +98,22 @@ class PolynomialSpec extends FlatSpec with Matchers {
     A <  (A min B) should not be (true)
   }
 
+  it should "have commutative min and max" in {
+    A max B should be (B max A)
+    A min B should be (B min A)
+  }
 
+  it should "have associative min and max" in {
+    A max (B max D) should be ((A max B) max D)
+    A min (B min D) should be ((A min B) min D)
+  }
+
+  it should "distribute min and max" in {
+    A min (B max D) should be ((A min B) max (A min D))
+    A max (B min D) should be ((A max B) min (A max D))
+    A + (B max D) should be ((A + B) max (A + D))
+    A + (B min D) should be ((A + B) min (A + D))
+    // note: does not distribute over *
+  }
 }
+

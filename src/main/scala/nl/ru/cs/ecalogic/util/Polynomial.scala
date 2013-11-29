@@ -56,19 +56,21 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends Par
   )
 
   def max(that: Polynomial) = new Polynomial(
-    repr.transform { case (term,fac) => fac max that.repr.getOrElse(term, BigInt(0)) }
+    that.repr ++ repr.transform { case (term,fac) => fac max that.coef(term) }
   )
 
   def min(that: Polynomial) = new Polynomial(
-    repr.transform { case (term,fac) => fac min that.repr.getOrElse(term, BigInt(0)) }
+    repr.transform { case (term,fac) => fac min that.coef(term) }
   )
+
+  def coef(term: Seq[String]): BigInt = repr.getOrElse(term, BigInt(0))
 
   override def tryCompareTo[B >: Polynomial <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
     case that: Polynomial =>
       val shared = (this.repr++that.repr).keys
       var sign = 0
       shared.foreach { term =>
-          val cmp = repr.getOrElse(term, BigInt(0)) compare that.repr.getOrElse(term, BigInt(0))
+          val cmp = coef(term) compare that.coef(term)
           if(sign*cmp < 0) return None 
           sign |= cmp
       }
@@ -95,7 +97,7 @@ object Polynomial {
   import scala.language.implicitConversions
 
   private def combine(a: Map[Seq[String],BigInt], b: Map[Seq[String],BigInt]) =
-    (a.repr ++ b.transform(a.repr.getOrElse(_,BigInt(0))+_))
+    a.repr ++ b.transform(a.getOrElse(_, BigInt(0))+_)
 
   private def product(a: (Seq[String],BigInt), b: (Seq[String],BigInt)) =
     ((a._1++b._1).sorted, a._2*b._2)
