@@ -85,7 +85,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     val grouped = items.groupBy(criterion).mapValues(_.sortBy(_.position))
     grouped.foreach {
       case (key, head +: _ +: _) =>
-        errorHandler.error(new ECAException(s"$description '$key' multiply declared.", head))
+        errorHandler.error(new ECAException(s"$description '$key' redeclared.", head))
       case _ =>
     }
     grouped.mapValues(_.head)

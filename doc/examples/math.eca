@@ -1,4 +1,8 @@
- function pow(X,Y)
+import component ecalogic.MyFancyCpu as cpu
+import component ecalogic.Foo
+import component ecalogic.bar.Foo as Baz
+
+function pow(X,Y)
   pow := 1;
   while Y > 0 bound Y do
     pow := pow * X;

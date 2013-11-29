@@ -58,7 +58,7 @@ class ParserSpec extends FlatSpec with Matchers {
   behavior of "The parser"
 
   new File("doc/examples").listFiles().withFilter(_.getName.endsWith(".eca")).foreach { f =>
-    it should s"should not throw any exceptions on ${f.getName}" in {
+    it should s"not throw any exceptions on ${f.getName}" in {
       noException should be thrownBy parse(f)
     }
   }
