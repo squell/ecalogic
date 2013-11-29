@@ -1,4 +1,8 @@
- function pow(X,Y)
+import component ecalogic.MyFancyCpu as cpu
+import component ecalogic.Foo
+import component ecalogic.bar.Foo as Baz
+
+function pow(X,Y)
   pow := 1;
   while Y > 0 bound Y do
     pow := pow * X;
@@ -62,8 +66,8 @@ function norror(X,P)
     A := P
   end if;
 
-  while Y <= A bound A do 
-    component::doSomething()
+  while Y <= A bound A do
+    component_::doSomething()
   end while;
 
   horror := X

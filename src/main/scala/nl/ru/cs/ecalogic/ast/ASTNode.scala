@@ -56,13 +56,25 @@ case class ErrorNode() extends PrimaryExpression with Statement
 
 
 /** Class representing an entire ECA program. */
-case class Program(functions: Seq[FunDef]) extends ASTNode
+case class Program(imports: Map[String, Import], functions: Map[String, FunDef]) extends ASTNode
+
+case class Import(namePath: Seq[String], alias: String) extends ASTNode {
+  def qualifiedName = namePath.mkString(".")
+}
 
 /** Class representing a parameter in function definition. */
 case class Param(name: String) extends ASTNode
 
+trait BasicFunction extends ASTNode {
+  def name: String
+  def parameters: Seq[Param]
+  def body: Statement
+}
+
 /** Class representing a function definition. */
-case class FunDef(name: String, parameters: Seq[Param], body: Statement) extends ASTNode
+case class FunDef(name: String, parameters: Seq[Param], body: Statement) extends BasicFunction {
+  def arity = parameters.length
+}
 
 
 
@@ -239,6 +251,4 @@ case class CompVarDecl(name: String, lower: BigInt, upper: BigInt) extends Model
 
 case class Component(name: String, variables: Seq[CompVarDecl], initializers: Seq[Assignment], componentFunctions: Seq[CompFunDef], functions: Seq[FunDef]) extends ModelASTNode
 
-case class CompFunDef(name: String, parameters: Seq[Param], energy: BigInt, time: BigInt, body: Statement) extends ModelASTNode
-
-case class Import(className: String) extends ModelASTNode
+case class CompFunDef(name: String, parameters: Seq[Param], energy: BigInt, time: BigInt, body: Statement) extends ModelASTNode with BasicFunction

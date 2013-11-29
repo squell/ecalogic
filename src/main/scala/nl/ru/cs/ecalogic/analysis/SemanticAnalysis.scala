@@ -53,16 +53,17 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
   def functionCallHygiene() {
     val defs = program.functions
 
-    val funNames = mutable.Set.empty[String]
-    defs.foreach { f =>
-      if (funNames(f.name))
-        eh.error(new ECAException(s"Redefinition of function '${f.name}'.", f.position))
-      else
-        funNames += f.name
-    }
+//    val funNames = mutable.Set.empty[String]
+//    defs.foreach { f =>
+//      if (funNames(f.name))
+//        eh.error(new ECAException(s"Redefinition of function '${f.name}'.", f.position))
+//      else
+//        funNames += f.name
+//    }
+    val funNames = defs.keys
 
-    val arity: Map[String, Int] =
-      defs.map(fundef=>fundef.name->fundef.parameters.length).toMap
+//    val arity: Map[String, Int] =
+//      defs.map(fundef=>fundef.name->fundef.parameters.length).toMap
 
     def funCalls(node: ASTNode): Set[String] = node match {
       case If(pred, thenPart, elsePart) => funCalls(pred) ++ funCalls(thenPart) ++ funCalls(elsePart)
@@ -70,7 +71,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
       case Composition(stms)            => stms.flatMap(funCalls).toSet
       case Assignment(_, expr)          => funCalls(expr)
       case FunCall(fun, args)
-        if !fun.isPrefixed              => arity.get(fun.name) match {
+        if !fun.isPrefixed              => defs.get(fun.name).map(_.arity) match {
                                              case None                  => eh.error(new ECAException(s"Undefined function: '${fun.name}'.", node.position))
                                              case Some(x) if x != args.length
                                                                         => eh.error(new ECAException(s"Incorrect number of arguments for '${fun.name}'.", node.position))
@@ -82,7 +83,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
     }
 
     val calls: Map[String, Set[String]] =
-      defs.map(fundef=>fundef.name->funCalls(fundef.body)).toMap.withDefaultValue(Set.empty)
+      defs.mapValues(f => funCalls(f.body)).toMap.withDefaultValue(Set.empty)
 
     def detectCycle(seen: Set[String], open: Set[String]) {
       for(next <- open)
@@ -101,7 +102,7 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
     */
   def variableReferenceHygiene() {
 
-    for(fundef <- program.functions) {
+    for(fundef <- program.functions.values) {
 
       val params = fundef.parameters.map(_.name).toSet
 

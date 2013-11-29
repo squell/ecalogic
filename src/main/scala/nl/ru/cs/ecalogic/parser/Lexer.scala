@@ -48,17 +48,20 @@ class Lexer(protected var input: String) extends BaseLexer {
   import Tokens._
 
   private val _keywords = Map (
-    "function" -> Function,
-    "end"      -> End,
-    "if"       -> If,
-    "then"     -> Then,
-    "else"     -> Else,
-    "while"    -> While,
-    "bound"    -> Bound,
-    "do"       -> Do,
-    "skip"     -> Skip,
-    "and"      -> And,
-    "or"       -> Or
+    "import"    -> Import,
+    "component" -> Component,
+    "as"        -> As,
+    "function"  -> Function,
+    "end"       -> End,
+    "if"        -> If,
+    "then"      -> Then,
+    "else"      -> Else,
+    "while"     -> While,
+    "bound"     -> Bound,
+    "do"        -> Do,
+    "skip"      -> Skip,
+    "and"       -> And,
+    "or"        -> Or
   )
 
   private val _parseToken: PartialFunction[Char, (Token, Int)] = {
@@ -136,6 +139,10 @@ object Lexer {
     // Make base tokens available
     val EndOfFile = BaseLexer.Tokens.EndOfFile
     val Unknown   = BaseLexer.Tokens.Unknown
+
+    case object Import                   extends Keyword("import")
+    case object Component                extends Keyword("component")
+    case object As                       extends Keyword("as")
 
     case object Function                 extends Keyword("function")
     case object End                      extends Keyword("end")

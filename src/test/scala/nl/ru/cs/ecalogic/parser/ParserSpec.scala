@@ -34,15 +34,14 @@ package nl.ru.cs.ecalogic
 package parser
 
 import ast._
-import util.{Position, DefaultErrorHandler}
+import util.DefaultErrorHandler
 
 import scala.io.Source
 
 import java.io.File
-import org.scalatest.FlatSpec
-import org.scalatest.matchers.{MatchResult, Matcher, ShouldMatchers}
+import org.scalatest.{FlatSpec, Matchers}
 
-class ParserSpec extends FlatSpec with ShouldMatchers {
+class ParserSpec extends FlatSpec with Matchers {
 
   private def parse(f: File): Program = parse(Source.fromFile(f).mkString, Some(f))
 
@@ -58,9 +57,9 @@ class ParserSpec extends FlatSpec with ShouldMatchers {
 
   behavior of "The parser"
 
-  it should "succeed on the test files" in {
-    new File("doc/examples").listFiles().withFilter(_.getName.endsWith(".eca")).foreach { f =>
-      parse(f)
+  new File("doc/examples").listFiles().withFilter(_.getName.endsWith(".eca")).foreach { f =>
+    it should s"not throw any exceptions on ${f.getName}" in {
+      noException should be thrownBy parse(f)
     }
   }
 

@@ -30,51 +30,52 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package nl.ru.cs.ecalogic
-package model
+package nl.ru.cs.ecalogic.web.snippet
 
-import ast._
-import parser.ModelParser
-import util.DefaultErrorHandler
+import scala.xml.{Elem, Text, NodeSeq, Node}
 
-import scala.collection.mutable
+import net.liftweb.util.Helpers._
+import net.liftweb.util.JsonCmd
+import net.liftweb.http.SHtml.jsonForm
+import net.liftweb.http.JsonHandler
+import net.liftweb.http.js.JsCmd
+import net.liftweb.http.js.JsCmds.{SetHtml, Script}
+import java.io.{FileNotFoundException, File}
 import scala.io.Source
+import scala.xml.transform.RewriteRule
 
-import java.io.File
+object LoadForm {
 
-trait ECMModel extends ComponentModel {
+  def render =
+    "#loadForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, {
+      val sb = new StringBuilder
+      var i = -1;
+      new File("doc\\examples\\").listFiles().foreach({f => sb append (
+        "<input type=\"radio\" name=\"load\" value=\"" + {i+=1;i} /* scala does not support i++, what?!? */ + "\">" + f.getName + "<br>\n")})
+      sb.append("<input type=\"submit\" value=\"Send\"/>")
+      scala.xml.Unparsed(sb.toString())
+    })) &
+      "#loadScript" #> Script(AnalyseServer.jsCmd)
 
-  class CState(val elements: Map[String, ECAValue]) extends ComponentState {
+  object AnalyseServer extends JsonHandler {
+    def apply(in: Any): JsCmd = in match {
+      case JsonCmd("processForm", target, params: Map[String, String], all) =>
+        val load = params.getOrElse("load", "")
 
-    protected def update(newElements: Map[String, ECAValue]) = ???
+        // TODO: Find file
+        try {
+          val file = new File("doc\\examples\\").listFiles()(load.toInt)
 
-  }
+          val source = Source.fromFile(file).mkString
 
-  val initialState = new CState(Map.empty)
-  private val elements                 = Map.empty[String, ECAValue].withDefault(n => throw new ECAException(s"Undefined element: '$n'."))
-  private val compFunctions            = Map.empty[String, CompFunDef]
-  private val functions                = Map.empty[String, FunDef]
-//  private val tdFunction: TDFunction   = functions.get("td").map(evalFunction(_, )
-//  private var lubFunction: LUBFunction = super.lub
-//  private var phiFunction: PHIFunction = super.phi
-//
-  private def evalFunction(fun: BasicFunction, arguments: Seq[ECAValue]): ECAValue = {
-    0
-  }
+          SetHtml("code", Text(source))
+        } catch {
+          case e: FileNotFoundException =>
+            return SetHtml("result", scala.xml.Unparsed("File not found: %s".format(e.getMessage)))
+        }
+    }
 
-}
-
-object ECMModel {
-
-  def fromNode(node: Component): ECMModel = ???
-
-  def fromFile(file: File): ECMModel = {
-    val source = Source.fromFile(file).mkString
-    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
-    val parser = new ModelParser(source, errorHandler)
-    val node = parser.component()
-    errorHandler.successOrElse("Parsing failed.")
-    fromNode(node)
+    //def apply(in: Any): JsCmd = SetHtml("code", Text("Bla"))
   }
 
 }

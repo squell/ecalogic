@@ -33,7 +33,6 @@
 package nl.ru.cs.ecalogic
 package parser
 
-import ast.ASTNode
 import util.{Positional, Position, ErrorHandler}
 import BaseLexer.Tokens
 
@@ -45,8 +44,6 @@ import scala.collection.mutable
   */
 trait BaseParser extends Positional {
   private var recovering = false
-
-  type ResultT <: ASTNode
 
   private lazy val buffer = {
     val buf = mutable.Queue.empty[(Token, Position)]

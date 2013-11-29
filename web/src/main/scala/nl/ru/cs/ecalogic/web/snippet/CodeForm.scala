@@ -32,8 +32,7 @@
 
 package nl.ru.cs.ecalogic.web.snippet
 
-import scala.xml.{Text, NodeSeq}
-
+import scala.xml.NodeSeq
 import net.liftweb.util.Helpers._
 import net.liftweb.util.JsonCmd
 import net.liftweb.http.SHtml.jsonForm
@@ -46,34 +45,51 @@ import nl.ru.cs.ecalogic.model.examples.{BadComponent, StubComponent}
 import nl.ru.cs.ecalogic.model.examples.DemoComponents.{CPU, Radio, Sensor}
 import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
 import nl.ru.cs.ecalogic.config
-import java.io.{FileNotFoundException, File, ByteArrayOutputStream, PrintWriter}
+import java.io.ByteArrayOutputStream
+import java.io.PrintWriter
 import net.liftmodules.textile._
-import scala.io.Source
 
-object LoadForm {
+object CodeForm {
 
   def render =
-    "#loadForm" #> ((ns:NodeSeq) => jsonForm(AnalyseServer, ns)) &
-      "#loadScript" #> Script(AnalyseServer.jsCmd)
+    "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, ns)) &
+      "#codeScript" #> Script(AnalyseServer.jsCmd)
 
   object AnalyseServer extends JsonHandler {
-      def apply(in: Any): JsCmd = in match {
+    def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, String], all) =>
-        val load = params.getOrElse("load", "")
+        val code = params.getOrElse("code", "")
 
-      // TODO: Find file
-      try {
-        val file = new File("/doc/examples/" + load)
+        val baos = new ByteArrayOutputStream()
+        val pw = new PrintWriter(baos)
+        val errorHandler = new DefaultErrorHandler(source = Some(code), writer = pw)
+        try {
+          val parser = new Parser(code, errorHandler)
+          val program = parser.program()
+          if (errorHandler.errorOccurred) {
+            return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
+          }
 
-        val source = Source.fromFile(file).mkString
+          val checker = new SemanticAnalysis(program, errorHandler)
+          checker.functionCallHygiene()
+          checker.variableReferenceHygiene()
+          if (errorHandler.errorOccurred) {
+            return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
+          }
 
-        SetHtml("result2", Text(source))
-      } catch {
-        case e: FileNotFoundException =>
-          return SetHtml("result", scala.xml.Unparsed("File not found: %s".format(e.getMessage)))
-      }
+          val components = Set(StubComponent, BadComponent, Sensor, Radio, if (config.Options.noCPU) StubComponent else CPU)
+
+          val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
+
+          if (errorHandler.errorOccurred) {
+            return SetHtml("result", scala.xml.Unparsed("Analyse error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
+          }
+          SetHtml("result", scala.xml.Unparsed("The result is %s".format(TextileParser.toHtml(consumptionAnalyser.toString))))
+        } catch {
+          case e: nl.ru.cs.ecalogic.ECAException =>
+            return SetHtml("result", scala.xml.Unparsed("Fatal error: <pre><code>%s</pre></code>".format(TextileParser.toHtml(baos.toString))))
+        }
     }
-    //def apply(in: Any): JsCmd = SetHtml("code", Text("Bla"))
   }
 
 }

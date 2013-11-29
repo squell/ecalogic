@@ -56,14 +56,47 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   protected val lexer = new Lexer(input)
   private var lastLineNumber = 0
 
-  protected def tryParse[A <: ASTNode](expected: Pattern, default: A)(follows: Pattern)(parser: PartialFunction[Token, A]): A = {
+  protected def nodeWithPosition[A <: ASTNode](f: => A): A = {
     val pos = position
-    val res = tryParse {_ => unexpected(expected); default}(follows)(parser)
-    res.withPosition(pos)
+    f.withPosition(pos)
+  }
+
+  protected def tryParse[A <: ASTNode](expected: Pattern, default: A)(follows: Pattern)(parser: PartialFunction[Token, A]): A = nodeWithPosition {
+    tryParse {_ => unexpected(expected); default}(follows)(parser)
   }
 
   protected def tryParse[A >: ErrorNode <: ASTNode](expected: Pattern)(follows: Pattern)(parser: PartialFunction[Token, A]): A =
     tryParse[A](expected, ErrorNode())(follows)(parser)
+
+  def parseSequenceOf[T <: ASTNode](f: (Pattern) => T, first: Pattern)(follows: Pattern): Seq[T] = {
+    val nodes = Seq.newBuilder[T]
+
+    while (current(first)) {
+      nodes += f(follows | Tokens.Semicolon)
+      if (current(first) || (current(Tokens.Semicolon) && lookahead(first)))
+        expectSeparator(follows | first)
+    }
+
+    optional(Tokens.Semicolon)
+    nodes.result()
+  }
+
+  protected def checkSeqToMap[A <: ASTNode, B](items: Seq[A])(criterion: A => B, description: String): Map[B, A] = {
+    val grouped = items.groupBy(criterion).mapValues(_.sortBy(_.position))
+    grouped.foreach {
+      case (key, head +: _ +: _) =>
+        errorHandler.error(new ECAException(s"$description '$key' redeclared.", head))
+      case _ =>
+    }
+    grouped.mapValues(_.head)
+  }
+
+  protected def checkSeqToSet[A <: ASTNode](items: Seq[A])(description: String): Set[A] = checkSeqToMap(items)(identity, description).keySet
+
+//  protected def checkSeqToSeq(items: Seq[A])(criterion: A => B, description: String): Seq[A] {
+//    checkSeqToMap
+//    items
+//  }
 
 
   override protected def advance() {
@@ -106,10 +139,30 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     *
     * @return        program node
     */
-  def program(follows: Pattern = Pattern.empty): Program = { // TODO: Make me reusable
-    val pos = position
-    val definitions = sequenceOf(funDef, Tokens.Function % "<function definition>")(Pattern.empty)
-    Program(definitions).withPosition(pos)
+  def program(follows: Pattern = Pattern.empty): Program = nodeWithPosition {
+    val imps = parseSequenceOf(import_(Tokens.Component), Tokens.Import % "<import declaration>")(follows)
+    val funs = parseSequenceOf(funDef, Tokens.Function % "<function definition>")(Pattern.empty)
+    Program(checkSeqToMap(imps)(_.alias, "Import declaration"), checkSeqToMap(funs)(_.name, "Function"))
+  }
+
+  def import_(keyword: Keyword)(follows: Pattern): Import = nodeWithPosition {
+    expect(Tokens.Import)(follows | keyword)
+    expect(keyword)(follows | Tokens.Identifier)
+    val namePathBuilder = Seq.newBuilder += identifier(follows | Tokens.Period | Tokens.As)
+    while (current(Tokens.Period)) {
+      advance()
+      namePathBuilder += identifier(follows | Tokens.Period | Tokens.As)
+    }
+
+    val namePath = namePathBuilder.result()
+    val alias = if (current(Tokens.As)) {
+      advance()
+      identifier(follows | Tokens.Identifier)
+    } else {
+      namePath.last
+    }
+
+    Import(namePath, alias)
   }
 
   /** Parses a function definition.
@@ -117,9 +170,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     * @param follows follow set pattern
     * @return        function definition node
     */
-  def funDef(follows: Pattern): FunDef = {
-    val pos = position
-
+  def funDef(follows: Pattern): FunDef = nodeWithPosition {
     expect(Tokens.Function)(follows)
 
     val name = identifier(follows | Tokens.LParen)
@@ -127,7 +178,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
 
     val body = funBody(name)(follows)
 
-    FunDef(name, params, body).withPosition(pos)
+    FunDef(name, params, body)
   }
 
   def parameters(follows: Pattern): Seq[Param] = {
@@ -137,10 +188,9 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
       if (!current(Tokens.RParen)) {
         var halt = false
         do {
-          val paramPos = position
-          val paramName = identifier(follows | Tokens.Comma | Tokens.RParen)
-
-          params += Param(paramName).withPosition(paramPos)
+          params += nodeWithPosition {
+            Param(identifier(follows | Tokens.Comma | Tokens.RParen))
+          }
 
           if (current(Tokens.Comma)) advance()
           else halt = true
@@ -175,24 +225,11 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     * @return        composition node
     */
   def composition(follows: Pattern): Statement = {
-    sequenceOf[Statement](statement, First.statement)(follows) match {
+    parseSequenceOf[Statement](statement, First.statement)(follows) match {
       case Seq()              => Skip().withPosition(position)//errorHandler.error(new ECAException("Statement list can not be empty.", position)); ErrorNode()(position)
       case Seq(first)         => first
       case seq @ (first +: _) => Composition(seq).withPosition(first.position)
     }
-  }
-
-  def sequenceOf[T <: ASTNode](f: (Pattern) => T, first: Pattern)(follows: Pattern): Seq[T] = {
-    val nodes = Seq.newBuilder[T]
-
-    while (current(first)) {
-      nodes += f(follows | Tokens.Semicolon)
-      if (current(first) || (current(Tokens.Semicolon) && lookahead(first)))
-        expectSeparator(follows | first)
-    }
-
-    optional(Tokens.Semicolon)
-    nodes.result()
   }
 
   /** Parses a statement.
@@ -252,9 +289,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     * @param follows follow set pattern
     * @return        function call node
     */
-  def funCall(follows: Pattern): FunCall = {
-    val pos = position
-
+  def funCall(follows: Pattern): FunCall = nodeWithPosition {
     val compOrNamePart = identifier(follows | Tokens.ColonColon | Tokens.LParen)
 
     val name = current match {
@@ -293,7 +328,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     }
     expect(Tokens.RParen)(follows)
 
-    FunCall(name, arguments.result()).withPosition(pos)
+    FunCall(name, arguments.result())
   }
 
   /** Parses a expression.

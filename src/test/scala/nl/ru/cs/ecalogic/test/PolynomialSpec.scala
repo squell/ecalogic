@@ -1,7 +1,7 @@
 /*
- * ecalogic: a tool for performing energy consumption analysis.
+ * ecalogic: A tool for performing energy consumption analysis.
  *
- * Copyright (c) 2013, J. Neutelings, D. Peelen, M. Schoolderman
+ * Copyright (C) 2013, J. Neutelings, D. Peelen, M. Schoolderman
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -29,52 +29,73 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 package nl.ru.cs.ecalogic
-package model
+package test
 
-import ast._
-import parser.ModelParser
-import util.DefaultErrorHandler
+import util.Polynomial
 
-import scala.collection.mutable
-import scala.io.Source
+import org.scalatest.{FlatSpec, Matchers}
 
-import java.io.File
+class PolynomialSpec extends FlatSpec with Matchers {
 
-trait ECMModel extends ComponentModel {
+  behavior of "The Polynomial class"
 
-  class CState(val elements: Map[String, ECAValue]) extends ComponentState {
+  val zero = Polynomial(0)
+  val one  = Polynomial(1)
+  val x    = Polynomial("x")
+  val y    = Polynomial("y")
+  val z    = Polynomial("z")
+  val A    = 5*x + 42*y
+  val B    = 37*x + 23*z
+  lazy val C = A*B
 
-    protected def update(newElements: Map[String, ECAValue]) = ???
-
+  it should "have equality" in {
+    A should equal(A)
+    A should not equal(B)
   }
 
-  val initialState = new CState(Map.empty)
-  private val elements                 = Map.empty[String, ECAValue].withDefault(n => throw new ECAException(s"Undefined element: '$n'."))
-  private val compFunctions            = Map.empty[String, CompFunDef]
-  private val functions                = Map.empty[String, FunDef]
-//  private val tdFunction: TDFunction   = functions.get("td").map(evalFunction(_, )
-//  private var lubFunction: LUBFunction = super.lub
-//  private var phiFunction: PHIFunction = super.phi
-//
-  private def evalFunction(fun: BasicFunction, arguments: Seq[ECAValue]): ECAValue = {
-    0
+  it should "not throw exceptions" in {
+    noException should be thrownBy (A+B)
+    noException should be thrownBy (A*B)
   }
 
-}
-
-object ECMModel {
-
-  def fromNode(node: Component): ECMModel = ???
-
-  def fromFile(file: File): ECMModel = {
-    val source = Source.fromFile(file).mkString
-    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
-    val parser = new ModelParser(source, errorHandler)
-    val node = parser.component()
-    errorHandler.successOrElse("Parsing failed.")
-    fromNode(node)
+  it should "have neutral elements" in {
+    A + zero should equal(A)
+    zero + A should equal(A)
+    A * one  should equal(A)
+    one * A  should equal(A)
   }
+
+  it should "have commutative operations" in {
+    A + B should equal(B + A)
+    A * B should equal(B * A)
+  }
+
+  it should "have A negative element" in {
+    A - A should equal(zero)
+    B - B should equal(zero)
+    A + (B-A) should equal(B)
+    B + (A-B) should equal(A)
+  }
+
+  it should "have associative operations" in {
+    A+(B+C) should equal ((A+B) + C)
+  }
+
+  it should "distribute * over +" in {
+    A * (B+C) should equal (A*B + A*C)
+  }
+
+  it should "distribute - over +" in {
+    A-(B-C) should equal ((A-B)+C)
+  }
+
+  it should "have true maximums and minimums" in {
+    A <= (A max B) should be (true)
+    A >  (A max B) should not be (true)
+    A >= (A min B) should be (true)
+    A <  (A min B) should not be (true)
+  }
+
 
 }

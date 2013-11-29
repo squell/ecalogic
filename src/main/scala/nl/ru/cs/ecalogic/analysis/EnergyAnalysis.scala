@@ -61,7 +61,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
   type Environment = Map[String, Expression]
 
   val lookup: Map[String, FunDef] =
-    program.functions.map(fundef=>fundef.name->fundef).toMap
+    program.functions//.map(fundef=>fundef.name->fundef).toMap
 
   /** Performs the functions of both "r()" and "e()" in the FOPARA Paper
     *
