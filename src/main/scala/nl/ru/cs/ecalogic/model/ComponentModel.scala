@@ -150,11 +150,11 @@ trait ComponentModel { model =>
     )
   }
 
-  // comparing t >= g.t is dubious since Polynomials are not totally ordered. 
-  // this next code is the only spot that requires a comparison on them.
-  // we should figure out if we *really* need this
-
-  def td(g: EACState, t: Polynomial): Polynomial = if (t >= g.t) (t - g.t) * phi(g.s) else ECAValue.Zero
+  // note: the check is not really necessary, since the GlobalState will
+  // ensure td() will never be called with timestampts in the past.
+  // but, it is better to be paranoid than wrong.
+  def td(g: EACState, t: Polynomial): Polynomial =
+    if (t >= g.t) (t - g.t) * phi(g.s) else throw new ECAException("$name::td attempt to rewind component")
 
   def delta(f: String)(s: CState) = s
 
