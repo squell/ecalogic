@@ -1,4 +1,4 @@
-import class java.lang.Math as JMath
+import class java.lang.Math
 
 component Stub(active: 0..100)
     active := 1
@@ -32,7 +32,7 @@ component Stub(active: 0..100)
         end if
     end function
 
-    function max(x, y) := JMath::max(x, y)
+    function max(x, y) := Math::max(x, y)
 
 end component
 
