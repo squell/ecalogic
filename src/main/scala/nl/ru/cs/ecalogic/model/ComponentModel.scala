@@ -130,8 +130,8 @@ trait ComponentModel { model =>
     }
   }
 
-  @deprecated
-  protected val name: String // TODO: Niet meer nodig
+  @deprecated("Niet meer nodig", "0.1")
+  protected val name: String
 
   val initialState: CState
 
