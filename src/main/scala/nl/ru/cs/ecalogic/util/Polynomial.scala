@@ -67,7 +67,7 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends Par
 
   def apply[T <% Polynomial](bindings: (String,T)*): Polynomial = {
     val env: PartialFunction[String,Polynomial] = 
-      bindings.toMap.mapValues(implicitly[T=>Polynomial]).orElse { case v => stringToPoly(v) }
+      bindings.toMap.mapValues(implicitly[T=>Polynomial]).orElse { case v => v }
 
     repr.map { case (term,fac) => fac*term.map(env).reduce(_*_) }.reduce(_+_)
   }
