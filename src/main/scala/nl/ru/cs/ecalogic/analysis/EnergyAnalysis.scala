@@ -60,8 +60,6 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
 
   type Environment = Map[String, Expression]
 
-  val lookup: Map[String, FunDef] = program.functions // TODO: Remove me
-
   /** Performs the functions of both "r()" and "e()" in the FOPARA Paper
     *
     * @param t The new timestamp for components (should be in the past)
@@ -124,7 +122,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
         lub  = lub.transform((name,st)=>st.lub(cur(name)))
       } while(seen.add(cur))
 
-      /** Restore the original time and energy info */
+      /** Return the lub using original time and energy info */
       lub.transform((name,st)=>st.update(init(name).t, init(name).e))
     }
 
@@ -191,7 +189,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
                                            } else
                                              args.foldLeft(G)(analyse).update(component, fun.name)
 
-      case FunCall(fun, args)           => val funDef = lookup(fun.name)
+      case FunCall(fun, args)           => val funDef = program.functions(fun.name)
                                            val resolvedArgs = args.map(foldConstants(_, env))
                                            val binding = funDef.parameters.map(_.name) zip resolvedArgs
                                            analyse(G, funDef.body)(env ++ binding)
@@ -201,7 +199,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
     }
 
     val initialState = GlobalState.initial(Seq(HyperPentium)++components)
-    val root         = lookup.getOrElse(entryPoint, throw new ECAException(s"No $entryPoint function to analyse."))
+    val root         = program.functions.getOrElse(entryPoint, throw new ECAException(s"No $entryPoint function to analyse."))
     val finalState   = analyse(initialState, root)(Map.empty).sync
     if(eh.errorOccurred)
       throw new ECAException("Analysis failed.")
