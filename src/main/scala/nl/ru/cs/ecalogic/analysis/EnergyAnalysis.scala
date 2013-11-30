@@ -34,20 +34,11 @@ package nl.ru.cs.ecalogic
 package analysis
 
 import ast._
-import parser.Parser
 import util.{ErrorHandler, DefaultErrorHandler, Polynomial}
+import model._
 import config.Options.{Analysis => config}
 
 import scala.collection.mutable
-import scala.io.Source
-
-import java.io.File
-import java.io.FileNotFoundException
-
-import model._
-// TODO: parametrize these
-import model.examples._
-import model.examples.DemoComponents._
 
 /**
  * @author Marc Schoolderman
@@ -198,7 +189,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
       case _:PrimaryExpression          => G
     }
 
-    val initialState = GlobalState.initial(Seq(HyperPentium)++components)
+    val initialState = GlobalState.initial(Seq(Pentium0)++components)
     val root         = program.functions.getOrElse(entryPoint, throw new ECAException(s"No $entryPoint function to analyse."))
     val finalState   = analyse(initialState, root)(Map.empty).sync
     if(eh.errorOccurred)
@@ -214,39 +205,40 @@ object EnergyAnalysis {
     * instantly and consumes no power. (You know you want one!)
     */
 
-  object HyperPentium extends DSLModel("CPU") {
+  object Pentium0 extends DSLModel("CPU") {
     define T (e = 0, a = 0, w = 0, ite = 0)
     define E (e = 0, a = 0, w = 0, ite = 0)
   }
 
+  /** The main function you want to use for debugging the analysis; 
+    * this is not intended to be user-friendly on purpose.
+    */
+
   def main(args: Array[String]) {
     import nl.ru.cs.ecalogic.config
+    import parser.Parser
+    import java.io.File
+    import scala.io.Source
+
     val fileName = config.Options(args).headOption.getOrElse("program.eca")
-    try {
-      val file = new File(fileName)
-      val source = Source.fromFile(file).mkString
-      val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
-      val parser = new Parser(source, errorHandler)
-      val program = parser.program()
-      errorHandler.successOrElse("Parse errors encountered.")
 
-      val checker = new SemanticAnalysis(program, errorHandler)
-      checker.functionCallHygiene()
-      checker.variableReferenceHygiene()
-      errorHandler.successOrElse("Semantic errors; please fix these.")
+    val file = new File(fileName)
+    val source = Source.fromFile(file).mkString
+    val errorHandler = new DefaultErrorHandler()//source = Some(source), file = Some(file))
+    val program = new Parser(source, errorHandler).program()
+    errorHandler.successOrElse("Parse errors encountered.")
 
-      //val stub = ECMModel.fromFile("doc/examples/Stub.ecm")
-      //val components = Set[ComponentModel](stub)
-      val components = Set(StubComponent, BadComponent, Sensor, Radio, if(config.Options.noCPU) StubComponent else CPU)
+    val checker = new SemanticAnalysis(program, errorHandler)
+    checker.functionCallHygiene()
+    checker.variableReferenceHygiene()
+    errorHandler.successOrElse("Semantic errors; please fix these.")
 
-      val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
-      println(consumptionAnalyser().toString)
+    import model.examples._
+    import model.examples.DemoComponents._
+    val components = Set(StubComponent, BadComponent, Sensor, Radio, if(config.Options.noCPU) StubComponent else CPU)
 
-      println("Success.")
-    } catch {
-      case _: ECAException          => Console.err.println("Aborted.")
-      case e: FileNotFoundException => Console.err.println(s"File not found: $fileName")
-    }
+    val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
+    println(consumptionAnalyser().toString)
   }
 
 }
