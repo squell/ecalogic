@@ -1,5 +1,5 @@
 (*
-   time usage: 33, 
+   time usage: 33,
    energy usage:
      - 275 (using ::idle() in the pre-loop), with call to ::off()
      -  55 (using ::zap()  in the pre-loop), with call to ::off()
@@ -19,15 +19,17 @@ Note:
 - stub::off() = (no time, no incidental energy, power drain becomes 0)
 - stub::zap() = (no time, incidental energy=1)
 - stub::idle()= (time=1,  no indidental energy)
- 
+
  *)
+
+import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
 
 { expect: (Map(Stub -> 11883, BUG -> 0, radio -> 3986, sensor -> 5979, CPU -> 1960),1993) }
 function program(X)
   Stub::on();
 
   while 42 > 5 bound 10 do                       // <-- pre-loop
-    Stub::idle() 
+    Stub::idle()
   end while;
 
   while 23 < 10 bound 23 do

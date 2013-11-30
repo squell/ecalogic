@@ -62,7 +62,7 @@ object CodeForm {
 
         val baos = new ByteArrayOutputStream()
         val pw = new PrintWriter(baos)
-        val errorHandler = new DefaultErrorHandler(source = Some(code), writer = pw)
+        val errorHandler = new DefaultErrorHandler(sourceText = Some(code), writer = pw)
         try {
           val parser = new Parser(code, errorHandler)
           val program = parser.program()

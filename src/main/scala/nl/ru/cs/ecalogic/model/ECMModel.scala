@@ -43,6 +43,7 @@ import scala.util.Try
 
 import java.io.File
 import java.lang.reflect.Method
+import java.net.{URI, URL}
 
 class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHandler()) extends ComponentModel {
   import ECAException._
@@ -131,7 +132,7 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
   }
 
   private def evalExpression(expr: Expression, localEnv: Map[String, ECAValue], stateEnv: Map[String, ECAValue], stackTrace: StackTraceBuilder): ECAValue = {
-    def callReflected(name: FunName, arguments: Seq[ECAValue], stackTrace: StackTraceBuilder, callPosition: Option[Position]): ECAValue = {
+    def callReflective(name: FunName, arguments: Seq[ECAValue], stackTrace: StackTraceBuilder, callPosition: Option[Position]): ECAValue = {
       val classAlias = name.prefix.get
       val methodName = name.name
       val clazz = imports.getOrElse(classAlias, errorHandler.fatalError(new ECAException(s"Undeclared class: '$classAlias'.", stackTrace.result(expr))))
@@ -190,7 +191,7 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
       case GT(x, y)             => evalExpr(x) > evalExpr(y)
       case GE(x, y)             => evalExpr(x) >= evalExpr(y)
 
-      case FunCall(qname, args) if qname.isPrefixed => callReflected(qname, args.map(evalExpr), stackTrace, Some(expr.position))
+      case FunCall(qname, args) if qname.isPrefixed => callReflective(qname, args.map(evalExpr), stackTrace, Some(expr.position))
       case FunCall(qname, args) => evalFunction(qname.name, args.map(evalExpr), stateEnv, stackTrace, Some(expr.position))
     }
 
@@ -218,20 +219,37 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
 
 object ECMModel {
 
-  def fromFile(name: String): ECMModel = fromFile(new File(name))
+  def fromSource(sourceText: String, sourceURI: Option[URI] = None) = {
+    val errorHandler = new DefaultErrorHandler(sourceText = Some(sourceText), sourceURI = sourceURI)
+    val parser = new ModelParser(sourceText, errorHandler)
+    val node = parser.component()
+    parser.expectEndOfFile()
+    errorHandler.successOrElse(s"Parsing${sourceURI.fold(" ")(u => s" '$u' ")}'failed.")
+
+    sourceURI.foreach { uri =>
+      val path = uri.getPath
+      val fileName = path.substring(path.lastIndexOf('/') + 1, path.length)
+      if (fileName != node.name + ".ecm") {
+        errorHandler.fatalError(new ECAException(s"File name does not match component name '${node.name}'."))
+      }
+    }
+
+    errorHandler.reset()
+    new ECMModel(node, errorHandler)
+  }
+
+  def fromFile(file: String): ECMModel = fromFile(new File(file))
 
   def fromFile(file: File): ECMModel = {
     val source = Source.fromFile(file).mkString
-    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
-    val parser = new ModelParser(source, errorHandler)
-    val node = parser.component()
-    parser.expectEndOfFile()
-    errorHandler.successOrElse("Parsing failed.")
-    if (node.name != file.getName.replace(".ecm", "")) {
-      errorHandler.fatalError(new ECAException(s"File name does not match component name '${node.name}'."))
-    }
-    errorHandler.reset()
-    new ECMModel(node, errorHandler)
+    fromSource(source, Some(file.toURI))
+  }
+
+  def fromURL(url: String): ECMModel = fromURL(new URL(url))
+
+  def fromURL(url: URL): ECMModel = {
+    val source = Source.fromURL(url).mkString
+    fromSource(source, Some(url.toURI))
   }
 
 }

@@ -168,7 +168,7 @@ object SemanticAnalysis {
 
     val file = new File(args.headOption.getOrElse(sys.error("Missing argument.")))
     val source = Source.fromFile(file).mkString
-    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
+    val errorHandler = new DefaultErrorHandler(sourceText = Some(source), sourceURI = Some(file.toURI))
     val parser = new Parser(source, errorHandler)
     val program = catching(classOf[ECAException]).opt(parser.program()).filterNot(_ => errorHandler.errorOccurred)
     val checker = new SemanticAnalysis(program.getOrElse(sys.exit(1)), errorHandler)

@@ -33,8 +33,10 @@
 package nl.ru.cs.ecalogic
 package model
 
-import util.Polynomial
+import nl.ru.cs.ecalogic.util.{DefaultErrorHandler, ErrorHandler, Polynomial}
 import config.Options.{Model => config}
+import scala.util.{Success, Failure, Try}
+import nl.ru.cs.ecalogic.ast.Import
 
 /**
  * @author Marc Schoolderman
@@ -128,7 +130,8 @@ trait ComponentModel { model =>
     }
   }
 
-  val name: String
+  @deprecated
+  protected val name: String // TODO: Niet meer nodig
 
   val initialState: CState
 
@@ -166,5 +169,25 @@ trait ComponentModel { model =>
 
 }
 
-/** Marker for CPU components. */
-trait CPUComponent { this: ComponentModel => }
+object ComponentModel {
+
+  def fromImport(imprt: Import, errorHandler: ErrorHandler = new DefaultErrorHandler): ComponentModel = {
+    val name = imprt.qualifiedName
+    val ecmURL = Option(getClass.getResource(s"/${name.replace('.', '/')}.ecm"))
+
+    errorHandler.handle {
+      ecmURL.map(url => ECMModel.fromURL(url)) getOrElse {
+        Try(Class.forName(name + "$")).map(clazz => clazz.getField("MODULE$").get(null).asInstanceOf[ComponentModel])   orElse
+        Try(Class.forName(name)).map(clazz => clazz.getMethod("getInstance").invoke(null).asInstanceOf[ComponentModel]) orElse
+        Try(Class.forName(name)).map(clazz => clazz.getField("INSTANCE").get(null).asInstanceOf[ComponentModel])        match {
+          case Success(c) => c
+          case Failure(e) => errorHandler.error(new ECAException(s"Unable to load component '$name': $e", Some(imprt.position), Some(e))); null
+        }
+      }
+    }
+  }
+
+  def fromImports(imports: Map[String, Import], errorHandler: ErrorHandler = new DefaultErrorHandler): Map[String, ComponentModel] =
+    imports.mapValues(fromImport(_, errorHandler)).toMap
+
+}
