@@ -32,17 +32,21 @@
 
 package nl.ru.cs.ecalogic.web.snippet
 
-import scala.xml.{Elem, Text, NodeSeq, Node}
 
-import net.liftweb.util.Helpers._
-import net.liftweb.util.JsonCmd
-import net.liftweb.http.SHtml.jsonForm
-import net.liftweb.http.JsonHandler
-import net.liftweb.http.js.JsCmd
-import net.liftweb.http.js.JsCmds.{SetHtml, Script}
 import java.io.{FileNotFoundException, File}
 import scala.io.Source
-import scala.xml.transform.RewriteRule
+import _root_.net.liftweb.http._
+import js._
+import JsCmds._
+import JE._
+import _root_.net.liftweb.util._
+import Helpers._
+import _root_.scala.xml._
+import net.liftweb.http.SHtml._
+import net.liftweb.util.JsonCmd
+import net.liftweb.http.js.JsCmds.SetHtml
+import net.liftmodules.textile.TextileParser
+import java.lang.NumberFormatException
 
 object LoadForm {
 
@@ -50,18 +54,24 @@ object LoadForm {
     "#loadForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, {
       val sb = new StringBuilder
       var i = -1;
-      new File("doc\\examples\\").listFiles().foreach({f => sb append (
-        "<input type=\"radio\" name=\"load\" value=\"" + {i+=1;i} /* scala does not support i++, what?!? */ + "\">" + f.getName + "<br>\n")})
-      sb.append("<input type=\"submit\" value=\"Load\"/>")
+      sb.append("<select name=\"load\">\n")
+      new File("doc\\examples\\").listFiles().foreach({
+        f => sb append (
+          "<option value=\"" + {
+            i += 1;
+            i
+          } /* scala does not support i++, what?!? */ + "\">" + f.getName + "</option>\n")
+      })
+      sb.append("</select>\n            <input type=\"submit\" value=\"Send\"/>")
       scala.xml.Unparsed(sb.toString())
     })) &
       "#loadScript" #> Script(AnalyseServer.jsCmd)
+
 
   object AnalyseServer extends JsonHandler {
     def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, String], all) =>
         val load = params.getOrElse("load", "")
-
         // TODO: Find file
         try {
           val file = new File("doc\\examples\\").listFiles()(load.toInt)
@@ -70,8 +80,8 @@ object LoadForm {
 
           SetHtml("code", Text(source))
         } catch {
-          case e: FileNotFoundException =>
-            return SetHtml("result", scala.xml.Unparsed("File not found: %s".format(e.getMessage)))
+          case e @ (_ : NumberFormatException | _ : FileNotFoundException | _ : ArrayIndexOutOfBoundsException) =>
+            return SetHtml("result", scala.xml.Unparsed("%s: %s".format(TextileParser.formatted(e.toString))))
         }
     }
 
