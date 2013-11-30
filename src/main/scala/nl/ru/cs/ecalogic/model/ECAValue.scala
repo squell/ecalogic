@@ -47,6 +47,7 @@ class ECAValue private(private val value: BigInt) extends ScalaNumber with Scala
   def *(that: ECAValue) = new ECAValue(value * that.value)
   def /(that: ECAValue) = new ECAValue(value / that.value)
   def %(that: ECAValue) = new ECAValue(value % that.value)
+  def ^(that: ECAValue) = new ECAValue(value ^ that.value)
   def unary_-           = new ECAValue(-value)
   def unary_+           = this
 

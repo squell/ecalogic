@@ -84,20 +84,14 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   protected def checkSeqToMap[A <: ASTNode, B](items: Seq[A])(criterion: A => B, description: String): Map[B, A] = {
     val grouped = items.groupBy(criterion).mapValues(_.sortBy(_.position))
     grouped.foreach {
-      case (key, head +: _ +: _) =>
-        errorHandler.error(new ECAException(s"$description '$key' redeclared.", head))
+      case (key, _ +: second +: _) =>
+        errorHandler.error(new ECAException(s"$description '$key' redeclared.", second))
       case _ =>
     }
     grouped.mapValues(_.head)
   }
 
   protected def checkSeqToSet[A <: ASTNode](items: Seq[A])(description: String): Set[A] = checkSeqToMap(items)(identity, description).keySet
-
-//  protected def checkSeqToSeq(items: Seq[A])(criterion: A => B, description: String): Seq[A] {
-//    checkSeqToMap
-//    items
-//  }
-
 
   override protected def advance() {
     lastLineNumber = position.line
@@ -142,7 +136,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   def program(follows: Pattern = Pattern.empty): Program = nodeWithPosition {
     val imps = parseSequenceOf(import_(Tokens.Component), Tokens.Import % "<import declaration>")(follows)
     val funs = parseSequenceOf(funDef, Tokens.Function % "<function definition>")(Pattern.empty)
-    Program(checkSeqToMap(imps)(_.alias, "Import declaration"), checkSeqToMap(funs)(_.name, "Function"))
+    Program(checkSeqToMap(imps)(_.alias, "Import for"), checkSeqToMap(funs)(_.name, "Function"))
   }
 
   def import_(keyword: Keyword)(follows: Pattern): Import = nodeWithPosition {
@@ -258,11 +252,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
       advance()
       val predicate = expression(follows | Tokens.Bound)
 
-      val rankingFunction = if (current(Tokens.Bound)) {
-        advance()
-        Some(expression(follows | Tokens.Do))
-      } else
-        None
+      val rankingFunction = bound(follows | Tokens.Do)
 
       expect(Tokens.Do)(follows | Tokens.Identifier | Tokens.Skip | Tokens.If | Tokens.While)
       val consequent = composition(follows | Tokens.End)
@@ -271,7 +261,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
       expect(Tokens.While)(follows)
 
       While(predicate, rankingFunction, consequent)
-    case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon | Tokens.Period) =>
+    case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon) =>
       funCall(follows)
     case Tokens.Identifier(n) if lookahead(Tokens.Assign) =>
       advance(2)
@@ -282,6 +272,11 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
       advance()
 
       Skip()
+  }
+
+  protected def bound(follows: Pattern): Option[Expression] = Some {
+    expect(Tokens.Bound)(follows | First.expression)
+    expression(follows)
   }
 
   /** Parses a function call.
@@ -298,19 +293,19 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
         val namePart = identifier(follows | Tokens.LParen)
 
         FunName(namePart, Some(compOrNamePart))
-      case Tokens.Period =>
-        val className = StringBuilder.newBuilder ++= compOrNamePart
-        do {
-          advance()
-          className += '.'
-          className ++= identifier(follows | Tokens.Period | Tokens.ColonColon)
-        } while (current(Tokens.Period))
-
-        expect(Tokens.ColonColon)(follows | Tokens.Identifier)
-
-        val namePart = identifier(follows | Tokens.LParen)
-
-        FunName(namePart, Some(className.result()))
+//      case Tokens.Period =>
+//        val className = StringBuilder.newBuilder ++= compOrNamePart
+//        do {
+//          advance()
+//          className += '.'
+//          className ++= identifier(follows | Tokens.Period | Tokens.ColonColon)
+//        } while (current(Tokens.Period))
+//
+//        expect(Tokens.ColonColon)(follows | Tokens.Identifier)
+//
+//        val namePart = identifier(follows | Tokens.LParen)
+//
+//        FunName(namePart, Some(className.result()))
       case _ =>
         FunName(compOrNamePart)
     }
@@ -346,7 +341,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     * @return        expression node
     */
   def primary(follows: Pattern) = tryParse[Expression](First.expression) (follows) {
-    case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon | Tokens.Period) =>
+    case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon) =>
       funCall(follows)
     case Tokens.Identifier(n) =>
       advance()
@@ -365,12 +360,13 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
       expr
   }
 
-  protected def expDivRightExpr(follows: Pattern) = literal(follows)
+  protected def expRightExpr(follows: Pattern): Expression = literal(follows)
+  protected def divRightExpr(follows: Pattern): Expression = literal(follows)
 
   def expExpr(follows: Pattern): Expression = {
     @tailrec
     def _expExpr(acc: Expression): Expression = current match {
-      case Tokens.Exponent => advance(); _expExpr(Exponent(acc, expDivRightExpr(follows)).withPosition(acc.position))
+      case Tokens.Exponent => advance(); _expExpr(Exponent(acc, expRightExpr(follows)).withPosition(acc.position))
       case _               => acc
     }
     _expExpr(primary(follows))
@@ -385,7 +381,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     @tailrec
     def _multExpr(acc: Expression): Expression = current match {
       case Tokens.Multiply => advance(); _multExpr(Multiply(acc, expExpr(follows)).withPosition(acc.position))
-      case Tokens.Divide   => advance(); _multExpr(Divide(acc, expDivRightExpr(follows)).withPosition(acc.position))
+      case Tokens.Divide   => advance(); _multExpr(Divide(acc, divRightExpr(follows)).withPosition(acc.position))
       case _               => acc
     }
     _multExpr(expExpr(follows))
@@ -414,12 +410,12 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   def relExpr(follows: Pattern): Expression = {
     val left = addExpr(follows)
     current match {
+      case Tokens.EQ => advance(); EQ(left, addExpr(follows)).withPosition(left.position)
+      case Tokens.NE => advance(); NE(left, addExpr(follows)).withPosition(left.position)
       case Tokens.LT => advance(); LT(left, addExpr(follows)).withPosition(left.position)
       case Tokens.LE => advance(); LE(left, addExpr(follows)).withPosition(left.position)
       case Tokens.GT => advance(); GT(left, addExpr(follows)).withPosition(left.position)
       case Tokens.GE => advance(); GE(left, addExpr(follows)).withPosition(left.position)
-      case Tokens.EQ => advance(); EQ(left, addExpr(follows)).withPosition(left.position)
-      case Tokens.NE => advance(); NE(left, addExpr(follows)).withPosition(left.position)
       case _         => left
     }
   }

@@ -32,7 +32,10 @@
 
 package nl.ru.cs.ecalogic
 
+import ast.FunName
 import util.{Positional, Position}
+
+import ECAException.StackTrace
 
 /** Base class for ecalogic exceptions.
   *
@@ -44,7 +47,8 @@ import util.{Positional, Position}
   */
 class ECAException(val message: String,
                    val position: Option[Position] = None,
-                   val cause: Option[Throwable] = None) extends RuntimeException(message, cause.orNull)
+                   val cause: Option[Throwable] = None,
+                   val stackTrace: StackTrace = Seq.empty) extends RuntimeException(message, cause.orNull)
 with Ordered[ECAException] {
 
   /** @see [[nl.ru.cs.ecalogic.ECAException]] */
@@ -56,6 +60,26 @@ with Ordered[ECAException] {
   /** @see [[nl.ru.cs.ecalogic.ECAException]] */
   def this(message: String, cause: Throwable) = this(message, None, Option(cause))
 
+  /** @see [[nl.ru.cs.ecalogic.ECAException]] */
+  def this(message: String, stackTrace: StackTrace) = this(message, stackTrace.headOption.flatMap(_._2), None, stackTrace)
+
   def compare(that: ECAException): Int = position.compare(that.position)
+
+}
+
+object ECAException {
+
+  type StackTrace = Seq[(FunName, Option[Position])]
+
+  class StackTraceBuilder private[ECAException](current: FunName, elements: StackTrace) {
+
+    def callFunction(name: FunName, position: Option[Position] = None) = new StackTraceBuilder(name, (current, position) +: elements)
+
+    def result(position: Option[Position] = None): StackTrace  = (current, position) +: elements
+    def result(positional: Positional): StackTrace             = result(Some(positional.position))
+
+  }
+
+  def newStackTraceBuilder(name: FunName): StackTraceBuilder = new StackTraceBuilder(name, Seq.empty)
 
 }

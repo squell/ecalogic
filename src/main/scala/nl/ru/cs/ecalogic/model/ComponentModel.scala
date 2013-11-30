@@ -160,7 +160,9 @@ trait ComponentModel { model =>
 
   def phi(s: CState) = ECAValue.Zero
 
-  def rv(f: String)(s: CState, a: Seq[ECAValue]) = ECAValue.Zero
+  protected def rv(f: String)(s: CState, a: Seq[ECAValue]) = ECAValue.Zero
+
+  def eval(f: String)(s: CState, a: Seq[ECAValue]): (CState, ECAValue) = (delta(f)(s), rv(f)(s, a))
 
 }
 

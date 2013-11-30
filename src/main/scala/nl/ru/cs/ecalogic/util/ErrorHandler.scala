@@ -49,7 +49,7 @@ trait ErrorHandler {
     *
     * @param exception error to report
     */
-  def fatalError(exception: ECAException)
+  def fatalError(exception: ECAException): Nothing
 
   /** Reports an error.
     *
@@ -105,9 +105,11 @@ class DefaultErrorHandler(maxErrorCount: Int = 10,
                           writer: PrintWriter = new PrintWriter(Console.err),
                           source: Option[String] = None,
                           file: Option[File] = None) extends ErrorHandler {
+  import ECAException.StackTrace
+
   private var errorCount = 0
 
-  private def printMessage(tpe: String, message: String, position: Option[Position]) {
+  private def printMessage(tpe: String, message: String, position: Option[Position], stackTrace: StackTrace) {
     writer.print(tpe)
     file.foreach(f => writer.print(s" in '${f.getAbsolutePath}'"))
     position.foreach(p => writer.print(s" at line ${p.line}, column ${p.column}"))
@@ -123,6 +125,12 @@ class DefaultErrorHandler(maxErrorCount: Int = 10,
         writer.printf("%n    %" + n + "s%n", "^")
       }
     }
+    if (!stackTrace.isEmpty) {
+      writer.println("Stacktrace:")
+      stackTrace.foreach { case (name, position) =>
+        writer.println(s"    $name${position.fold("")(p => s" [$p]")}")
+      }
+    }
     writer.flush()
   }
 
@@ -132,14 +140,13 @@ class DefaultErrorHandler(maxErrorCount: Int = 10,
 
   def errorOccurred: Boolean = errorCount > 0
 
-  def fatalError(exception: ECAException) {
-    printMessage("Fatal error", exception.message, exception.position)
-    errorCount += 1
+  def fatalError(exception: ECAException) = {
+    printMessage("Fatal error", exception.message, exception.position, exception.stackTrace)
     throw new ECAException(s"Fatal error occurred: ${exception.message}", exception)
   }
 
   def error(exception: ECAException) {
-    printMessage("Error", exception.message, exception.position)
+    printMessage("Error", exception.message, exception.position, exception.stackTrace)
     errorCount += 1
     if (maxErrorCount > 0 && errorCount >= maxErrorCount) {
       fatalError(new ECAException("Maximum number of errors reached"))
@@ -147,7 +154,7 @@ class DefaultErrorHandler(maxErrorCount: Int = 10,
   }
 
   def warning(exception: ECAException) {
-    printMessage("Warning", exception.message, exception.position)
+    printMessage("Warning", exception.message, exception.position, exception.stackTrace)
   }
 
 }
@@ -170,7 +177,7 @@ class CachingErrorHandler(val output: ErrorHandler = new DefaultErrorHandler) ex
 
   def errorOccurred: Boolean = output.errorOccurred || errors.exists(!_._2)
 
-  def fatalError(exception: ECAException) {
+  def fatalError(exception: ECAException) = {
     flush()
     output.fatalError(exception)
   }

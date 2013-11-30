@@ -36,10 +36,10 @@ class ModelLexer(_input: String) extends Lexer(_input) {
   import ModelLexer.Tokens._
 
   private val _keywords: Map[String, Token] = Map (
-    "object"    -> Object,
-    "uses"      -> Uses,
-    "time"      -> Time,
-    "energy"    -> Energy
+    "class"  -> Class,
+    "uses"   -> Uses,
+    "time"   -> Time,
+    "energy" -> Energy
   )
 
   private val _parseToken: PartialFunction[Char, (Token, Int)] = {
@@ -70,7 +70,7 @@ object ModelLexer {
     val End        = Lexer.Tokens.End
     val Assign     = Lexer.Tokens.Assign
 
-    case object Object       extends Keyword("object")
+    case object Class        extends Keyword("class")
 
     case object Uses         extends Keyword("uses")
     case object Time         extends Keyword("time")

@@ -48,34 +48,47 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
 
   def numeral(follows: Pattern): BigInt = expect(Tokens.Numeral, BigInt(0))(follows)
 
-  def component(follows: Pattern = Pattern.empty): Component = nodeWithPosition {
-    val imps = parseSequenceOf(import_(Tokens.Object), Tokens.Import % "<import declaration>")(follows)
+  def component(follows: Pattern = Pattern.empty): Component = {
+    val imps = parseSequenceOf(import_(Tokens.Class), Tokens.Import % "<import declaration>")(follows)
 
-    expect(Tokens.Component)(follows | Tokens.Identifier)
-    val name = identifier(follows | Tokens.LParen)
-    val variables = Seq.newBuilder[CompVarDecl]
-    if (current(Tokens.LParen)) {
-      do {
-        advance()
-        val varPos = position
+    nodeWithPosition {
+      expect(Tokens.Component)(follows | Tokens.Identifier)
+      val name = identifier(follows | Tokens.LParen)
+      val variablesBuilder = Map.newBuilder[String, CompVarDecl]
+      if (current(Tokens.LParen)) {
+        do {
+          advance()
+          val varPos = position
 
-        val varName = identifier(follows | Tokens.Colon)
-        expect(Tokens.Colon)(follows | Tokens.Numeral)
-        val (lower, upper) = range(follows | Tokens.Comma | Tokens.RParen)
+          val varName = identifier(follows | Tokens.Colon)
+          expect(Tokens.Colon)(follows | Tokens.Numeral)
+          val (lower, upper) = range(follows | Tokens.Comma | Tokens.RParen)
 
-        variables += CompVarDecl(varName, lower, upper).withPosition(varPos)
-      } while(current(Tokens.Comma))
-      expect(Tokens.RParen)(follows | First.member | Tokens.End)
+          variablesBuilder += varName -> CompVarDecl(varName, lower, upper, None).withPosition(varPos)
+        } while(current(Tokens.Comma))
+        expect(Tokens.RParen)(follows | First.member | Tokens.End)
+      }
+      val definitions = parseSequenceOf(member, First.member)(follows | Tokens.End)
+      expect(Tokens.End)(follows | Tokens.Component)
+      expect(Tokens.Component)(follows)
+
+      val imports            = checkSeqToMap(imps)(_.alias, "Import for")
+      val initializers       = checkSeqToMap(definitions.collect { case i: Initializer => i })(_.name, "Initializer for")
+      val componentFunctions = checkSeqToMap(definitions.collect { case c: CompFunDef  => c })(_.name, "Component function")
+      val functions          = checkSeqToMap(definitions.collect { case f: FunDef      => f })(_.name, "Local function")
+
+      val variables = variablesBuilder.result().mapValues {
+        case CompVarDecl(name, lower, upper, initialValue) if initializers.contains(name) =>
+          CompVarDecl(name, lower, upper, Some(initializers(name)))
+        case v => v
+      }
+
+      (initializers.keySet &~ variables.keySet).foreach { v =>
+        errorHandler.error(new ECAException(s"Undeclared component variable: '$v'.", initializers(v)))
+      }
+
+      Component(name, imports, variables, componentFunctions, functions)
     }
-    val definitions = parseSequenceOf(member, First.member)(follows | Tokens.End)
-    expect(Tokens.End)(follows | Tokens.Component)
-    expect(Tokens.Component)(follows)
-
-    val initializers       = definitions.collect { case a: Assignment => a }
-    val componentFunctions = definitions.collect { case c: CompFunDef => c }
-    val functions          = definitions.collect { case f: FunDef     => f }
-
-    Component(name, variables.result(), initializers, componentFunctions, functions)
   }
 
   def range(follows: Pattern): (BigInt, BigInt) = {
@@ -90,9 +103,9 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
     case Tokens.Identifier(name) =>
       advance()
       expect(Tokens.Assign)(follows | Tokens.Numeral)
-      val value = numeral(follows)
+      val value = literal(follows)
 
-      Assignment(name, Literal(value))
+      Initializer(name, value)
     case Tokens.Component =>
       componentFunDef(follows)
 
@@ -134,6 +147,11 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
 
     CompFunDef(name, params, energy, time, body)
   }
+
+  override protected def bound(follows: Pattern) = None
+
+  override protected def expRightExpr(follows: Pattern) = primary(follows)
+  override protected def divRightExpr(follows: Pattern) = expExpr(follows)
 
 }
 

@@ -116,8 +116,8 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
       def varFlow(live: Set[String], node: ASTNode): Set[String] = node match {
         case If(pred, thenPart, elsePart) => varFlow(live, pred)
                                              varFlow(live, thenPart) & varFlow(live, elsePart)
-        case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, consq)
-                                             rf.fold(eh.error(new ECAException("While loop needs a bound expression.", node.position))) {
+        case While(pred, Some(rf), consq) => varFlow(live, pred); varFlow(live, consq)
+                                             rf match {
                                                case _: ArithmeticExpression =>
                                                case Literal(_) =>
                                                case v@VarRef(ident) =>

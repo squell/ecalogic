@@ -60,8 +60,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
 
   type Environment = Map[String, Expression]
 
-  val lookup: Map[String, FunDef] =
-    program.functions//.map(fundef=>fundef.name->fundef).toMap
+  val lookup: Map[String, FunDef] = program.functions // TODO: Remove me
 
   /** Performs the functions of both "r()" and "e()" in the FOPARA Paper
     *
@@ -126,7 +125,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
       } while(seen.add(cur))
 
       /** Restore the original time and energy info */
-      return lub.transform((name,st)=>st.update(init(name).t, init(name).e))
+      lub.transform((name,st)=>st.update(init(name).t, init(name).e))
     }
 
     /** Convert an Expression to ECAValue, and complain if this is not possible */
@@ -202,7 +201,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
     }
 
     val initialState = GlobalState.initial(Seq(HyperPentium)++components)
-    val root         = lookup.getOrElse(entryPoint, throw new ECAException(s"No ${entryPoint} function to analyse."))
+    val root         = lookup.getOrElse(entryPoint, throw new ECAException(s"No $entryPoint function to analyse."))
     val finalState   = analyse(initialState, root)(Map.empty).sync
     if(eh.errorOccurred)
       throw new ECAException("Analysis failed.")
@@ -223,7 +222,6 @@ object EnergyAnalysis {
   }
 
   def main(args: Array[String]) {
-    import scala.util.control.Exception._
     import nl.ru.cs.ecalogic.config
     val fileName = config.Options(args).headOption.getOrElse("program.eca")
     try {
@@ -239,6 +237,8 @@ object EnergyAnalysis {
       checker.variableReferenceHygiene()
       errorHandler.successOrElse("Semantic errors; please fix these.")
 
+      //val stub = ECMModel.fromFile("doc/examples/Stub.ecm")
+      //val components = Set[ComponentModel](stub)
       val components = Set(StubComponent, BadComponent, Sensor, Radio, if(config.Options.noCPU) StubComponent else CPU)
 
       val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
@@ -246,8 +246,8 @@ object EnergyAnalysis {
 
       println("Success.")
     } catch {
-      case e: ECAException => println(s"${e.message}\nAborted")
-      case e: FileNotFoundException => println(s"File not found: ${fileName}")
+      case _: ECAException          => Console.err.println("Aborted.")
+      case e: FileNotFoundException => Console.err.println(s"File not found: $fileName")
     }
   }
 

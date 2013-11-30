@@ -94,7 +94,7 @@ class PrettyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler
         case VarRef(ident) => print(ident)
         case e: BinaryExpression =>
           printPart(e.left, depth)
-          print(" " + e.operator + " ")
+          print(" " + e.operatorName + " ")
           printPart(e.right, depth)
           // TODO Fix braces
         case e: UnaryExpression =>
