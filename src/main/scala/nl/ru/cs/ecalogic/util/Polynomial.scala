@@ -72,6 +72,10 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends Par
     repr.map { case (term,fac) => fac*term.map(env).reduce(_*_) }.reduce(_+_)
   }
 
+  /* Polynomials only admit a partial order; so beware of this. 
+     This ordering compares polynomials under the assumption that all symbols
+     are non-negative.  */
+
   override def tryCompareTo[B >: Polynomial <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
     case that: Polynomial =>
       val shared = (this.repr++that.repr).keys
