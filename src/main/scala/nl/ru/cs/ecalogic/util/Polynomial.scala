@@ -65,6 +65,13 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends Par
 
   def coef(term: Seq[String]): BigInt = repr.getOrElse(term, BigInt(0))
 
+  def apply[T <% Polynomial](bindings: (String,T)*): Polynomial = {
+    val env: PartialFunction[String,Polynomial] = 
+      bindings.toMap.mapValues(implicitly[T=>Polynomial]).orElse { case v => v }
+
+    repr.map { case (term,fac) => fac*term.map(env).reduce(_*_) }.reduce(_+_)
+  }
+
   override def tryCompareTo[B >: Polynomial <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
     case that: Polynomial =>
       val shared = (this.repr++that.repr).keys

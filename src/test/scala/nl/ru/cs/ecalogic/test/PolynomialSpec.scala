@@ -72,7 +72,7 @@ class PolynomialSpec extends FlatSpec with Matchers {
     A * B should equal(B * A)
   }
 
-  it should "have A negative element" in {
+  it should "have a negative element" in {
     A - A should equal(zero)
     B - B should equal(zero)
     A + (B-A) should equal(B)
@@ -114,6 +114,16 @@ class PolynomialSpec extends FlatSpec with Matchers {
     A + (B max D) should be ((A + B) max (A + D))
     A + (B min D) should be ((A + B) min (A + D))
     // note: does not distribute over *
+  }
+
+  it should "evaluate correctly" in {
+    val env = Seq("x"->2, "y"->3, "z"->5)
+    C(env:_*) + D(env:_*) should be ((C+D)(env:_*))
+    C(env:_*) * D(env:_*) should be ((C*D)(env:_*))
+    C("x"->0,"y"->0,"z"->0) should be (C.coef(Seq()))
+  }
+  it should "compose substitution" in {
+    C("x"->A).apply("y"->B) should be (C("x"->A("y"->B), "y"->B))
   }
 }
 
