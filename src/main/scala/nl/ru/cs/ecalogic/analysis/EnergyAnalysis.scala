@@ -80,9 +80,10 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
 
   /** Performs energy analysis of the function 'program'
     *
-    * @return I'll tell you later, once I know. TODO
+    * @param entryPoint the function to analyse
+    * @return The resulting global state after analysing the program
     */
-  def apply(entryPoint: String = "program") = {
+  def apply(entryPoint: String = "program"): GlobalState = {
     /** Compute fixed points of componentstates within a while-loop
      *
      * @param init set-of-componentstates (without global time)
@@ -191,11 +192,11 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
 
     val initialState = GlobalState.initial(Seq(Pentium0)++components)
     val root         = program.functions.getOrElse(entryPoint, throw new ECAException(s"No $entryPoint function to analyse."))
-    val finalState   = analyse(initialState, root)(Map.empty).sync
+    val finalState   = analyse(initialState, root)(Map.empty)
     if(eh.errorOccurred)
       throw new ECAException("Analysis failed.")
     else
-      finalState.mapValues(_.e)
+      finalState.sync
   }
 }
 
