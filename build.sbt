@@ -2,6 +2,8 @@ lazy val main = project in file(".")
 
 lazy val web = project dependsOn main
 
+val MainClass = "nl.ru.cs.ecalogic.ECALogic"
+
 name := "ecalogic"
 
 organization := "nl.ru.cs.ecalogic"
@@ -16,4 +18,10 @@ unmanagedClasspath in Runtime += baseDirectory.value / "components"
 
 scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
 
-mainClass in (Compile, packageBin) := Some("nl.ru.cs.ecalogic.analysis.EnergyAnalysis")
+mainClass in (Compile, packageBin) := Some(MainClass)
+
+proguardSettings
+
+ProguardKeys.options in Proguard ++= IO.readLines(baseDirectory.value / "project" / "proguard.cfg")
+
+ProguardKeys.inputs in Proguard := (ProguardKeys.inputs in Proguard).value filterNot { _.getName == "components" }

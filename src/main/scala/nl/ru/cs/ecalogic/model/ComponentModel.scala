@@ -175,7 +175,7 @@ object ComponentModel {
     val name = imprt.qualifiedName
     val ecmURL = Option(getClass.getResource(s"/${name.replace('.', '/')}.ecm"))
 
-    errorHandler.handle {
+    errorHandler.report {
       ecmURL.map(url => ECMModel.fromURL(url)) getOrElse {
         Try(Class.forName(name + "$")).map(clazz => clazz.getField("MODULE$").get(null).asInstanceOf[ComponentModel])   orElse
         Try(Class.forName(name)).map(clazz => clazz.getMethod("getInstance").invoke(null).asInstanceOf[ComponentModel]) orElse

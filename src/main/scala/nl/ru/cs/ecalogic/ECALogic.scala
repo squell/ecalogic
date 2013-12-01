@@ -61,33 +61,32 @@ object ECALogic {
         println(s"$fileName:")
         println(f"Time:\t$t%s")
         println(f"Energy:\t${states.values.reduce(_+_)}%s")
-        for((name, e) <- states) 
+        for((name, e) <- states)
           println(f"└ ${name}%13s\t$e%s")
     }
   }
-    
+
   def analyse(fileName: String) = {
     val file = new File(fileName)
-    val source = defaultErrorHandler.handle(Source.fromFile(file).mkString)
+    val source = defaultErrorHandler.report(Source.fromFile(file).mkString)
     val errorHandler = new DefaultErrorHandler(sourceText = Some(source), sourceURI = Some(file.toURI))
-    val parser = new Parser(source, errorHandler)
 
-    val program = errorHandler.handleBlock("One or more errors occurred during parsing.") {
+    val program = errorHandler.reportAll("One or more errors occurred during parsing.") {
       val parser = new Parser(source, errorHandler)
       parser.program()
     }
 
-    errorHandler.handleBlock("One or more errors occurred during semantic analysis.") {
+    errorHandler.reportAll("One or more errors occurred during semantic analysis.") {
       val checker = new SemanticAnalysis(program, errorHandler)
       checker.functionCallHygiene()
       checker.variableReferenceHygiene()
     }
 
-    val components = errorHandler.handleBlock("One or more errors occurred while loading components.") {
+    val components = errorHandler.reportAll("One or more errors occurred while loading components.") {
       ComponentModel.fromImports(program.imports, errorHandler)
     }
 
-    errorHandler.handleBlock("One or more errors occurred during energy analysis.") {
+    errorHandler.reportAll("One or more errors occurred during energy analysis.") {
       val consumptionAnalyser = new EnergyAnalysis(program, components++forceComponents, errorHandler)
       consumptionAnalyser.analyse(Options.entryPoint)
     }
@@ -110,17 +109,17 @@ object ECALogic {
           val msg = s"File not recognized: $fileName"
           Console.err.println(msg)
           throw new ECAException(msg)
-    } 
-    if(idle) 
+    }
+    if(idle)
       Console.err.println("Nothing to do! Run with --help to see usage instructions.")
   } catch {
-    case _: ECAException          => 
+    case _: ECAException          =>
       Console.err.println("Aborted.")
       sys.exit(1)
-    case e: NumberFormatException => 
+    case e: NumberFormatException =>
       Console.err.println(s"Numeric argument expected: ${e.getMessage}")
       sys.exit(1)
-    case e: FileNotFoundException => 
+    case e: FileNotFoundException =>
       Console.err.println(s"${e.getMessage}")
       sys.exit(1)
     case e: Exception =>

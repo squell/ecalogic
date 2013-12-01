@@ -71,14 +71,14 @@ trait ErrorHandler {
   /** Tries to evaluate the given expression and optionally returns the result and otherwise reports an error.
     *
     * @param  expression expression to evaluate
-    * @tparam T          type of the expression
+    * @tparam A          type of the expression
     * @return            optional result
     */
-//  def tryCatch[T](expression: => T): Option[T] = try Some(expression) catch {
-//    case e: ECAException =>
-//      error(e)
-//      None
-//  }
+  def tryCatch[A](expression: => A): Option[A] = try Some(expression) catch {
+    case e: ECAException =>
+      error(e)
+      None
+  }
 
   /** Does nothing if no errors occurred; otherwise, reports and throws a fatal exception
     *
@@ -88,21 +88,36 @@ trait ErrorHandler {
     if(errorOccurred) fatalError(new ECAException(complaint))
   }
 
-  /** TODO document
+  /** Reports all exceptions thrown by ''block''.
     *
+    * Caught [[nl.ru.cs.ecalogic.ECAException]]s that have been reported before won't be reported again. Other non-fatal
+    * exceptions as defined by [[scala.util.control.NonFatal]] are wrapped inside an ''ECAException'' and reported. Any
+    * exceptions that have been caught are thrown again.
+    *
+    * @param  block code block to execute
+    * @tparam A     result type of code block
+    * @return       result of code block
     */
-  def handle[A](block: => A): A = {
+  def report[A](block: => A): A = {
     try {
       reset()
       block
     } catch {
-      case e: ECAException if !e.reported => fatalError(e)
-      case e: ECAException                => throw e
-      case NonFatal(e)                    => fatalError(new ECAException(e.toString, e))
+      case e: ECAException if e.reported => throw e
+      case e: ECAException               => fatalError(e)
+      case NonFatal(e)                   => fatalError(new ECAException(e.toString, e))
     }
   }
 
-  def handleBlock[A](complaint: String)(block: => A): A = handle {
+  /** Reports all exceptions thrown by ''block'' and reports a fatal error given by the ''complaint'' message
+   *  if any non-fatal errors were reported by ''block''.
+   *
+   * @param  complaint message to report if non-fatal errors occurred
+   * @param  block     code block to execute
+   * @tparam A         result type of code block
+   * @return           result of code block
+   */
+  def reportAll[A](complaint: String)(block: => A): A = report {
     val res = block
     successOrElse(complaint)
     res
