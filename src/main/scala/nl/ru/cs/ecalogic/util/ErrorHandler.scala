@@ -88,6 +88,9 @@ trait ErrorHandler {
     if(errorOccurred) fatalError(new ECAException(complaint))
   }
 
+  /** TODO document
+    *
+    */
   def handle[A](block: => A): A = {
     try {
       reset()
