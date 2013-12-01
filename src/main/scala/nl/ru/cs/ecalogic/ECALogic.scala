@@ -48,7 +48,9 @@ import model._
 import model.examples._
 import model.examples.DemoComponents._
 
-object run {
+object ECALogic extends App {
+
+  val defaultErrorHandler = new DefaultErrorHandler
 
   var components: Set[ComponentModel] = Set(StubComponent, BadComponent, Sensor, Radio)
 
@@ -65,25 +67,34 @@ object run {
     }
   }
     
-  def analyze(fileName: String) = {
+  def analyse(fileName: String) = {
     val file = new File(fileName)
-    val source = Source.fromFile(file).mkString
-    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
+    val source = defaultErrorHandler.handle(Source.fromFile(file).mkString)
+    val errorHandler = new DefaultErrorHandler(sourceText = Some(source), sourceURI = Some(file.toURI))
     val parser = new Parser(source, errorHandler)
 
-    val program = parser.program()
-    errorHandler.successOrElse("Parse errors encountered.")
+    val program = errorHandler.handleBlock("One or more errors occurred during parsing.") {
+      val parser = new Parser(source, errorHandler)
+      parser.program()
+    }
 
-    val checker = new SemanticAnalysis(program, errorHandler)
-    checker.functionCallHygiene()
-    checker.variableReferenceHygiene()
-    errorHandler.successOrElse("Semantic errors; please fix these.")
+    errorHandler.handleBlock("One or more errors occurred during semantic analysis.") {
+      val checker = new SemanticAnalysis(program, errorHandler)
+      checker.functionCallHygiene()
+      checker.variableReferenceHygiene()
+    }
 
-    val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
-    consumptionAnalyser(Options.entryPoint)
+    val components = errorHandler.handleBlock("One or more errors occurred while loading components.") {
+      ComponentModel.fromImports(program.imports, errorHandler)
+    }
+
+    errorHandler.handleBlock("One or more errors occurred during energy analysis.") {
+      val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
+      consumptionAnalyser.analyse(Options.entryPoint)
+    }
   }
 
-  def main(args: Array[String]) = try {
+  override def main(args: Array[String]) = try {
     var idle = true
     val fileArgs = config.Options(args)
     if(!Options.noCPU) 
@@ -93,7 +104,7 @@ object run {
         case fileName if fileName.endsWith(".ecm") =>
           components = components + ECMModel.fromFile(fileName)
         case fileName if fileName.endsWith(".eca") =>
-          val state = analyze(fileName)
+          val state = analyse(fileName)
           report(fileName, state)
           idle = false
         case fileName =>
@@ -104,9 +115,19 @@ object run {
     if(idle) 
       Console.err.println("Nothing to do! Run with --help to see usage instructions.")
   } catch {
-    case _: ECAException          => Console.err.println("Aborted.")
-    case e: NumberFormatException => Console.err.println(s"Numeric argument expected: ${e.getMessage}")
-    case e: FileNotFoundException => Console.err.println(s"${e.getMessage}")
+    case _: ECAException          => 
+      Console.err.println("Aborted.")
+      sys.exit(1)
+    case e: NumberFormatException => 
+      Console.err.println(s"Numeric argument expected: ${e.getMessage}")
+      sys.exit(1)
+    case e: FileNotFoundException => 
+      Console.err.println(s"${e.getMessage}")
+      sys.exit(1)
+    case e: Exception =>
+      Console.err.println("Oops. An exception seems to have escaped.")
+      e.printStackTrace()
+      sys.exit(2)
   }
 
 }

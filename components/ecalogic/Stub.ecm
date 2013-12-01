@@ -1,7 +1,5 @@
-// Import a Scala object or Java class with static methods.
-import class java.lang.Math as JMath
+import class java.lang.Math
 
-// Defines a component with two variables in its state.
 component Stub(active: 0..100)
     active := 0
 
@@ -34,7 +32,7 @@ component Stub(active: 0..100)
         end if
     end function
 
-    function max(x, y) := JMath::max(x, y)
+    function max(x, y) := Math::max(x, y)
 
 end component
 

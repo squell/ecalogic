@@ -48,7 +48,8 @@ import ECAException.StackTrace
 class ECAException(val message: String,
                    val position: Option[Position] = None,
                    val cause: Option[Throwable] = None,
-                   val stackTrace: StackTrace = Seq.empty) extends RuntimeException(message, cause.orNull)
+                   val stackTrace: StackTrace = Seq.empty,
+                   val reported: Boolean = false) extends RuntimeException(message, cause.orNull)
 with Ordered[ECAException] {
 
   /** @see [[nl.ru.cs.ecalogic.ECAException]] */
@@ -64,6 +65,8 @@ with Ordered[ECAException] {
   def this(message: String, stackTrace: StackTrace) = this(message, stackTrace.headOption.flatMap(_._2), None, stackTrace)
 
   def compare(that: ECAException): Int = position.compare(that.position)
+
+  def markReported = new ECAException(message, position, cause, stackTrace, true)
 
 }
 

@@ -171,7 +171,7 @@ object ModelParser {
 
     val file = new File(args.headOption.getOrElse(sys.error("Missing argument.")))
     val source = Source.fromFile(file).mkString
-    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
+    val errorHandler = new DefaultErrorHandler(sourceText = Some(source), sourceURI = Some(file.toURI))
     val parser = new ModelParser(source, errorHandler)
     val model = catching(classOf[ECAException]).opt(parser.component()).filterNot(_ => errorHandler.errorOccurred)
     println(model.getOrElse(sys.exit(1)))

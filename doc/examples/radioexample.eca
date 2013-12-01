@@ -5,7 +5,7 @@ DIFFERENCES FROM THE EXAMPLE IN TECH REPORT
  - TR has CPU at 55 energy per iteration, but the production rules put it at 30
    This is probably an error in the production rules.
 
- - In calculating the final cost for the sensor, the calculation suddenly assumes 
+ - In calculating the final cost for the sensor, the calculation suddenly assumes
    each loop body took 200 time (instead of 195)
 
 TIME
@@ -55,16 +55,20 @@ Which is exactly what ECA tells us
 
  *)
 
-{ expect: (Map(Stub -> 0, BUG -> 0, radio -> 403380, sensor -> 6430, CPU -> 550),2010) }
+import component ecalogic.Radio
+import component ecalogic.Sensor
+import component ecalogic.CPU
+
+{ expect: (Map(Stub -> 0, BUG -> 0, Radio -> 403380, Sensor -> 6430, CPU -> 550),2010) }
 function algorithm1(Xn,Xdiv10)
-  radio::on()
+  Radio::on()
   while Xn > 0 bound Xn do
-    X1 := sensor::m()
-    radio::queue(X1)
-    radio::send()
+    X1 := Sensor::m()
+    Radio::queue(X1)
+    Radio::send()
     Xn := Xn-1
   end while
-  radio::off()
+  Radio::off()
 end function
 
 function algorithm2(Xn,Xdiv10)
@@ -72,14 +76,14 @@ function algorithm2(Xn,Xdiv10)
     Xi := 10
 //  while Xi > 0 bound Xi do // <--- not allowed: program variable
     while Xi > 0 bound 10 do
-      X1 := sensor::m()
-      radio::queue(X1)
+      X1 := Sensor::m()
+      Radio::queue(X1)
       Xi := Xi - 1
       Xn := Xn - 1
     end while
-    radio::on()
-    radio::send()
-    radio::off()
+    Radio::on()
+    Radio::send()
+    Radio::off()
   end while
 end function
 

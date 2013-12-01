@@ -78,8 +78,8 @@ object GlobalState {
   /** A map containing, for each component (identified by name), its current component state */
   type States = Map[String,ComponentModel#EACState]
 
-  def initial(components: Iterable[ComponentModel]): GlobalState =
-    GlobalState(components.map(x=>(x.name->x.initialEACState())).toMap, 0)
+  def initial(components: Map[String, ComponentModel]): GlobalState =
+    GlobalState(components.mapValues(_.initialEACState()), 0)
 
   implicit def tupleToGlobalState(gamma: (States, Polynomial)): GlobalState = GlobalState(gamma._1, gamma._2)
 

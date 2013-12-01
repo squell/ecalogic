@@ -34,20 +34,27 @@ package nl.ru.cs.ecalogic
 package analysis
 
 import ast._
+import parser.Parser
 import util.{ErrorHandler, DefaultErrorHandler, Polynomial}
 import model._
-import config.Options.{Analysis => config}
+import config.Options
 
 import scala.collection.mutable
+import scala.io.Source
+
+import java.io.File
+
 
 /**
  * @author Marc Schoolderman
  */
-class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: ErrorHandler = new DefaultErrorHandler()) {
+class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], eh: ErrorHandler = new DefaultErrorHandler()) {
 
   import GlobalState.States
   import Transform._
   import EnergyAnalysis._
+
+  val config = Options.Analysis
 
   type Environment = Map[String, Expression]
 
@@ -83,7 +90,7 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
     * @param entryPoint the function to analyse
     * @return The resulting global state after analysing the program
     */
-  def apply(entryPoint: String = "program"): GlobalState = {
+  def analyse(entryPoint: String = "program"): GlobalState = {
     /** Compute fixed points of componentstates within a while-loop
      *
      * @param init set-of-componentstates (without global time)
@@ -190,13 +197,10 @@ class EnergyAnalysis(program: Program, components: Set[ComponentModel], eh: Erro
       case _:PrimaryExpression          => G
     }
 
-    val initialState = GlobalState.initial(Seq(Pentium0)++components)
+    val initialState = GlobalState.initial(Map("CPU" -> Pentium0) ++ components)
     val root         = program.functions.getOrElse(entryPoint, throw new ECAException(s"No $entryPoint function to analyse."))
     val finalState   = analyse(initialState, root)(Map.empty)
-    if(eh.errorOccurred)
-      throw new ECAException("Analysis failed.")
-    else
-      finalState.sync
+    finalState.sync
   }
 }
 
@@ -211,35 +215,52 @@ object EnergyAnalysis {
     define E (e = 0, a = 0, w = 0, ite = 0)
   }
 
-  /** The main function you want to use for debugging the analysis; 
+  /** The main function you want to use for debugging the analysis;
     * this is not intended to be user-friendly on purpose.
     */
 
   def main(args: Array[String]) {
-    import nl.ru.cs.ecalogic.config
-    import parser.Parser
-    import java.io.File
-    import scala.io.Source
+    val fileName = Options(args).headOption.getOrElse("program.eca")
+    val defaultErrorHandler = new DefaultErrorHandler
+    try {
+      val file = new File(fileName)
+      val source = defaultErrorHandler.handle(Source.fromFile(file).mkString)
+      val errorHandler = new DefaultErrorHandler(sourceText = Some(source), sourceURI = Some(file.toURI))
 
-    val fileName = config.Options(args).headOption.getOrElse("program.eca")
+      val program = errorHandler.handleBlock("One or more errors occurred during parsing. Aborted.") {
+        val parser = new Parser(source, errorHandler)
+        parser.program()
+      }
 
-    val file = new File(fileName)
-    val source = Source.fromFile(file).mkString
-    val errorHandler = new DefaultErrorHandler()//source = Some(source), file = Some(file))
-    val program = new Parser(source, errorHandler).program()
-    errorHandler.successOrElse("Parse errors encountered.")
+      errorHandler.handleBlock("One or more errors occurred during semantic analysis. Aborted.") {
+        val checker = new SemanticAnalysis(program, errorHandler)
+        checker.functionCallHygiene()
+        checker.variableReferenceHygiene()
+      }
 
-    val checker = new SemanticAnalysis(program, errorHandler)
-    checker.functionCallHygiene()
-    checker.variableReferenceHygiene()
-    errorHandler.successOrElse("Semantic errors; please fix these.")
+      //val stub = ECMModel.fromFile("doc/examples/Stub.ecm")
+      //val components = Set[ComponentModel](stub)
+      //val components = Set(StubComponent, BadComponent, Sensor, Radio, if(config.Options.noCPU) StubComponent else CPU)
 
-    import model.examples._
-    import model.examples.DemoComponents._
-    val components = Set(StubComponent, BadComponent, Sensor, Radio, if(config.Options.noCPU) StubComponent else CPU)
+      val components = errorHandler.handleBlock("One or more errors occurred while loading components. Aborted.") {
+        ComponentModel.fromImports(program.imports, errorHandler)
+      }
 
-    val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
-    println(consumptionAnalyser().toString)
+      val finalState = errorHandler.handleBlock("One or more errors occurred during energy analysis. Aborted.") {
+        val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
+        consumptionAnalyser.analyse()
+      }
+      println(finalState)
+
+      println(s"Analysis of '${file.getAbsolutePath}' was successful.")
+    } catch {
+      case _: ECAException          =>
+        sys.exit(1)
+      case e: Exception =>
+        Console.err.println("Oops. An exception seems to have escaped.")
+        e.printStackTrace()
+        sys.exit(2)
+    }
   }
 
 }

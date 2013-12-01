@@ -36,6 +36,8 @@ package util
 import scala.collection.mutable
 
 import java.io.{File, PrintWriter}
+import java.net.URI
+import scala.util.control.NonFatal
 
 /** Base trait for error handlers.
   *
@@ -72,18 +74,35 @@ trait ErrorHandler {
     * @tparam T          type of the expression
     * @return            optional result
     */
-  def tryCatch[T](expression: => T): Option[T] = try Some(expression) catch {
-    case e: ECAException =>
-      error(e)
-      None
-  }
+//  def tryCatch[T](expression: => T): Option[T] = try Some(expression) catch {
+//    case e: ECAException =>
+//      error(e)
+//      None
+//  }
 
-  /** Does nothing if no errors occurred; otherwise, throws an exception
+  /** Does nothing if no errors occurred; otherwise, reports and throws a fatal exception
     *
     * @param  complaint explanation of the error condition
     */
   def successOrElse(complaint: String) {
     if(errorOccurred) fatalError(new ECAException(complaint))
+  }
+
+  def handle[A](block: => A): A = {
+    try {
+      reset()
+      block
+    } catch {
+      case e: ECAException if !e.reported => fatalError(e)
+      case e: ECAException                => throw e
+      case NonFatal(e)                    => fatalError(new ECAException(e.toString, e))
+    }
+  }
+
+  def handleBlock[A](complaint: String)(block: => A): A = handle {
+    val res = block
+    successOrElse(complaint)
+    res
   }
 
 }
@@ -96,25 +115,25 @@ trait ErrorHandler {
   *
   * @param maxErrorCount maximum number of error messages
   * @param writer        output
-  * @param source        optional input
-  * @param file          optional file name
+  * @param sourceText    optional input
+  * @param sourceURI     optional uri
   *
   * @author Jascha Neutelings
   */
 class DefaultErrorHandler(maxErrorCount: Int = 10,
                           writer: PrintWriter = new PrintWriter(Console.err),
-                          source: Option[String] = None,
-                          file: Option[File] = None) extends ErrorHandler {
+                          sourceText: Option[String] = None,
+                          sourceURI: Option[URI] = None) extends ErrorHandler {
   import ECAException.StackTrace
 
   private var errorCount = 0
 
   private def printMessage(tpe: String, message: String, position: Option[Position], stackTrace: StackTrace) {
     writer.print(tpe)
-    file.foreach(f => writer.print(s" in '${f.getAbsolutePath}'"))
+    sourceURI.filter(_ => position.isDefined).foreach(u => writer.print(s" in '$u'"))
     position.foreach(p => writer.print(s" at line ${p.line}, column ${p.column}"))
     writer.printf(":%n    %s%n", message)
-    source.map(_ + "\n").zip(position).foreach { case (s, Position(l, c)) =>
+    sourceText.map(_ + "\n").zip(position).foreach { case (s, Position(l, c)) =>
       val line = s.lines.drop(l - 1).next()
       val trimmedLine = line.dropWhile(_ <= ' ')
 
@@ -142,14 +161,14 @@ class DefaultErrorHandler(maxErrorCount: Int = 10,
 
   def fatalError(exception: ECAException) = {
     printMessage("Fatal error", exception.message, exception.position, exception.stackTrace)
-    throw new ECAException(s"Fatal error occurred: ${exception.message}", exception)
+    throw new ECAException(s"Fatal error occurred: ${exception.message}", exception).markReported
   }
 
   def error(exception: ECAException) {
     printMessage("Error", exception.message, exception.position, exception.stackTrace)
     errorCount += 1
     if (maxErrorCount > 0 && errorCount >= maxErrorCount) {
-      fatalError(new ECAException("Maximum number of errors reached"))
+      fatalError(new ECAException("Maximum number of errors reached."))
     }
   }
 

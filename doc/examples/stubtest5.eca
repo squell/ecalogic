@@ -1,7 +1,9 @@
 (*
    time usage: 23, energy usage: 23
- 
+
  *)
+
+import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
 
 { expect: (Map(Stub -> 1173, BUG -> 0, radio -> 2346, sensor -> 3519, CPU -> 1150),1173) }
 function program(X)

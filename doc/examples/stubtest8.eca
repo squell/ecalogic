@@ -1,3 +1,5 @@
+import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
+
 { expect: (Map(Stub -> 10235, BUG -> 0, radio -> 10270, sensor -> 15405, CPU -> 5035),5135) }
 function waste(X)
   while X > 0 bound X do
