@@ -59,6 +59,7 @@ object CodeForm {
     def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, String], all) =>
         val code = params.getOrElse("code", "")
+        val CPUVal = params.getOrElse("CPU", "")
 
         val baos = new ByteArrayOutputStream()
         val pw = new PrintWriter(baos)
@@ -76,6 +77,8 @@ object CodeForm {
           if (errorHandler.errorOccurred) {
             return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(TextileParser.formatted(baos.toString))))
           }
+
+          config.Options.noCPU = CPUVal == "Free"
 
           val components = Set(StubComponent, BadComponent, Sensor, Radio, if (config.Options.noCPU) StubComponent else CPU)
 
