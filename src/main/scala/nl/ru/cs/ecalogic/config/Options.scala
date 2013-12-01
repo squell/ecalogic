@@ -45,6 +45,11 @@ object Options {
   /* Disable the simulated CPU; this switch should be deprecated in the future */
   var noCPU = false
 
+  /* The "main" function to analyze; should change to 'main' in the future */
+  var entryPoint = "program"
+
+  var terse = false
+
   /* NOTE: there may be some interplay between these options; also, some
      options may be unnecessary if you enable other options. */
 
@@ -105,10 +110,14 @@ object Options {
     args.foreach {
       case "-0" | "--noCPU"
         => noCPU = true
+      case "-t" | "--terse"
+        => terse = true
+      case "-e" | "--entry"
+        => argHandler += (s => entryPoint = s)
       case "-tr" | "--techReport"
         => techReport = true
       case "-P" | "--fixPatience"
-        => argHandler += (s => fixPatience = s.toInt)
+        => argHandler += (s => try fixPatience = s.toInt)
       case "-s0" | "--beforeSync"
         => beforeSync = true
       case "-s1" | "--afterSync"
@@ -121,7 +130,7 @@ object Options {
         => alwaysForwardTime = true
       case "-u" | "--update"
         => alwaysUpdate = true; alwaysForwardTime = true
-      case "-?" | "--help"
+      case "-h" | "-?" | "--help"
         => friendlyHelpMsg(); return Array.empty
       case s if s.startsWith("-")
         => throw new ECAException(s"unknown flag: $s")
@@ -135,7 +144,9 @@ object Options {
   }
 
   def friendlyHelpMsg() {
-    println("...")
+    println("""
+      ... blah
+""")
   }
 
   def main(args: Array[String]) =

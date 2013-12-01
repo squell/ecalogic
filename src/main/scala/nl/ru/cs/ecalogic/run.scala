@@ -35,46 +35,79 @@ package nl.ru.cs.ecalogic
 import parser.Parser
 import analysis.{SemanticAnalysis, EnergyAnalysis}
 import util.{ErrorHandler, DefaultErrorHandler}
+import config.Options
 
 import scala.io.Source
 
 import java.io.File
 import java.io.FileNotFoundException
+import java.lang.NumberFormatException
 
-// TODO: parametrize these
 import model._
+// deprecated
 import model.examples._
 import model.examples.DemoComponents._
 
 object run {
 
-  def main(args: Array[String]) {
-    val fileName = config.Options(args).headOption.getOrElse("program.eca")
-    try {
-      val file = new File(fileName)
-      val source = Source.fromFile(file).mkString
-      val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
-      val parser = new Parser(source, errorHandler)
-      val program = parser.program()
-      errorHandler.successOrElse("Parse errors encountered.")
+  var components: Set[ComponentModel] = Set(StubComponent, BadComponent, Sensor, Radio)
 
-      val checker = new SemanticAnalysis(program, errorHandler)
-      checker.functionCallHygiene()
-      checker.variableReferenceHygiene()
-      errorHandler.successOrElse("Semantic errors; please fix these.")
-
-      //val stub = ECMModel.fromFile("doc/examples/Stub.ecm")
-      //val components = Set[ComponentModel](stub)
-      val components = Set(StubComponent, BadComponent, Sensor, Radio, if(config.Options.noCPU) StubComponent else CPU)
-
-      val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
-      println(consumptionAnalyser().toString)
-
-      println("Success.")
-    } catch {
-      case _: ECAException          => Console.err.println("Aborted.")
-      case e: FileNotFoundException => Console.err.println(s"File not found: $fileName")
+  def report(fileName: String, state: GlobalState) {
+    state.mapValues(_.e) match {
+      case result if Options.terse =>
+        println(result)
+      case (states, t) =>
+        println(s"$fileName:")
+        println(f"Time:\t$t%s")
+        println(f"Energy:\t${states.values.reduce(_+_)}%s")
+        for((name, e) <- states) 
+          println(f"└ ${name}%13s\t$e%s")
     }
+  }
+    
+  def analyze(fileName: String) = {
+    val file = new File(fileName)
+    val source = Source.fromFile(file).mkString
+    val errorHandler = new DefaultErrorHandler(source = Some(source), file = Some(file))
+    val parser = new Parser(source, errorHandler)
+
+    val program = parser.program()
+    errorHandler.successOrElse("Parse errors encountered.")
+
+    val checker = new SemanticAnalysis(program, errorHandler)
+    checker.functionCallHygiene()
+    checker.variableReferenceHygiene()
+    errorHandler.successOrElse("Semantic errors; please fix these.")
+
+    val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
+    consumptionAnalyser(Options.entryPoint)
+  }
+
+  def main(args: Array[String]) = try {
+    var idle = true
+    val fileArgs = config.Options(args)
+    if(!Options.noCPU) 
+      components = components + CPU
+
+    fileArgs.foreach {
+        case fileName if fileName.endsWith(".ecm") =>
+          components = components + ECMModel.fromFile(fileName)
+        case fileName if fileName.endsWith(".eca") =>
+          val state = analyze(fileName)
+          report(fileName, state)
+          idle = false
+        case fileName =>
+          val msg = s"File not recognized: $fileName"
+          Console.err.println(msg)
+          throw new ECAException(msg)
+    } 
+    if(idle) 
+      Console.err.println("Nothing to do! Run with --help to see usage instructions.")
+  } catch {
+    case _: ECAException          => Console.err.println("Aborted.")
+    case e: NumberFormatException => Console.err.println(s"Numeric argument expected: ${e.getMessage}")
+    case e: FileNotFoundException => Console.err.println(s"${e.getMessage}")
   }
 
 }
+
