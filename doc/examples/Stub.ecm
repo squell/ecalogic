@@ -3,7 +3,7 @@ import class java.lang.Math as JMath
 
 // Defines a component with two variables in its state.
 component Stub(active: 0..100)
-    active := 1
+    active := 0
 
     component function zap uses 1 energy;
     component function idle uses 1 time;
@@ -21,7 +21,7 @@ component Stub(active: 0..100)
     end function
 
     component function lower
-        active := max(active + 1, 0)
+        active := max(active - 1, 0)
     end function
 
     function phi := active
