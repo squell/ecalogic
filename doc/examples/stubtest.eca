@@ -4,7 +4,7 @@ import component ecalogic.Stub
 // import component ecalogic.Radio
 // import component ecalogic.Sensor
 
-{ expect: (Map(Stub -> 0, BUG -> 0, radio -> 1096, sensor -> 1644, CPU -> 525),548) }
+{ expect: (Map(Stub -> 0, BUG -> 0, Radio -> 1096, Sensor -> 1644, CPU -> 525),548) }
 function program(X)
   Stub::idle();
   if 23 < 281723817 then

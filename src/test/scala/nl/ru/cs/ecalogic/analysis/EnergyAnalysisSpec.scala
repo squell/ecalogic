@@ -31,17 +31,18 @@
  */
 
 package nl.ru.cs.ecalogic
-package test
+package analysis
 
 import org.scalatest.{FlatSpec, Matchers}
 import java.io.File
 import scala.io.Source
-import nl.ru.cs.ecalogic.parser.{Parser, Lexer}
-import nl.ru.cs.ecalogic.parser.Lexer.Tokens
-import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
-import nl.ru.cs.ecalogic.model.examples.{BadComponent, StubComponent}
-import nl.ru.cs.ecalogic.model.examples.DemoComponents.{CPU, Radio, Sensor}
-import nl.ru.cs.ecalogic.util.DefaultErrorHandler
+import parser.{Parser, Lexer}
+import parser.Lexer.Tokens
+import model._
+import model.examples.BadComponent
+import model.examples.StubComponent
+import model.examples.DemoComponents._
+import util._
 
 /**
  * @Author: Dorus Peelen
@@ -50,47 +51,43 @@ class EnergyAnalysisSpec extends FlatSpec with Matchers {
 
   behavior of "The Energy Analysis"
 
-  // FIXME: please
-//  new File("doc/examples").listFiles().withFilter(_.getName.endsWith(".eca")).foreach { file =>
-//    //parse(f)
-//    val source = Source.fromFile(file).mkString
-//    val lexer = new Lexer(source)
-//
-//    var (token, _) = lexer.next()
-//    while (token != Tokens.EndOfFile) {
-//      token match {
-//        case Tokens.Comment(c) if c.startsWith("expect:") =>
-//          val comment = c.substring(8)
-//          val errorHandler = new DefaultErrorHandler(sourceText = Some(source), sourceURI = Some(file.toURI))
-//
-//          val parser = new Parser(source, errorHandler)
-//          val program = parser.program()
-//          errorHandler.successOrElse("Parse errors encountered.")
-//
-//          val checker = new SemanticAnalysis(program, errorHandler)
-//          checker.functionCallHygiene()
-//          checker.variableReferenceHygiene()
-//          errorHandler.successOrElse("Semantic errors; please fix these.")
-//
-//          val components = Set(StubComponent, BadComponent, Sensor, Radio, if(config.Options.noCPU) StubComponent else CPU)
-//
-//          val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler).apply().toString
-//
-//          if (consumptionAnalyser != comment) {
-//            println(comment)
-//            println(consumptionAnalyser)
-//          }
-//
-//          it should s"succeed for ${file.getName}" in {
-//            consumptionAnalyser should equal (comment)
-//          }
-//
-//        case _ =>
-//      }
-//      token = lexer.next()._1
-//    }
-//
-//
-//  }
+  new File("doc/examples").listFiles().withFilter(_.getName.endsWith(".eca")).foreach { file =>
+    //parse(f)
+    val source = Source.fromFile(file).mkString
+    val lexer = new Lexer(source)
+
+    var (token, _) = lexer.next()
+    while (token != Tokens.EndOfFile) {
+      token match {
+        case Tokens.Comment(c) if c.startsWith("expect:") =>
+          val comment = c.substring(8)
+          val errorHandler = new DefaultErrorHandler(sourceText = Some(source), sourceURI = Some(file.toURI))
+
+          val parser = new Parser(source, errorHandler)
+          val program = parser.program()
+
+          val dsl_components = Map("Stub"->StubComponent, "BUG"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, "CPU"->CPU)
+
+          it should s"succeed with Scala components for ${file.getName}" in {
+            val analyzer = new EnergyAnalysis(program, dsl_components, errorHandler)
+            val result = analyzer.analyse().mapValues(_.e)
+            result.toString should equal (comment)
+          }
+
+          it should s"succeed with imported components for ${file.getName}" in {
+            val imported_components = ComponentModel.fromImports(program.imports, errorHandler)
+            errorHandler.successOrElse("Error importing")
+            val analyzer = new EnergyAnalysis(program, dsl_components++imported_components, errorHandler)
+            val result = analyzer.analyse().mapValues(_.e)
+            result.toString should equal (comment)
+          }
+
+        case _ =>
+      }
+      token = lexer.next()._1
+    }
+
+
+  }
 
 }

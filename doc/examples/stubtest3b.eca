@@ -2,7 +2,7 @@
 // this might not be what you expect, so read on
 import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
 
-{ expect: (Map(Stub -> 37, BUG -> 0, radio -> 74, sensor -> 111, CPU -> 35),37) }
+{ expect: (Map(Stub -> 37, BUG -> 0, Radio -> 74, Sensor -> 111, CPU -> 35),37) }
 function program(X)
   Stub::idle();
   if 23 < 281723817 then

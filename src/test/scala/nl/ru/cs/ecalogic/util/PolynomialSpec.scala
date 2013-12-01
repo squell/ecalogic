@@ -30,9 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package nl.ru.cs.ecalogic
-package test
-
-import util.Polynomial
+package util
 
 import org.scalatest.{FlatSpec, Matchers}
 

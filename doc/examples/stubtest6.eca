@@ -24,7 +24,7 @@ Note:
 
 import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
 
-{ expect: (Map(Stub -> 11883, BUG -> 0, radio -> 3986, sensor -> 5979, CPU -> 1960),1993) }
+{ expect: (Map(Stub -> 11883, BUG -> 0, Radio -> 3986, Sensor -> 5979, CPU -> 1960),1993) }
 function program(X)
   Stub::on();
 

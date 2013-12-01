@@ -8,7 +8,7 @@
 
 *)
 
-{ expect: (Map(Stub -> 350716400, BUG -> 0, radio -> 77200, sensor -> 115800, CPU -> 38500),38600) }
+{ expect: (Map(Stub -> 350716400, BUG -> 0, Radio -> 77200, Sensor -> 115800, CPU -> 38500),38600) }
 function program ()
   while 1 < 0 bound 1000 do
     Stub::raise();

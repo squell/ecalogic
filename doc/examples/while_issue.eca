@@ -1,4 +1,4 @@
-{ expect: (Map(Stub -> 0, BUG -> 0, radio -> 700, sensor -> 1050, CPU -> 350),350) }
+{ expect: (Map(Stub -> 0, BUG -> 0, Radio -> 700, Sensor -> 1050, CPU -> 350),350) }
 function program()
 while 1 = 1 bound 10 do
   skip
