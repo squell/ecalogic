@@ -219,49 +219,30 @@ object EnergyAnalysis {
     * this is not intended to be user-friendly on purpose.
     */
 
-  def main(args: Array[String]) {
-    val fileName = Options(args).headOption.getOrElse("program.eca")
-    val defaultErrorHandler = new DefaultErrorHandler
-    try {
-      val file = new File(fileName)
-      val source = defaultErrorHandler.handle(Source.fromFile(file).mkString)
-      val errorHandler = new DefaultErrorHandler(sourceText = Some(source), sourceURI = Some(file.toURI))
+  def main(args: Array[String]){
+    import nl.ru.cs.ecalogic.config
+    import parser.Parser
+    import java.io.File
+    import scala.io.Source
 
-      val program = errorHandler.handleBlock("One or more errors occurred during parsing. Aborted.") {
-        val parser = new Parser(source, errorHandler)
-        parser.program()
-      }
+    val fileName = config.Options(args).headOption.getOrElse("program.eca")
 
-      errorHandler.handleBlock("One or more errors occurred during semantic analysis. Aborted.") {
-        val checker = new SemanticAnalysis(program, errorHandler)
-        checker.functionCallHygiene()
-        checker.variableReferenceHygiene()
-      }
+    val file = new File(fileName)
+    val source = Source.fromFile(file).mkString
+    val errorHandler = new DefaultErrorHandler()//source = Some(source), file = Some(file))
+    val program = new Parser(source, errorHandler).program()
+    errorHandler.successOrElse("Parse errors encountered.")
 
-      //val stub = ECMModel.fromFile("doc/examples/Stub.ecm")
-      //val components = Set[ComponentModel](stub)
-      //val components = Set(StubComponent, BadComponent, Sensor, Radio, if(config.Options.noCPU) StubComponent else CPU)
+    val checker = new SemanticAnalysis(program, errorHandler)
+    checker.functionCallHygiene()
+    checker.variableReferenceHygiene()
+    errorHandler.successOrElse("Semantic errors; please fix these.")
 
-      val components = errorHandler.handleBlock("One or more errors occurred while loading components. Aborted.") {
-        ComponentModel.fromImports(program.imports, errorHandler)
-      }
+    import model.examples._
+    import model.examples.DemoComponents._
+    val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, if(config.Options.noCPU) "Stub"->StubComponent else "CPU"->CPU)
 
-      val finalState = errorHandler.handleBlock("One or more errors occurred during energy analysis. Aborted.") {
-        val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
-        consumptionAnalyser.analyse()
-      }
-      println(finalState)
-
-      println(s"Analysis of '${file.getAbsolutePath}' was successful.")
-    } catch {
-      case _: ECAException          =>
-        sys.exit(1)
-      case e: Exception =>
-        Console.err.println("Oops. An exception seems to have escaped.")
-        e.printStackTrace()
-        sys.exit(2)
-    }
+    val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
+    println(consumptionAnalyser.analyse().toString)
   }
-
 }
-
