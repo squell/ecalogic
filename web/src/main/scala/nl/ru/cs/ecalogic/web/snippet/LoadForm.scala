@@ -62,7 +62,7 @@ object LoadForm {
             i
           } /* scala does not support i++, what?!? */ + "\">" + f.getName + "</option>\n")
       })
-      sb.append("</select>\n            <input type=\"submit\" value=\"Send\"/>")
+      sb.append("</select>\n            <input type=\"submit\" value=\"Load\"/>")
       scala.xml.Unparsed(sb.toString())
     })) &
       "#loadScript" #> Script(AnalyseServer.jsCmd)
