@@ -1,13 +1,13 @@
-(* tests if taking fixpoints works as advertised 
- 
+(* tests if taking fixpoints works as advertised
+
    Stub::raise increases the power level of the radio (max: 100)
-   Stub::lower decreases the power level of the radio 
+   Stub::lower decreases the power level of the radio
 
   so, fixpoint calculation means this program consumed no power.
 
 *)
 
-{ expect: (Map(Stub -> 1046599, BUG -> 0, Radio -> 7072, Sensor -> 10608, CPU -> 3535),3536) }
+{ expect: (Map(BUG -> 0, CPU -> 3535, Radio -> 7072, Sensor -> 10608, Stub -> 1046599),3536) }
 function program ()
   while 1 < 0 bound 1 do
     Stub::raise();

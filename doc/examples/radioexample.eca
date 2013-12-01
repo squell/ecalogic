@@ -59,7 +59,7 @@ import component ecalogic.Radio
 import component ecalogic.Sensor
 import component ecalogic.CPU
 
-{ expect: (Map(Stub -> 0, BUG -> 0, Radio -> 403380, Sensor -> 6430, CPU -> 550),2010) }
+{ expect: (Map(BUG -> 0, CPU -> 550, Radio -> 403380, Sensor -> 6430, Stub -> 0),2010) }
 function algorithm1(Xn,Xdiv10)
   Radio::on()
   while Xn > 0 bound Xn do

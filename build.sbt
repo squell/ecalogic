@@ -16,6 +16,8 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "2.0" % "test"
 
 unmanagedClasspath in Runtime += baseDirectory.value / "components"
 
+unmanagedClasspath in Test += baseDirectory.value / "components"
+
 scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
 
 mainClass in (Compile, packageBin) := Some(MainClass)

@@ -1,7 +1,7 @@
 // time usage: 0, energy usage: 23
 import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
 
-{ expect: (Map(Stub -> 23, BUG -> 0, Radio -> 1050, Sensor -> 1575, CPU -> 525),525) }
+{ expect: (Map(BUG -> 0, CPU -> 525, Radio -> 1050, Sensor -> 1575, Stub -> 23),525) }
 function program(X)
   Stub::zap();
   if 23 < 281723817 then
