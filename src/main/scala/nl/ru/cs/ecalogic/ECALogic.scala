@@ -44,15 +44,14 @@ import java.io.FileNotFoundException
 import java.lang.NumberFormatException
 
 import model._
-// deprecated
-import model.examples._
-import model.examples.DemoComponents._
 
-object ECALogic extends App {
+// do not "extend App"; or else the initializations won't take place
+
+object ECALogic {
+
+  var forceComponents = Map.empty[String,ComponentModel]
 
   val defaultErrorHandler = new DefaultErrorHandler
-
-  var components: Set[ComponentModel] = Set(StubComponent, BadComponent, Sensor, Radio)
 
   def report(fileName: String, state: GlobalState) {
     state.mapValues(_.e) match {
@@ -89,20 +88,20 @@ object ECALogic extends App {
     }
 
     errorHandler.handleBlock("One or more errors occurred during energy analysis.") {
-      val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
+      val consumptionAnalyser = new EnergyAnalysis(program, components++forceComponents, errorHandler)
       consumptionAnalyser.analyse(Options.entryPoint)
     }
   }
 
-  override def main(args: Array[String]) = try {
+  def main(args: Array[String]) = try {
     var idle = true
     val fileArgs = config.Options(args)
-    if(!Options.noCPU) 
-      components = components + CPU
 
     fileArgs.foreach {
         case fileName if fileName.endsWith(".ecm") =>
-          components = components + ECMModel.fromFile(fileName)
+          val name  = new File(fileName).getName
+          val model = ECMModel.fromFile(fileName)
+          forceComponents = forceComponents + (name.substring(0,name.length-4)->model)
         case fileName if fileName.endsWith(".eca") =>
           val state = analyse(fileName)
           report(fileName, state)
