@@ -73,8 +73,8 @@ eerste 3 weken:
 - polynomials                                DONE
 - fix while                                  DONE
 -*runtime variable analysis (annotations?)   TODO
-- interpreter/transduceerder                 TODO?
--*externe DSL implementeren,integreren       DONE?
+- interpreter/transduceerder                 PARTIAL
+-*externe DSL implementeren,integreren       DONE
 
 drie weken:
 - annotated program as output(?)
