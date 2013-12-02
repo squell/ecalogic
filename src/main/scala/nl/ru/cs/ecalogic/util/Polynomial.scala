@@ -35,6 +35,10 @@ package util
 
 /**
  * A simple class representing Polynomials
+ * TODO: add division by a constant/single variable
+ * TODO: solve max by just storing the alternatives?
+ *     pro: get tighter bounds
+ *     con: possible data blow-up in memory
  *
  * class invariant:
  * - all Seq's used in the keys of repr must be sorted
@@ -99,7 +103,8 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends Par
 
   override def toString = {
     def nondigit(c: Char) = !('0' to '9' contains c)
-    val str = (for((term, coef)<-repr.toSeq if coef != 0) yield coef+:term mkString "*") sortBy(-_.count(nondigit)) mkString " + "
+    def prepend(coef: BigInt, term: Seq[String]) = if(coef != 1) coef+:term else term
+    val str = (for((term, coef)<-repr.toSeq if coef != 0) yield prepend(coef,term) mkString "*") sortBy(-_.count(nondigit)) mkString " + "
     if(str.isEmpty) "0" else str
   }
 }
