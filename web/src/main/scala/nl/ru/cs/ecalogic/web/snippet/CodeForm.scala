@@ -80,14 +80,14 @@ object CodeForm {
 
           config.Options.noCPU = CPUVal == "Free"
 
-          val components = Set(StubComponent, BadComponent, Sensor, Radio, if (config.Options.noCPU) StubComponent else CPU)
+          val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, if(config.Options.noCPU) "Stub"->StubComponent else "CPU"->CPU)
 
           val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
 
           if (errorHandler.errorOccurred) {
             return SetHtml("result", scala.xml.Unparsed("Analyse error: <pre><code>%s</pre></code>".format(TextileParser.formatted(baos.toString))))
           }
-          SetHtml("result", scala.xml.Unparsed("The result is %s".format(TextileParser.formatted(consumptionAnalyser().toString))))
+          SetHtml("result", scala.xml.Unparsed("The result is %s".format(TextileParser.formatted(consumptionAnalyser.analyse().toString))))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
             return SetHtml("result", scala.xml.Unparsed("Fatal error: <pre><code>%s</pre></code>".format(TextileParser.formatted(baos.toString))))

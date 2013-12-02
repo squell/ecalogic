@@ -1,6 +1,6 @@
 seq(webSettings :_*)
 
-name := "ecalogic-web"
+name := "ecalogic-webapp"
 
 libraryDependencies ++= {
   val liftVersion = "2.6-M2"
@@ -17,4 +17,5 @@ libraryDependencies ++= {
   )
 }
 
-unmanagedResourceDirectories in Test <+= (baseDirectory) { _ / "src/main/webapp" }
+// Not needed until we start using test cases
+// unmanagedResourceDirectories in Test <+= (baseDirectory) { _ / "src/main/webapp" }
