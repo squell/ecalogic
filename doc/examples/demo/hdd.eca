@@ -79,32 +79,33 @@ Energy: 115*N
 └           hdd 115*N
 $ scala nl.ru.cs.ecalogic.ECALogic -e alwaysOn hdd.eca
 hdd.eca:
-Time:   1*N*T + 6*N + 100
-Energy: 1*N*T + 11*N + 105
+Time:   N*T + 6*N + 100
+Energy: N*T + 11*N + 105
 └           CPU 0
 └    controller 0
-└           hdd 1*N*T + 11*N + 105
+└           hdd N*T + 11*N + 105
 
 Less nice (since it appears to be outperformed):
 
 $ scala nl.ru.cs.ecalogic.ECALogic -e caching hdd.eca
-Time:   1*N*T + 5*B*N + 102*N
+hdd.eca:
+Time:   5*B*N + N*T + 102*N
 Energy: 10*B*N + 106*N
 └           CPU 0
-└    controller 1*N
+└    controller N
 └           hdd 10*B*N + 105*N
 
 $ scala nl.ru.cs.ecalogic.ECALogic -e caching2 hdd.eca
 hdd.eca:
-Time:   1*B*NB*T + 7*B*NB + 100*NB
+Time:   B*NB*T + 7*B*NB + 100*NB
 Energy: 11*B*NB + 105*NB
 └           CPU 0
-└    controller 1*B*NB
+└    controller B*NB
 └           hdd 10*B*NB + 105*NB
 
 And since B*NB = N, we get:
 
-Time:   1*N*T + 7*N + 100*NB
+Time:   N*T + 7*N + 100*NB
 Energy: 11*N + 105*NB
 
 *)
