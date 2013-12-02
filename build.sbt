@@ -1,29 +1,15 @@
-lazy val main = project in file(".")
-
-lazy val web = project dependsOn main
-
-val MainClass = "nl.ru.cs.ecalogic.ECALogic"
-
 name := "ecalogic"
 
-organization := "nl.ru.cs.ecalogic"
+organization in ThisBuild := "nl.ru.cs.ecalogic"
 
-version := "0.1-SNAPSHOT"
+version in ThisBuild := "0.1-SNAPSHOT"
 
-scalaVersion := "2.10.3"
+scalaVersion in ThisBuild := "2.10.3"
+
+scalacOptions in ThisBuild ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.0" % "test"
 
-unmanagedClasspath in Runtime += baseDirectory.value / "components"
+mainClass in (Compile, packageBin) := Some("nl.ru.cs.ecalogic.ECALogic")
 
-unmanagedClasspath in Test += baseDirectory.value / "components"
-
-scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
-
-mainClass in (Compile, packageBin) := Some(MainClass)
-
-proguardSettings
-
-ProguardKeys.options in Proguard ++= IO.readLines(baseDirectory.value / "project" / "proguard.cfg")
-
-ProguardKeys.inputs in Proguard := (ProguardKeys.inputs in Proguard).value filterNot { _.getName == "components" }
+distributionFiles += file("components/") -> "components"

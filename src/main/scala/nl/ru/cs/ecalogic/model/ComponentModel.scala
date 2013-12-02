@@ -37,6 +37,8 @@ import nl.ru.cs.ecalogic.util.{DefaultErrorHandler, ErrorHandler, Polynomial}
 import config.Options.{Model => config}
 import scala.util.{Success, Failure, Try}
 import nl.ru.cs.ecalogic.ast.Import
+import java.net.{URL, URLClassLoader}
+import java.io.File
 
 /**
  * @author Marc Schoolderman
@@ -171,15 +173,20 @@ trait ComponentModel { model =>
 
 object ComponentModel {
 
+  //TODO: Make this configurable
+  private val ComponentPath = Seq(new File("components"), new File(new File(System.getProperty("user.home"), "ecalogic"), "components"))
+
+  private lazy val ComponentLoader = new URLClassLoader(ComponentPath.map(_.getAbsoluteFile.toURI.toURL).toArray, getClass.getClassLoader)
+
   def fromImport(imprt: Import, errorHandler: ErrorHandler = new DefaultErrorHandler): ComponentModel = {
     val name = imprt.qualifiedName
-    val ecmURL = Option(getClass.getResource(s"/${name.replace('.', '/')}.ecm"))
+    val ecmURL = Option(ComponentLoader.getResource(s"${name.replace('.', '/')}.ecm"))
 
     errorHandler.report {
       ecmURL.map(url => ECMModel.fromURL(url)) getOrElse {
-        Try(Class.forName(name + "$")).map(clazz => clazz.getField("MODULE$").get(null).asInstanceOf[ComponentModel])   orElse
-        Try(Class.forName(name)).map(clazz => clazz.getMethod("getInstance").invoke(null).asInstanceOf[ComponentModel]) orElse
-        Try(Class.forName(name)).map(clazz => clazz.getField("INSTANCE").get(null).asInstanceOf[ComponentModel])        match {
+        Try(Class.forName(name + "$", true, ComponentLoader)).map(clazz => clazz.getField("MODULE$").get(null).asInstanceOf[ComponentModel])         orElse
+        Try(Class.forName(name      , true, ComponentLoader)).map(clazz => clazz.getMethod("getInstance").invoke(null).asInstanceOf[ComponentModel]) orElse
+        Try(Class.forName(name      , true, ComponentLoader)).map(clazz => clazz.getField("INSTANCE").get(null).asInstanceOf[ComponentModel])        match {
           case Success(c) => c
           case Failure(e) => errorHandler.error(new ECAException(s"Unable to load component '$name': $e", Some(imprt.position), Some(e))); null
         }
