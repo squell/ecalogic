@@ -1,0 +1,28 @@
+import component controller
+import component hdd
+
+function get_data(T)
+  while controller::peek() = 0 bound T do 
+    skip 
+  end while
+  get_data := controller::read()
+end function
+
+function alwaysOn(N, T)
+  hdd::on()
+  while controller::engaged() > 0 bound N do
+    X := get_data(T)
+    hdd::write(X)
+  end while
+  hdd::off()
+end function
+
+function onDemand(N, T)
+  while controller::engaged() > 0 bound N do
+    X := get_data(T)
+    hdd::on()
+    hdd::write(X)
+    hdd::off()
+  end while
+end function
+
