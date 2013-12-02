@@ -8,5 +8,7 @@ component controller
 
     component function queue uses 1 energy 1 time;
 
+    component function pop uses 1 energy 1 time;
+
 end component
 
