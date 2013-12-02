@@ -173,9 +173,9 @@ trait ComponentModel { model =>
 object ComponentModel {
 
   //TODO: Make this configurable
-  private val ComponentPath = Seq(new File("components"), new File(new File(System.getProperty("user.home"), "ecalogic"), "components"))
+  val ComponentPath = Seq(new File("components"), new File(new File(System.getProperty("user.home"), ".ecalogic"), "components"))
 
-  private lazy val ComponentLoader = new URLClassLoader(ComponentPath.map(_.getAbsoluteFile.toURI.toURL).toArray, getClass.getClassLoader)
+  lazy val ComponentLoader = new URLClassLoader(ComponentPath.map(_.getAbsoluteFile.toURI.toURL).toArray, getClass.getClassLoader)
 
   def fromImport(imprt: Import, errorHandler: ErrorHandler = new DefaultErrorHandler): ComponentModel = {
     val name = imprt.qualifiedName
