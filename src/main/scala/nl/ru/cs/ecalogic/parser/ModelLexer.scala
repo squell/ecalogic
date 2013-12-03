@@ -35,21 +35,15 @@ package nl.ru.cs.ecalogic.parser
 class ModelLexer(_input: String) extends Lexer(_input) {
   import ModelLexer.Tokens._
 
-  private val _keywords: Map[String, Token] = Map (
-    "class"  -> Class,
-    "uses"   -> Uses,
-    "time"   -> Time,
-    "energy" -> Energy
-  )
-
-  private val _parseToken: PartialFunction[Char, (Token, Int)] = {
-    case ':' if !lookahead('=') && !lookahead(':') => (Colon       , 1)
-    case '.' if lookahead('.')                     => (PeriodPeriod, 2)
+  override protected def parseToken = {
+    val parseToken: PartialFunction[Char, (Token, Int)] = {
+      case ':' if !lookahead('=') && !lookahead(':') => (Colon       , 1)
+      case '.' if lookahead('.')                     => (PeriodPeriod, 2)
+    }
+    parseToken orElse super.parseToken
   }
 
-  override protected def parseToken = _parseToken orElse super.parseToken
-
-  override protected def keywords =  _keywords orElse super.keywords
+  override protected def keywords =  super.keywords ++ Set(Class, Uses, Initial, Time, Energy)
 
 }
 
@@ -75,6 +69,8 @@ object ModelLexer {
     case object Uses         extends Keyword("uses")
     case object Time         extends Keyword("time")
     case object Energy       extends Keyword("energy")
+
+    case object Initial      extends Keyword("initial")
 
     case object Colon        extends FixedToken(":")
     case object PeriodPeriod extends FixedToken("..")

@@ -34,7 +34,7 @@ package nl.ru.cs.ecalogic
 package parser
 
 import ast._
-import util.{Position, DefaultErrorHandler, ErrorHandler}
+import util.{DefaultErrorHandler, ErrorHandler}
 import Lexer.Tokens
 
 import scala.annotation.tailrec
@@ -151,7 +151,12 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     val namePath = namePathBuilder.result()
     val alias = if (current(Tokens.As)) {
       advance()
-      identifier(follows | Tokens.Identifier)
+      val pos = position
+      val alias = identifier(follows | Tokens.Identifier)
+      if (alias == namePath.last) {
+        errorHandler.warning(new ECAException(s"Unnecessary alias: '$alias'.", pos))
+      }
+      alias
     } else {
       namePath.last
     }
@@ -195,23 +200,26 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     params.result()
   }
 
-  def funBody(funName: String)(follows: Pattern): Statement = tryParse[Statement](First.funBody)(follows) {
-    case Tokens.Semicolon =>
-      // Don't remove it
-      Skip()
-    case Tokens.Assign =>
-      advance()
-      val expr = expression(follows)
+  def funBody(funName: String)(follows: Pattern): Statement = nodeWithPosition {
+    // No need for tryParse, because any input is correct at this point
+    current match {
+      case Tokens.Assign =>
+        advance()
+        val expr = expression(follows)
 
-      Assignment(funName, expr)
-    case t if First.statement.matches(t) =>
-      val stmt = composition(follows | Tokens.End)
+        Assignment(funName, expr)
+      case t if First.statement.matches(t) =>
+        val stmt = composition(follows | Tokens.End)
 
-      expect(Tokens.End)(follows | Tokens.Function)
-      expect(Tokens.Function)(follows)
+        expect(Tokens.End)(follows | Tokens.Function)
+        expect(Tokens.Function)(follows)
 
-      stmt
+        stmt
+      case _ =>
+        Skip()
+    }
   }
+
 
   /** Parses a list of one or more statements.
     *

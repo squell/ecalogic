@@ -100,8 +100,9 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
   }
 
   def member(follows: Pattern) = tryParse[ASTNode](First.member)(follows) {
-    case Tokens.Identifier(name) =>
+    case Tokens.Initial =>
       advance()
+      val name = identifier(follows | Tokens.Assign)
       expect(Tokens.Assign)(follows | Tokens.Numeral)
       val value = literal(follows)
 
@@ -160,7 +161,7 @@ object ModelParser {
   object First {
 
     val member =
-      Tokens.Identifier % "<initial value definition>"      |
+      Tokens.Initial    % "<initial value definition>"      |
       Tokens.Component  % "<component function definition>" |
       Tokens.Function   % "<local function definition>"
 

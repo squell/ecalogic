@@ -1,14 +1,14 @@
 component controller
 
-    component function engaged;
+    component function engaged
 
-    component function peek uses 1 time;
+    component function peek uses 1 time
 
-    component function read uses 1 time;
+    component function read uses 1 time
 
-    component function queue uses 1 energy 1 time;
+    component function queue uses 1 energy 1 time
 
-    component function pop uses 1 energy 1 time;
+    component function pop uses 1 energy 1 time
 
 end component
 

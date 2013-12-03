@@ -47,24 +47,9 @@ class Lexer(protected var input: String) extends BaseLexer {
   import Lexer._
   import Tokens._
 
-  private val _keywords = Map (
-    "import"    -> Import,
-    "component" -> Component,
-    "as"        -> As,
-    "function"  -> Function,
-    "end"       -> End,
-    "if"        -> If,
-    "then"      -> Then,
-    "else"      -> Else,
-    "while"     -> While,
-    "bound"     -> Bound,
-    "do"        -> Do,
-    "skip"      -> Skip,
-    "and"       -> And,
-    "or"        -> Or
-  )
+  private lazy val parseKeyword = keywords.map(k => k.keyword -> k).toMap
 
-  private val _parseToken: PartialFunction[Char, (Token, Int)] = {
+  protected def parseToken = {
     case '/' if lookahead('/') =>
       val end = input.indexOf('\n', 2)
       val value = if (end >= 0) input.substring(2, end) else input.substring(2)
@@ -109,7 +94,7 @@ class Lexer(protected var input: String) extends BaseLexer {
 
     case h if isIdHead(h)      =>
       val value = input.takeWhile(isIdTail)
-      val token = keywords.applyOrElse(value, Identifier.apply)
+      val token = parseKeyword.applyOrElse(value, Identifier.apply)
       (token, value.length)
 
     case w if isWhitespace(w)  =>
@@ -117,9 +102,7 @@ class Lexer(protected var input: String) extends BaseLexer {
       (Whitespace(value), value.length)
   }
 
-  protected def parseToken: PartialFunction[Char, (Token, Int)] = _parseToken
-
-  protected def keywords: PartialFunction[String, Token] = _keywords
+  protected def keywords = Set[Keyword](Import, Component, As, Function, End, If, Then, Else, While, Bound, Do, Skip, And, Or)
 
 }
 
@@ -175,8 +158,8 @@ object Lexer {
     case object GE                       extends FixedToken(">=")
     case object NE                       extends FixedToken("<>")
 
-    case object And                      extends FixedToken("and")
-    case object Or                       extends FixedToken("or")
+    case object And                      extends Keyword("and")
+    case object Or                       extends Keyword("or")
 
     case object LParen                   extends FixedToken("(")
     case object RParen                   extends FixedToken(")")
