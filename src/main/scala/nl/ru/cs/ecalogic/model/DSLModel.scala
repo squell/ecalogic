@@ -123,6 +123,10 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
 
   override def phi(s: CState) = phiFunction(s)
 
+  override def functionArity(f: String) = if ((rvFunctions.keySet union deltaFunctions.keySet).contains(f)) Some(-1) else None
+
+  override def hasFunctionInfo = true
+
   protected object define {
 
     private[define] abstract class Declaration[T] extends Dynamic {

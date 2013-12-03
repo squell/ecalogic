@@ -233,14 +233,14 @@ object EnergyAnalysis {
     val program = new Parser(source, errorHandler).program()
     errorHandler.successOrElse("Parse errors encountered.")
 
-    val checker = new SemanticAnalysis(program, errorHandler)
-    checker.functionCallHygiene()
-    checker.variableReferenceHygiene()
-    errorHandler.successOrElse("Semantic errors; please fix these.")
-
     import model.examples._
     import model.examples.DemoComponents._
     val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, if(config.Options.noCPU) "Stub"->StubComponent else "CPU"->CPU)
+
+    val checker = new SemanticAnalysis(program, components, errorHandler)
+    checker.functionCallHygiene()
+    checker.variableReferenceHygiene()
+    errorHandler.successOrElse("Semantic errors; please fix these.")
 
     val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
     println(consumptionAnalyser.analyse().toString)

@@ -215,6 +215,10 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
     evalFunction(f, Seq.empty, s.elements, newStackTraceBuilder(new FunName("phi", Some("<internal>"))), None)._2
   }.getOrElse(super.phi(s))
 
+  override def functionArity(f: String) = node.componentFunctions.get(f).map(_.arity)
+
+  override def hasFunctionInfo = true
+
 }
 
 object ECMModel {

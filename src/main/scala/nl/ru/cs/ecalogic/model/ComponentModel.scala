@@ -168,6 +168,13 @@ trait ComponentModel { model =>
 
   def eval(f: String)(s: CState, a: Seq[ECAValue]): (CState, ECAValue) = (delta(f)(s), rv(f)(s, a))
 
+  // None: this function does not exist
+  // Some(x) where x >= 0: function exists and has arity x
+  // Some(x) where < 0: function exists but arity is unknown (varargs?)
+  def functionArity(f: String): Option[Int] = None
+
+  def hasFunctionInfo = false
+
 }
 
 object ComponentModel {

@@ -76,18 +76,18 @@ object ECALogic {
       parser.program()
     }
 
+    val components = errorHandler.reportAll("One or more errors occurred while loading components.") {
+      ComponentModel.fromImports(program.imports, errorHandler)
+    } ++ forceComponents
+
     errorHandler.reportAll("One or more errors occurred during semantic analysis.") {
-      val checker = new SemanticAnalysis(program, errorHandler)
+      val checker = new SemanticAnalysis(program, components, errorHandler)
       checker.functionCallHygiene()
       checker.variableReferenceHygiene()
     }
 
-    val components = errorHandler.reportAll("One or more errors occurred while loading components.") {
-      ComponentModel.fromImports(program.imports, errorHandler)
-    }
-
     errorHandler.reportAll("One or more errors occurred during energy analysis.") {
-      val consumptionAnalyser = new EnergyAnalysis(program, components++forceComponents, errorHandler)
+      val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
       consumptionAnalyser.analyse(Options.entryPoint)
     }
   }

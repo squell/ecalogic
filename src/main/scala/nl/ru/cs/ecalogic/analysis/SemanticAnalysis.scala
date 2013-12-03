@@ -34,10 +34,10 @@ package nl.ru.cs.ecalogic
 package analysis
 
 import ast._
+import model.ComponentModel
 import parser.Parser
 import util.{ErrorHandler, DefaultErrorHandler}
 
-import scala.collection.mutable
 import scala.io.Source
 
 import java.io.File
@@ -45,7 +45,7 @@ import java.io.File
 /**
  * @author Marc Schoolderman
  */
-class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHandler()) {
+class SemanticAnalysis(program: Program, components: Map[String, ComponentModel], eh: ErrorHandler = new DefaultErrorHandler()) {
 
   /** Sanity checks function calls in ECA programs; specifically:
     * Number of argument should match number of parameters, no recursion
@@ -70,14 +70,19 @@ class SemanticAnalysis(program: Program, eh: ErrorHandler = new DefaultErrorHand
       case While(pred, _, consq)        => funCalls(pred) ++ funCalls(consq)
       case Composition(stms)            => stms.flatMap(funCalls).toSet
       case Assignment(_, expr)          => funCalls(expr)
-      case FunCall(fun, args)
-        if !fun.isPrefixed              => defs.get(fun.name).map(_.arity) match {
-                                             case None                  => eh.error(new ECAException(s"Undefined function: '${fun.name}'.", node.position))
-                                             case Some(x) if x != args.length
-                                                                        => eh.error(new ECAException(s"Incorrect number of arguments for '${fun.name}'.", node.position))
-                                             case _                     =>
-                                           }
-                                           args.flatMap(funCalls).toSet + fun.name
+      case FunCall(fun, args)           =>
+        if (!fun.prefix.flatMap(components.get(_).map(_.hasFunctionInfo)).getOrElse(true)) {
+          eh.warning(new ECAException(s"Unchecked function call because component '${fun.prefix.get}' has no function information.", node))
+        } else {
+          val arity = fun.prefix.map(components.get(_).flatMap(_.functionArity(fun.name))) getOrElse defs.get(fun.name).map(_.arity)
+          arity match {
+           case None                  => eh.error(new ECAException(s"Undeclared function: '${fun.qualified}'.", node))
+           case Some(x) if x >= 0 && x != args.length
+                                      => eh.error(new ECAException(s"Incorrect number of arguments for '${fun.qualified}'. Expected: $x; found: ${args.length}.", node))
+           case _                     =>
+          }
+        }
+        args.flatMap(funCalls).toSet + fun.qualified
       case e: Expression                => e.operands.flatMap(funCalls).toSet
       case _                            => Set.empty
     }
@@ -171,7 +176,7 @@ object SemanticAnalysis {
     val errorHandler = new DefaultErrorHandler(sourceText = Some(source), sourceURI = Some(file.toURI))
     val parser = new Parser(source, errorHandler)
     val program = catching(classOf[ECAException]).opt(parser.program()).filterNot(_ => errorHandler.errorOccurred)
-    val checker = new SemanticAnalysis(program.getOrElse(sys.exit(1)), errorHandler)
+    val checker = new SemanticAnalysis(program.getOrElse(sys.exit(1)), Map.empty, errorHandler)
     checker.functionCallHygiene()
     checker.variableReferenceHygiene()
     println("Done")
