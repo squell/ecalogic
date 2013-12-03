@@ -76,6 +76,11 @@ object LoadForm {
         try {
           val file = new File("doc\\examples\\").listFiles()(load.toInt)
 
+          if (file.isDirectory) {
+            // TODO: ?Walk directory?
+            return SetHtml("result", scala.xml.Unparsed("Not a file."))
+          }
+
           val source = Source.fromFile(file).mkString
 
           SetHtml("code", Text(source))
