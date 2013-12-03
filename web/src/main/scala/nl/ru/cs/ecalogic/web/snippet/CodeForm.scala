@@ -71,7 +71,9 @@ object CodeForm {
             return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(TextileParser.formatted(errorStream.toString))))
           }
 
-          val checker = new SemanticAnalysis(program, errorHandler)
+          val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, if(config.Options.noCPU) "Stub"->StubComponent else "CPU"->CPU)
+
+          val checker = new SemanticAnalysis(program, components, errorHandler)
           checker.functionCallHygiene()
           checker.variableReferenceHygiene()
           if (errorHandler.errorOccurred) {
@@ -79,8 +81,6 @@ object CodeForm {
           }
 
           config.Options.noCPU = CPUVal == "Free"
-
-          val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, if(config.Options.noCPU) "Stub"->StubComponent else "CPU"->CPU)
 
           val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
 
