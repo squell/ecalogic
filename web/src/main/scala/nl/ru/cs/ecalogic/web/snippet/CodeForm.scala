@@ -61,21 +61,21 @@ object CodeForm {
         val code = params.getOrElse("code", "")
         val CPUVal = params.getOrElse("CPU", "")
 
-        val baos = new ByteArrayOutputStream()
-        val pw = new PrintWriter(baos)
+        val errorStream = new ByteArrayOutputStream()
+        val pw = new PrintWriter(errorStream)
         val errorHandler = new DefaultErrorHandler(sourceText = Some(code), writer = pw)
         try {
           val parser = new Parser(code, errorHandler)
           val program = parser.program()
           if (errorHandler.errorOccurred) {
-            return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(TextileParser.formatted(baos.toString))))
+            return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(TextileParser.formatted(errorStream.toString))))
           }
 
           val checker = new SemanticAnalysis(program, errorHandler)
           checker.functionCallHygiene()
           checker.variableReferenceHygiene()
           if (errorHandler.errorOccurred) {
-            return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(TextileParser.formatted(baos.toString))))
+            return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(TextileParser.formatted(errorStream.toString))))
           }
 
           config.Options.noCPU = CPUVal == "Free"
@@ -85,12 +85,12 @@ object CodeForm {
           val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
 
           if (errorHandler.errorOccurred) {
-            return SetHtml("result", scala.xml.Unparsed("Analyse error: <pre><code>%s</pre></code>".format(TextileParser.formatted(baos.toString))))
+            return SetHtml("result", scala.xml.Unparsed("Analyse error: <pre><code>%s</pre></code>".format(TextileParser.formatted(errorStream.toString))))
           }
           SetHtml("result", scala.xml.Unparsed("The result is %s".format(TextileParser.formatted(consumptionAnalyser.analyse().toString))))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
-            return SetHtml("result", scala.xml.Unparsed("Fatal error: <pre><code>%s</pre></code>".format(TextileParser.formatted(baos.toString))))
+            return SetHtml("result", scala.xml.Unparsed("Fatal error: <pre><code>%s</pre></code>".format(TextileParser.formatted(errorStream.toString))))
         }
     }
   }
