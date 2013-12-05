@@ -45,8 +45,6 @@ import java.lang.NumberFormatException
 
 import model._
 
-// do not "extend App"; or else the initializations won't take place
-
 object ECALogic {
 
   var forceComponents = Map.empty[String,ComponentModel]
@@ -62,7 +60,7 @@ object ECALogic {
         println(f"Time:\t$t%s")
         println(f"Energy:\t${states.values.reduce(_+_)}%s")
         for((name, e) <- states)
-          println(f"└ ${name}%13s\t$e%s")
+          println(f"└ $name%13s\t$e%s")
     }
   }
 
@@ -92,7 +90,7 @@ object ECALogic {
     }
   }
 
-  def main(args: Array[String]) = try {
+  def main_(args: Array[String]): Int = try {
     var idle = true
     val fileArgs = config.Options(args)
 
@@ -112,20 +110,26 @@ object ECALogic {
     }
     if(idle)
       Console.err.println("Nothing to do! Run with --help to see usage instructions.")
+
+    0
   } catch {
     case _: ECAException          =>
       Console.err.println("Aborted.")
-      sys.exit(1)
+      1
     case e: NumberFormatException =>
       Console.err.println(s"Numeric argument expected: ${e.getMessage}")
-      sys.exit(1)
+      1
     case e: FileNotFoundException =>
       Console.err.println(s"${e.getMessage}")
-      sys.exit(1)
+      1
     case e: Exception =>
       Console.err.println("Oops. An exception seems to have escaped.")
       e.printStackTrace()
-      sys.exit(2)
+      2
+  }
+
+  def main(args: Array[String]) {
+    sys.exit(main_(args))
   }
 
 }

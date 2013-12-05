@@ -32,51 +32,113 @@
 
 import sbt._
 import Keys._
-import com.typesafe.sbt.SbtProguard._
-import ProguardKeys._
 
 object ECALogicBuild extends Build {
 
-  lazy val distributionFiles = TaskKey[Seq[(File, String)]]("distribution-files", "Files and folder for distribution.")
-  lazy val distribute = TaskKey[File]("distribute", "Creates a distributable zip file.")
+  lazy val Distribute = config("distribute").hide
 
-  lazy val main = Project(id = "main", base = file("."), settings = buildProperties)
-  lazy val web = Project(id = "web", base = file("web"), dependencies = Seq(main))
+  lazy val launcher = taskKey[File]("Creates a launcher jar.")
 
-  override def settings = super.settings ++ Seq (
-    exportJars := true
+  lazy val main = project in file(".") settings (buildSettings: _*) settings (distributeSettings: _*) settings (
+    name                               := "ecalogic",
+    mainClass in (Compile, packageBin) := Some("nl.ru.cs.ecalogic.ECALogic"),
+    mainClass in Distribute            := Some("nl.ru.cs.ecalogic.util.SBTMain"),
+
+    includeFilter in (Distribute, unmanagedResources) := "README.md" || "LICENSE",
+
+    libraryDependencies                += "org.scalatest" %% "scalatest" % "2.0" % "test"
+  )
+  lazy val web = project in file("web") dependsOn main settings (buildSettings: _*)
+
+  lazy val buildSettings = Seq (
+    organization   := "nl.ru.cs.ecalogic",
+    version        := "0.1-SNAPSHOT",
+    scalaVersion   := "2.10.3",
+    exportJars     := true,
+    crossPaths     := false,
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
   )
 
-  val buildProperties = Project.defaultSettings ++ proguardSettings ++ Seq (
-    distributionFiles <<= (proguard in Proguard, name) map { (proguardOutput, name) =>
-      proguardOutput map {
-        case f if f.getName.startsWith(name) => f -> s"lib/$name.jar"
-        case f                               => f -> s"lib/${f.getName}"
-      }
+  lazy val distributeSettings = inConfig(Distribute)(Seq (
+    //target                       := target.value / "dist",
+    artifactPath                 := target.value / s"${name.value}-${version.value}.zip",
+    mainClass                   <<= mainClass in (Compile, packageBin),
+
+    resourceDirectory           <<= baseDirectory,
+    unmanagedResourceDirectories := Seq(resourceDirectory.value),
+    resourceDirectories         <<= unmanagedResourceDirectories,
+    unmanagedResources          <<= Defaults.collectFiles(unmanagedResourceDirectories, includeFilter in unmanagedResources, excludeFilter in unmanagedResources),
+    mappings                    <<= Defaults.resourceMappings,
+
+    includeFilter in unmanagedResources := NothingFilter,
+
+    dependencyClasspath         <<= externalDependencyClasspath,
+    externalDependencyClasspath <<= Classpaths.concat(unmanagedClasspath, managedClasspath),
+    managedClasspath             := Classpaths.managedJars(configuration.value, classpathTypes.value, update.value),
+    unmanagedClasspath          <<= Classpaths.unmanagedDependencies,
+
+    launcher                    <<= (dependencyClasspath, target, name, organization, version, mainClass, streams) map {
+      (classpath, target, name, organization, version, mainClass, s) =>
+        IO.withTemporaryDirectory { directory =>
+          val destJar = target / "sbt-launch.jar"
+          classpath.map(_.data).foreach {
+            case f if f.isDirectory => IO.copyDirectory(f, directory)
+            case f                  => IO.unzip(f, directory)
+          }
+          val bootFile = directory / "sbt" / "sbt.boot.properties"
+          IO.write(bootFile, launcherConfig(name, organization, version, mainClass))
+          s.log.info(s"Building launcher ${destJar.getAbsolutePath} ...")
+          IO.zip(collectFiles(s)(directory), destJar)
+          s.log.info("Done building launcher")
+          destJar
+        }
     },
-
-    distribute <<= (distributionFiles, target, name, version, streams) map {
-      (distributionFiles, target, name, version, s) =>
-
-      val zipFile = target / s"$name-$version.zip"
-      IO.delete(zipFile)
-
-      s.log.info(s"Building distribution ${zipFile.getAbsolutePath} ...")
-
-      def collectFiles(f: File, n: String): Iterable[(File, String)] = f match {
-        case f if f.isDirectory => f.listFiles.flatMap(f => collectFiles(f, s"$n/${f.getName}"))
-        case f                  => s.log.info(s"Added $n"); Seq(f -> n)
-      }
-
-      val files = distributionFiles.flatMap((collectFiles _).tupled)
-
-      IO.zip(files, zipFile)
-      s.log.info("Done building distribution")
-      zipFile
-    },
-
-    options in Proguard     <++= baseDirectory map (baseDirectory => IO.readLines(baseDirectory / "project" / "proguard.cfg")),
-    inputFilter in Proguard <<= (packageBin in Compile) map (artifact => file => if (file == artifact) None else Some("!META-INF/**,!*"))
+    Keys.`package`              <<= (mappings, launcher, artifactPath, streams) map {
+      (mappings, launcherJar, artifactPath, s) =>
+        IO.delete(artifactPath)
+        s.log.info(s"Building distribution zip ${artifactPath.getAbsolutePath} ...")
+        IO.zip(mappings ++ Seq(launcherJar -> "lib/sbt-launch.jar"), artifactPath)
+        s.log.info("Done building distribution zip")
+        artifactPath
+    }
+  )) ++ Seq (
+    ivyConfigurations    += Distribute,
+    resolvers            += sbtResolver.value,
+    libraryDependencies ++= Seq (
+      "org.scala-sbt" % "sbt-launch"         % sbtVersion.value % Distribute.name,
+      "org.scala-sbt" % "launcher-interface" % sbtVersion.value % "provided"
+    )
   )
+
+  private def collectFiles(s: TaskStreams)(f: File, n: Option[String] = None): Iterable[(File, String)] = f match {
+    case f if f.isDirectory => f.listFiles.flatMap(f => collectFiles(s)(f, Some(n.fold("")(_ + "/") + f.getName)))
+    case f                  => s.log.info(s"  Added ${n.getOrElse(f.getName)}"); Seq(f -> n.getOrElse(f.getName))
+  }
+
+  def launcherConfig(name: String, organization: String, version: String, mainClass: Option[String]) =
+    s"""[scala]
+       |  version: $${sbt.scala.version-auto}
+       |
+       |[app]
+       |  org: $organization
+       |  name: $name
+       |  version: $${ecalogic.version-read(ecalogic.version)[$version]}
+       |  class: $${ecalogic.main.class-${mainClass.mkString}}
+       |  cross-versioned: false
+       |
+       |[repositories]
+       |  local
+       |#  typesafe-ivy-releases: http://repo.typesafe.com/typesafe/ivy-releases/, [organization]/[module]/[revision]/[type]s/[artifact](-[classifier]).[ext], bootOnly
+       |  maven-central
+       |
+       |[boot]
+       |  directory: $${ecalogic.boot.directory-$${ecalogic.global.base-$${user.home}/.ecalogic}/boot/}
+       |
+       |#[ivy]
+       |#  ivy-home: $${sbt.ivy.home-$${user.home}/.ivy2/}
+       |#  checksums: $${sbt.checksums-sha1,md5}
+       |#  override-build-repos: $${sbt.override.build.repos-false}
+       |#  repository-config: $${sbt.repository.config-$${sbt.global.base-$${user.home}/.sbt}/repositories}
+       |""".stripMargin
 
 }
