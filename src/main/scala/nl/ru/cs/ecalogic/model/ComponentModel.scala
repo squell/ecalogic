@@ -180,7 +180,7 @@ trait ComponentModel { model =>
 object ComponentModel {
 
   //TODO: Make this configurable
-  val ComponentPath = Seq(new File("components"), new File(new File(System.getProperty("user.home"), ".ecalogic"), "components"))
+  lazy val ComponentPath = Seq(new File(new File(System.getProperty("ecalogic.home", ".")), "components"))
 
   lazy val ComponentLoader = new URLClassLoader(ComponentPath.map(_.getAbsoluteFile.toURI.toURL).toArray, getClass.getClassLoader)
 
@@ -194,7 +194,8 @@ object ComponentModel {
         Try(Class.forName(name      , true, ComponentLoader)).map(clazz => clazz.getMethod("getInstance").invoke(null).asInstanceOf[ComponentModel]) orElse
         Try(Class.forName(name      , true, ComponentLoader)).map(clazz => clazz.getField("INSTANCE").get(null).asInstanceOf[ComponentModel])        match {
           case Success(c) => c
-          case Failure(e) => errorHandler.error(new ECAException(s"Unable to load component '$name': $e", Some(imprt.position), Some(e))); null
+          case Failure(e: ClassNotFoundException) => errorHandler.error(new ECAException(s"Unable to find component '$name'.", Some(imprt.position), Some(e))); null
+          case Failure(e) => errorHandler.error(new ECAException(s"Error while loading component '$name': $e", Some(imprt.position), Some(e))); null
         }
       }
     }

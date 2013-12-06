@@ -31,46 +31,64 @@
  */
 
 import sbt._
-import Keys._
+import sbt.Keys._
+
+import com.earldouglas.xsbtwebplugin.WebPlugin
 
 object ECALogicBuild extends Build {
 
-  lazy val Distribute = config("distribute").hide
+  lazy val Launcher = config("launcher").hide
 
   lazy val launcher = taskKey[File]("Creates a launcher jar.")
 
-  lazy val main = project in file(".") settings (buildSettings: _*) settings (distributeSettings: _*) settings (
-    name                               := "ecalogic",
-    mainClass in (Compile, packageBin) := Some("nl.ru.cs.ecalogic.ECALogic"),
-    mainClass in Distribute            := Some("nl.ru.cs.ecalogic.util.SBTMain"),
-
-    includeFilter in (Distribute, unmanagedResources) := "README.md" || "LICENSE",
-
-    libraryDependencies                += "org.scalatest" %% "scalatest" % "2.0" % "test"
-  )
-  lazy val web = project in file("web") dependsOn main settings (buildSettings: _*)
-
-  lazy val buildSettings = Seq (
+  override lazy val settings = super.settings ++ Seq (
     organization   := "nl.ru.cs.ecalogic",
     version        := "0.1-SNAPSHOT",
     scalaVersion   := "2.10.3",
-    exportJars     := true,
     crossPaths     := false,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
   )
 
-  lazy val distributeSettings = inConfig(Distribute)(Seq (
-    //target                       := target.value / "dist",
-    artifactPath                 := target.value / s"${name.value}-${version.value}.zip",
+  lazy val main = project in file(".") aggregate LocalProject("web") settings (launcherSettings :_*) settings (
+    name                               := "ecalogic",
+    mainClass in (Compile, packageBin) := Some("nl.ru.cs.ecalogic.ECALogic"),
+    mainClass in Launcher              := Some("nl.ru.cs.ecalogic.util.SBTMain"),
+
+    mappings in Launcher              ++= Seq (
+      baseDirectory.value / "LICENSE"   -> "LICENSE",
+      baseDirectory.value / "README.md" -> "README.md"
+    ),
+
+    libraryDependencies                += "org.scalatest" %% "scalatest" % "2.0" % "test"
+  )
+
+  lazy val web = project dependsOn main settings (WebPlugin.webSettings: _*) settings (
+    name                 := "ecalogic-webapp",
+    libraryDependencies ++= {
+      val liftVersion = "2.5.1"
+      val lv = "2.5"
+      Seq (
+        "net.liftweb"             %% "lift-webkit"             % liftVersion,             // Required for Lift
+        "net.liftmodules"         %% s"lift-jquery-module_$lv" % "2.5",                   // Required for JQuery
+        "net.liftmodules"         %% s"textile_$lv"            % "1.3",                   // Required to parse text to HTML (why do we need this?)
+        "ch.qos.logback"          %  "logback-classic"         % "1.0.13",                // Required to log messages
+
+        "org.eclipse.jetty"       %  "jetty-webapp"            % "9.1.0.+" % "container", // Required for web-plugin
+        "org.eclipse.jetty"       %  "jetty-plus"              % "9.1.0.+" % "container"  // Required for web-plugin
+      )
+    }
+    // unmanagedResourceDirectories in Test <++= PluginKeys.webappResources in Compile
+  )
+
+  lazy val launcherSettings = inConfig(Launcher)(Seq (
+    artifactPath                 := target.value / s"${name.value}-launcher.zip",
     mainClass                   <<= mainClass in (Compile, packageBin),
 
-    resourceDirectory           <<= baseDirectory,
+    resourceDirectory           <<= (sourceDirectory in Compile) (_ / "launcher"),
     unmanagedResourceDirectories := Seq(resourceDirectory.value),
     resourceDirectories         <<= unmanagedResourceDirectories,
     unmanagedResources          <<= Defaults.collectFiles(unmanagedResourceDirectories, includeFilter in unmanagedResources, excludeFilter in unmanagedResources),
     mappings                    <<= Defaults.resourceMappings,
-
-    includeFilter in unmanagedResources := NothingFilter,
 
     dependencyClasspath         <<= externalDependencyClasspath,
     externalDependencyClasspath <<= Classpaths.concat(unmanagedClasspath, managedClasspath),
@@ -80,7 +98,7 @@ object ECALogicBuild extends Build {
     launcher                    <<= (dependencyClasspath, target, name, organization, version, mainClass, streams) map {
       (classpath, target, name, organization, version, mainClass, s) =>
         IO.withTemporaryDirectory { directory =>
-          val destJar = target / "sbt-launch.jar"
+          val destJar = target / "dist" / "sbt-launch.jar"
           classpath.map(_.data).foreach {
             case f if f.isDirectory => IO.copyDirectory(f, directory)
             case f                  => IO.unzip(f, directory)
@@ -102,11 +120,12 @@ object ECALogicBuild extends Build {
         artifactPath
     }
   )) ++ Seq (
-    ivyConfigurations    += Distribute,
+    ivyConfigurations    += Launcher,
     resolvers            += sbtResolver.value,
+
     libraryDependencies ++= Seq (
-      "org.scala-sbt" % "sbt-launch"         % sbtVersion.value % Distribute.name,
-      "org.scala-sbt" % "launcher-interface" % sbtVersion.value % "provided"
+      "org.scala-sbt" %  "launcher-interface" % sbtVersion.value % "provided",
+      "org.scala-sbt" % "sbt-launch"          % sbtVersion.value % Launcher.name
     )
   )
 
@@ -117,7 +136,7 @@ object ECALogicBuild extends Build {
 
   def launcherConfig(name: String, organization: String, version: String, mainClass: Option[String]) =
     s"""[scala]
-       |  version: $${sbt.scala.version-auto}
+       |  version: auto
        |
        |[app]
        |  org: $organization
@@ -128,17 +147,10 @@ object ECALogicBuild extends Build {
        |
        |[repositories]
        |  local
-       |#  typesafe-ivy-releases: http://repo.typesafe.com/typesafe/ivy-releases/, [organization]/[module]/[revision]/[type]s/[artifact](-[classifier]).[ext], bootOnly
-       |  maven-central
+       |#  maven-central
        |
        |[boot]
-       |  directory: $${ecalogic.boot.directory-$${ecalogic.global.base-$${user.home}/.ecalogic}/boot/}
-       |
-       |#[ivy]
-       |#  ivy-home: $${sbt.ivy.home-$${user.home}/.ivy2/}
-       |#  checksums: $${sbt.checksums-sha1,md5}
-       |#  override-build-repos: $${sbt.override.build.repos-false}
-       |#  repository-config: $${sbt.repository.config-$${sbt.global.base-$${user.home}/.sbt}/repositories}
+       |  directory: $${ecalogic.home-$${user.home}/.ecalogic}/boot/
        |""".stripMargin
 
 }

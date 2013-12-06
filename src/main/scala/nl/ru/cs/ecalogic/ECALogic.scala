@@ -65,7 +65,7 @@ object ECALogic {
   }
 
   def analyse(fileName: String) = {
-    val file = new File(fileName)
+    val file = new File(fileName).getAbsoluteFile
     val source = defaultErrorHandler.report(Source.fromFile(file).mkString)
     val errorHandler = new DefaultErrorHandler(sourceText = Some(source), sourceURI = Some(file.toURI))
 
@@ -96,8 +96,9 @@ object ECALogic {
 
     fileArgs.foreach {
         case fileName if fileName.endsWith(".ecm") =>
-          val name  = new File(fileName).getName
-          val model = ECMModel.fromFile(fileName)
+          val file  = new File(fileName).getAbsoluteFile
+          val name  = file.getName
+          val model = ECMModel.fromFile(file)
           forceComponents = forceComponents + (name.substring(0,name.length-4)->model)
         case fileName if fileName.endsWith(".eca") =>
           val state = analyse(fileName)
