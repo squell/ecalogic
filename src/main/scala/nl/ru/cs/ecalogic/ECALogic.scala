@@ -52,7 +52,7 @@ object ECALogic {
   val defaultErrorHandler = new DefaultErrorHandler
 
   def report(fileName: String, state: GlobalState) {
-    state.mapValues(_.e) match {
+    state.mapValues(_.energy) match {
       case result if Options.terse =>
         println(result)
       case (states, t) =>

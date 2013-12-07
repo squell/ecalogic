@@ -56,7 +56,7 @@ case class GlobalState(gamma: GlobalState.States, t: Polynomial) {
   def sync: GlobalState = mapValues(_.forward(t))
 
   /* Synchronize all components to the global timer; no time passes */
-  def timeshift: GlobalState = mapValues(st=>st.update(t, st.e))
+  def timeshift: GlobalState = mapValues(st=>st.update(t, st.energy))
 
   // Scala doesn't (and can't possibly?) know that the two EACStates are the same type.
   def max(other: GlobalState): GlobalState =

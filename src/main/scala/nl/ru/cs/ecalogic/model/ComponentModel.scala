@@ -88,34 +88,31 @@ trait ComponentModel { model =>
   }
 
   case class EACState(state: CState, timestamp: Polynomial, energy: Polynomial) {
-    def s = state
-    def t = timestamp
-    def e = energy
 
     def update(f: String, t1: Polynomial): (EACState, Polynomial) = {
-      val e1 = e + E(f)
+      val e1 = energy + E(f)
       val t2 = t1 + T(f)
-      val s1 = delta(f)(s)
-      phiCheck(s, s1)
+      val s1 = delta(f)(state)
+      phiCheck(state, s1)
 
-      if(s1 != s || config.alwaysUpdate) {
+      if(s1 != state || config.alwaysUpdate) {
         val upd = EACState(s1, t1, e1 + td(this,t1))
         if(config.alwaysForwardTime)
           // not only update, but set it to the most recent
-          (EACState(s1, t2, upd.e + td(upd, t2)), t2)
+          (EACState(s1, t2, upd.energy + td(upd, t2)), t2)
         else
           (upd, t2)
       } else
         // do not update the timestamp if the state did not change
-        (EACState(s, t, e1), t2)
+        (EACState(state, timestamp, e1), t2)
     }
 
     def forward(t1: Polynomial) =
-      EACState(s, t max t1, e + td(this,t1))
+      EACState(state, timestamp max t1, energy + td(this,t1))
 
-    def reset = EACState(s, 0, 0)
+    def reset = EACState(state, 0, 0)
 
-    def update(timestamp: Polynomial, energy: Polynomial) = EACState(s, timestamp, energy)
+    def update(timestamp: Polynomial, energy: Polynomial) = EACState(state, timestamp, energy)
 
     // why not define the lub here in the first place?
     def lub(that: ComponentModel#EACState) =
@@ -155,10 +152,10 @@ trait ComponentModel { model =>
   }
 
   // note: the check is not really necessary, since the GlobalState will
-  // ensure td() will never be called with timestampts in the past.
+  // ensure td() will never be called with timestamps in the past.
   // but, it is better to be paranoid than wrong.
   def td(g: EACState, t: Polynomial): Polynomial =
-    if (t >= g.t) (t - g.t) * phi(g.s) else throw new ECAException("$name::td attempt to rewind component")
+    if (t >= g.timestamp) (t - g.timestamp) * phi(g.state) else throw new ECAException("$name::td attempt to rewind component")
 
   def delta(f: String)(s: CState) = s
 

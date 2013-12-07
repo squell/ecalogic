@@ -67,7 +67,7 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
     */
 
   def computeEnergyBound(out: GlobalState, in: GlobalState, rf: Polynomial): GlobalState = (
-    out.gamma.transform((comp,g) => g.update(g.t min in.t, in(comp).e + (out(comp).e-in(comp).e)*rf)),
+    out.gamma.transform((comp,g) => g.update(g.timestamp min in.t, in(comp).energy + (out(comp).energy - in(comp).energy) * rf)),
     in.t + (out.t-in.t)*rf
   )
 
@@ -81,7 +81,8 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
     */
 
   def computeEnergyBound_TR(out: GlobalState, in: GlobalState, pre: GlobalState, rf: Polynomial): GlobalState = (
-    out.gamma.transform((comp,g) => g.update(g.t min pre.t, (in(comp).e-pre(comp).e) + (out(comp).e-in(comp).e)*(rf-1) + pre(comp).e)),
+    out.gamma.transform((comp,g) => g.update(g.timestamp min pre.t, (in(comp).energy-pre(comp).energy) +
+      (out(comp).energy-in(comp).energy)*(rf-1) + pre(comp).energy)),
     pre.t + (in.t-pre.t)*rf
   )
 
@@ -122,7 +123,7 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
       } while(seen.add(cur))
 
       /** Return the lub using original time and energy info */
-      lub.transform((name,st)=>st.update(init(name).t, init(name).e))
+      lub.transform((name,st)=>st.update(init(name).timestamp, init(name).energy))
     }
 
     /** Convert an Expression to ECAValue, and complain if this is not possible */

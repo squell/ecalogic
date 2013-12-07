@@ -71,6 +71,7 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
       case Composition(stms)            => stms.flatMap(funCalls).toSet
       case Assignment(_, expr)          => funCalls(expr)
       case FunCall(fun, args)           =>
+        // FIXME: rewrite this, it doesn't really work
         if (!fun.prefix.flatMap(components.get(_).map(_.hasFunctionInfo)).getOrElse(true)) {
           eh.warning(new ECAException(s"Unchecked function call because component '${fun.prefix.get}' has no function information.", node))
         } else {
