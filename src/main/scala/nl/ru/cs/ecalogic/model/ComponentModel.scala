@@ -34,7 +34,7 @@ package nl.ru.cs.ecalogic
 package model
 
 import nl.ru.cs.ecalogic.util.{DefaultErrorHandler, ErrorHandler, Polynomial}
-import config.Options.{Model => config}
+import config.Options.{Model => Config}
 import scala.util.{Success, Failure, Try}
 import nl.ru.cs.ecalogic.ast.Import
 import java.net.{URL, URLClassLoader}
@@ -95,9 +95,9 @@ trait ComponentModel { model =>
       val s1 = delta(f)(state)
       phiCheck(state, s1)
 
-      if(s1 != state || config.alwaysUpdate) {
+      if(s1 != state || Config.alwaysUpdate) {
         val upd = EACState(s1, t1, e1 + td(this,t1))
-        if(config.alwaysForwardTime)
+        if(Config.alwaysForwardTime)
           // not only update, but set it to the most recent
           (EACState(s1, t2, upd.energy + td(upd, t2)), t2)
         else

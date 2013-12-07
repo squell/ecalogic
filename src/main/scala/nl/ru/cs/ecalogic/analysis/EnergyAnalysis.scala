@@ -37,7 +37,7 @@ import ast._
 import parser.Parser
 import util.{ErrorHandler, DefaultErrorHandler, Polynomial}
 import model._
-import config.Options
+import config.Options.{Analysis => Config}
 
 import scala.collection.mutable
 import scala.io.Source
@@ -54,7 +54,6 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
   import Transform._
   import EnergyAnalysis._
 
-  val config = Options.Analysis
 
   type Environment = Map[String, Expression]
 
@@ -114,7 +113,7 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
 
       /** Find the fixpoint */
       val seen  = mutable.Set(cur)
-      var limit = config.fixPatience
+      var limit = Config.fixPatience
       do {
         if({limit-=1; limit} <= 0)
           eh.fatalError(new ECAException("Model error: not all component delta functions have fixed points."))
@@ -147,34 +146,34 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
     def analyse(G: GlobalState, node: ASTNode)(implicit env: Environment): GlobalState = node match {
       case FunDef(name, parms, body)    => analyse(G,body)
       case Skip()                       => G
-      case If(pred, thenPart, elsePart) => val Gpre = if (config.beforeSync) G.sync else G
+      case If(pred, thenPart, elsePart) => val Gpre = if (Config.beforeSync) G.sync else G
                                            val G2 = analyse(Gpre,pred).update("CPU","ite")
                                            val G3 = analyse(G2,thenPart)
                                            val G4 = analyse(G2,elsePart)
-                                           if(config.afterSync)
+                                           if(Config.afterSync)
                                              (G3.sync max G4.sync).timeshift
                                            else
                                              G3 max G4
 
       case While(pred, Some(rf), consq)
-        if config.techReport            => val Gpre = if (config.beforeSync) G.sync else G
+        if Config.techReport            => val Gpre = if (Config.beforeSync) G.sync else G
                                            val G2 = analyse(Gpre,pred).update("CPU","w")
                                            val G3 = analyse(G2,consq)
                                            val G3fix = (fixPoint(G3.gamma, pred, consq), G3.t)
                                            val G4 = analyse(analyse(G3fix, pred).update("CPU","w"), consq)
                                          //val G4 = analyse(analyse(G3fix, pred), consq) // this is bug-compatible with the TR
                                            val iters = resolve(foldConstants(rf, env))
-                                           if(config.afterSync)
+                                           if(Config.afterSync)
                                              computeEnergyBound_TR(G4.sync, G3.sync, Gpre, iters).timeshift
                                            else
                                              computeEnergyBound_TR(G4, G3, Gpre, iters)
 
-      case While(pred, Some(rf), consq) => val Gpre = if (config.beforeSync) G.sync else G
+      case While(pred, Some(rf), consq) => val Gpre = if (Config.beforeSync) G.sync else G
                                            val Gfix = (fixPoint(Gpre.gamma, pred, consq), Gpre.t)
                                            val G2 = analyse(Gfix,pred).update("CPU","w")
                                            val G3 = analyse(G2,consq)
                                            val iters = resolve(foldConstants(rf, env))
-                                           if(config.afterSync)
+                                           if(Config.afterSync)
                                              computeEnergyBound(G3.sync, Gpre, iters).timeshift
                                            else
                                              computeEnergyBound(G3, Gpre, iters)
