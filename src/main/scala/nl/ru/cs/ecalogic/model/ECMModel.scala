@@ -35,7 +35,7 @@ package model
 
 import ast._
 import parser.ModelParser
-import nl.ru.cs.ecalogic.util._
+import util._
 
 import scala.collection.mutable
 import scala.io.Source

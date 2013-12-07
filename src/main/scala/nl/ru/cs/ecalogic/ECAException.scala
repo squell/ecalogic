@@ -64,6 +64,8 @@ with Ordered[ECAException] {
   /** @see [[nl.ru.cs.ecalogic.ECAException]] */
   def this(message: String, stackTrace: StackTrace) = this(message, stackTrace.headOption.flatMap(_._2), None, stackTrace)
 
+  def this(message: String, cause: Throwable, stackTrace: StackTrace) = this(message, stackTrace.headOption.flatMap(_._2), Some(cause), stackTrace)
+
   def compare(that: ECAException): Int = position.compare(that.position)
 
   def markReported = new ECAException(message, position, cause, stackTrace, true)

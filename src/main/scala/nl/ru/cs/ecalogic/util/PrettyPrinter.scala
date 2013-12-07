@@ -97,9 +97,9 @@ class PrettyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler
           print(" " + e.operatorName + " ")
           printPart(e.right, depth)
           // TODO Fix braces
-        case e: UnaryExpression =>
-          printPart(e.operand, depth)
-          e.operands.foreach(printPart(_, depth))
+//        case e: UnaryExpression =>
+//          printPart(e.operand, depth)
+//          e.operands.foreach(printPart(_, depth))
         case FunDef(name, params, body) =>
           print("function " + name)
           printParams(params)

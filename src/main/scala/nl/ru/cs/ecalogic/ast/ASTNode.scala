@@ -134,25 +134,28 @@ sealed trait BinaryExpression extends NAryExpression {
   def left: Expression
   def right: Expression
   def operands = Seq(left, right)
+  def operator: (ECAValue, ECAValue) => ECAValue
 }
 
-sealed trait UnaryExpression extends NAryExpression {
-  def arity = 1
-  def operand: Expression
-  def operands = Seq(operand)
-}
+//sealed trait UnaryExpression extends NAryExpression {
+//  def arity = 1
+//  def operand: Expression
+//  def operands = Seq(operand)
+//}
 
 
 sealed trait LogicalExpression extends NAryExpression
 
 case class Or(left: Expression, right: Expression) extends BinaryExpression with LogicalExpression {
   def operatorName = "or"
+  def operator = _ || _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class And(left: Expression, right: Expression) extends BinaryExpression with LogicalExpression {
   def operatorName = "and"
+  def operator = _ && _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
@@ -162,30 +165,35 @@ sealed trait ArithmeticExpression extends NAryExpression
 
 case class Add(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
   def operatorName = "+"
+  def operator = _ + _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class Subtract(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
   def operatorName = "-"
+  def operator = _ - _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class Multiply(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
   def operatorName = "*"
+  def operator = _ * _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class Divide(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
   def operatorName = "/"
+  def operator = _ / _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class Exponent(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
   def operatorName = "^"
+  def operator = _ ^ _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
@@ -195,36 +203,42 @@ sealed trait RelationalExpression extends BinaryExpression
 
 case class EQ(left: Expression, right: Expression) extends RelationalExpression {
   def operatorName = "="
+  def operator = _ == _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class NE(left: Expression, right: Expression) extends RelationalExpression {
   def operatorName = "<>"
+  def operator = _ != _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class LT(left: Expression, right: Expression) extends RelationalExpression {
   def operatorName = "<"
+  def operator = _ < _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class LE(left: Expression, right: Expression) extends RelationalExpression {
   def operatorName = "<="
+  def operator = _ <= _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class GT(left: Expression, right: Expression) extends RelationalExpression {
   def operatorName = ">"
+  def operator = _ > _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class GE(left: Expression, right: Expression) extends RelationalExpression {
   def operatorName = ">="
+  def operator = _ >= _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }

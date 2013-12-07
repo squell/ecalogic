@@ -78,16 +78,16 @@ trait BaseParser extends Positional {
     *
     * @return pattern describing ignored tokens
     */
-  protected def ignored: Pattern = Pattern.empty
+  protected val ignored: Pattern = Pattern.empty
 
   /** Returns the size of the look-ahead ''k''. */
-  protected def k: Int = 1
+  protected val k: Int = 1
 
   /** Returns the lexer used by this parser. */
-  protected def lexer: BaseLexer
+  protected val lexer: BaseLexer
 
   /** Returns the error handler used by this parser. */
-  protected def errorHandler: ErrorHandler
+  protected val errorHandler: ErrorHandler
 
   private def fill(buf: mutable.Queue[(Token, Position)]) {
     while (buf.size < k + 1) lexer.next() match {

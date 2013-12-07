@@ -68,13 +68,13 @@ object ECALogicBuild extends Build {
       val liftVersion = "2.5.1"
       val lv = "2.5"
       Seq (
-        "net.liftweb"             %% "lift-webkit"             % liftVersion,             // Required for Lift
-        "net.liftmodules"         %% s"lift-jquery-module_$lv" % "2.5",                   // Required for JQuery
-        "net.liftmodules"         %% s"textile_$lv"            % "1.3",                   // Required to parse text to HTML (why do we need this?)
-        "ch.qos.logback"          %  "logback-classic"         % "1.0.13",                // Required to log messages
+        "net.liftweb"       %% "lift-webkit"             % liftVersion,             // Required for Lift
+        "net.liftmodules"   %% s"lift-jquery-module_$lv" % "2.5",                   // Required for JQuery
+        "net.liftmodules"   %% s"textile_$lv"            % "1.3",                   // Required to parse text to HTML (why do we need this?)
+        "ch.qos.logback"    %  "logback-classic"         % "1.0.13",                // Required to log messages
 
-        "org.eclipse.jetty"       %  "jetty-webapp"            % "9.1.0.+" % "container", // Required for web-plugin
-        "org.eclipse.jetty"       %  "jetty-plus"              % "9.1.0.+" % "container"  // Required for web-plugin
+        "org.eclipse.jetty" %  "jetty-webapp"            % "9.1.0.+" % "container", // Required for web-plugin
+        "org.eclipse.jetty" %  "jetty-plus"              % "9.1.0.+" % "container"  // Required for web-plugin
       )
     }
     // unmanagedResourceDirectories in Test <++= PluginKeys.webappResources in Compile
@@ -111,6 +111,7 @@ object ECALogicBuild extends Build {
           destJar
         }
     },
+
     Keys.`package`              <<= (mappings, launcher, artifactPath, streams) map {
       (mappings, launcherJar, artifactPath, s) =>
         IO.delete(artifactPath)
