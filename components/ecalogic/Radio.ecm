@@ -8,8 +8,8 @@ component Radio(active: 0..1)
         active := 0
     end function
 
-    component function queue uses 30 time 30 energy
-    component function send uses 100 time 100 energy
+    component function queue uses 30 time 30 energy;
+    component function send uses 100 time 100 energy;
 
     function phi := 2 + 200 * active
 
