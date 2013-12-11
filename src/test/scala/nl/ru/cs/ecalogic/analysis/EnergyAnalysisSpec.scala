@@ -71,7 +71,7 @@ class EnergyAnalysisSpec extends FlatSpec with Matchers {
 
           it should s"succeed with Scala components for ${file.getName}" in {
             val analyzer = new EnergyAnalysis(program, dsl_components, errorHandler)
-            val result = analyzer.analyse().mapValues(_.e)
+            val result = analyzer.analyse().mapValues(_.energy)
             val resultString = (SortedMap.empty[String, Polynomial] ++ result._1, result._2).toString
             resultString should equal (comment)
           }
@@ -80,7 +80,7 @@ class EnergyAnalysisSpec extends FlatSpec with Matchers {
             val imported_components = ComponentModel.fromImports(program.imports, errorHandler)
             errorHandler.successOrElse("Error importing")
             val analyzer = new EnergyAnalysis(program, dsl_components++imported_components, errorHandler)
-            val result = analyzer.analyse().mapValues(_.e)
+            val result = analyzer.analyse().mapValues(_.energy)
             val resultString = (SortedMap.empty[String, Polynomial] ++ result._1, result._2).toString
             resultString should equal (comment)
           }
