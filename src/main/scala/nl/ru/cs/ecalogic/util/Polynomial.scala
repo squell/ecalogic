@@ -103,7 +103,7 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends Par
 
   override def toString = {
     def nondigit(c: Char) = !('0' to '9' contains c)
-    def prepend(coef: BigInt, term: Seq[String]) = if(coef != 1) coef+:term else term
+    def prepend(coef: BigInt, term: Seq[String]) = if(coef != 1 || term.isEmpty) coef+:term else term
     val str = (for((term, coef)<-repr.toSeq if coef != 0) yield prepend(coef,term) mkString "*") sortBy(-_.count(nondigit)) mkString " + "
     if(str.isEmpty) "0" else str
   }

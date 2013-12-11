@@ -48,6 +48,13 @@ class PolynomialSpec extends FlatSpec with Matchers {
   lazy val C = A*B
   val D    = 77*y + 7*z
 
+  it should "print properly" in {
+    zero.toString should equal ("0")
+    one.toString should equal ("1")
+    x.toString should equal ("x")
+    A.toString should equal ("5*x + 42*y")
+  }
+
   it should "have equality" in {
     A should equal(A)
     A should not equal(B)
