@@ -51,13 +51,13 @@ import java.io.PrintWriter
 object CodeForm {
 
   def render =
-    "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, ns)) &
+    "#codeForm1" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, ns)) &
       "#codeScript" #> Script(AnalyseServer.jsCmd)
 
   object AnalyseServer extends JsonHandler {
     def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, String], all) =>
-        val code = params.getOrElse("code", "")
+        val code = params.getOrElse("code1", "")
         val CPUVal = params.getOrElse("CPU", "")
 
         val errorStream = new ByteArrayOutputStream()

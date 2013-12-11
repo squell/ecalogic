@@ -81,7 +81,7 @@ object LoadForm {
 
           val source = Source.fromFile(file).mkString
 
-          SetHtml("code", Text(source))
+          SetHtml("code1", Text(source))
         } catch {
           case e @ (_ : NumberFormatException | _ : FileNotFoundException | _ : ArrayIndexOutOfBoundsException) =>
             return SetHtml("result", scala.xml.Unparsed("%s: %s".format(xml.Utility.escape(e.toString))))
