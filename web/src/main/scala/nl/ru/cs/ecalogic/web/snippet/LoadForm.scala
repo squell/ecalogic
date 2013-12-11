@@ -38,14 +38,12 @@ import scala.io.Source
 import _root_.net.liftweb.http._
 import js._
 import JsCmds._
-import JE._
 import _root_.net.liftweb.util._
 import Helpers._
 import _root_.scala.xml._
 import net.liftweb.http.SHtml._
 import net.liftweb.util.JsonCmd
 import net.liftweb.http.js.JsCmds.SetHtml
-import net.liftmodules.textile.TextileParser
 import java.lang.NumberFormatException
 
 object LoadForm {
@@ -86,7 +84,7 @@ object LoadForm {
           SetHtml("code", Text(source))
         } catch {
           case e @ (_ : NumberFormatException | _ : FileNotFoundException | _ : ArrayIndexOutOfBoundsException) =>
-            return SetHtml("result", scala.xml.Unparsed("%s: %s".format(TextileParser.formatted(e.toString))))
+            return SetHtml("result", scala.xml.Unparsed("%s: %s".format(xml.Utility.escape(e.toString))))
         }
     }
 

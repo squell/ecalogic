@@ -70,7 +70,6 @@ object ECALogicBuild extends Build {
       Seq (
         "net.liftweb"       %% "lift-webkit"             % liftVersion,             // Required for Lift
         "net.liftmodules"   %% s"lift-jquery-module_$lv" % "2.5",                   // Required for JQuery
-        "net.liftmodules"   %% s"textile_$lv"            % "1.3",                   // Required to parse text to HTML (why do we need this?)
         "ch.qos.logback"    %  "logback-classic"         % "1.0.13",                // Required to log messages
 
         "org.eclipse.jetty" %  "jetty-webapp"            % "9.1.0.+" % "container", // Required for web-plugin
