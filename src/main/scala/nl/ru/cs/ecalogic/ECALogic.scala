@@ -115,7 +115,9 @@ object ECALogic {
       case bindSpec =>
         val (alias, trueClassName) = getAlias(bindSpec)
         if(alias.isEmpty)
+          // TODO: alias
           complain(s"Missing 'alias=' override for $bindSpec")
+        // TODO: pass the error handler
         val model = ComponentModel.fromImport(Import(trueClassName.split('.'), alias))
         forceComponents = forceComponents + (alias->model)
     }
