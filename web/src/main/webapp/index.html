@@ -5,7 +5,7 @@
 
     <div style="float: left;width: 700px;">
         <a href="#"
-           onclick="createNewTab('codeForm1','Component #','<div class=&quot;dhtmlgoodies_aTab&quot;><textarea name=&quot;newcode&quot; cols=&quot;80&quot; rows=&quot;35&quot; id=%amp;code3%amp;></textarea><br></div>','',true);return false">
+           onclick="createNewTab('codeForm1','Component ' + tabs,'<textarea name=&quot;newcode' + tabs + '&quot; cols=&quot;80&quot; rows=&quot;35&quot; id=&quot;newcode' + tabs +'&quot;></textarea><br>','',true);tabs=tabs+1;return false">
             More components</a><br>
 
         <div data-lift="CodeForm">
