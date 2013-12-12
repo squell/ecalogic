@@ -70,7 +70,7 @@ object CodeForm {
             return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
           }
 
-          val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, if(config.Options.noCPU) "Stub"->StubComponent else "CPU"->CPU)
+          val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio) ++ (if(CPUVal == "Free") Map.empty else Map("CPU"->CPU))
 
           val checker = new SemanticAnalysis(program, components, errorHandler)
           checker.functionCallHygiene()
@@ -78,8 +78,6 @@ object CodeForm {
           if (errorHandler.errorOccurred) {
             return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
           }
-
-          config.Options.noCPU = CPUVal == "Free"
 
           val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
 
