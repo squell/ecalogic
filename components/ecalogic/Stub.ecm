@@ -2,8 +2,8 @@ import class java.lang.Math
 
 component Stub(active: 0..100)
 
-    component function zap uses 1 energy;
-    component function idle uses 1 time;
+    component function zap uses 1 energy
+    component function idle uses 1 time
 
     component function on
         active := 1
