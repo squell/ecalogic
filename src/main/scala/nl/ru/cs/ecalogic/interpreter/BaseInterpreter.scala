@@ -96,6 +96,8 @@ trait BaseInterpreter {
       statements.foldLeft(state) {
         case (state, stmt) => evalStatement(stmt, state, stackTrace)
       }
+    case ErrorNode() =>
+      throw new Exception("This can never happen.")
   }
 
   protected def evalExprList(exprs: Seq[Expression], state: IState, stackTrace: StackTraceBuilder) =
