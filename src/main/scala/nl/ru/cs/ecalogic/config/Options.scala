@@ -43,6 +43,7 @@ TODO: adds some code that reads cmdline flags here.
 
 object Options {
   /* Disable the simulated CPU; this switch should be deprecated in the future */
+  @deprecated ("this variable is ignored by everybody in the world", "0.666xyzzy")
   var noCPU = false
 
   /* The "main" function to analyze; should change to 'main' in the future */
