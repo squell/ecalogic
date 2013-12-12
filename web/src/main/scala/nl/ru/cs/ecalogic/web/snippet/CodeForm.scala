@@ -51,7 +51,7 @@ import java.io.PrintWriter
 object CodeForm {
 
   def render =
-    "#codeForm1" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, ns)) &
+    "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, ns)) &
       "#codeScript" #> Script(AnalyseServer.jsCmd)
 
   object AnalyseServer extends JsonHandler {
