@@ -51,15 +51,13 @@ import java.io.PrintWriter
 object CodeForm {
 
   def render =
-    "#codeForm1" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, ns)) &
+    "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, ns)) &
       "#codeScript" #> Script(AnalyseServer.jsCmd)
 
   object AnalyseServer extends JsonHandler {
     def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, String], all) =>
         val code = params.getOrElse("code1", "")
-        val CPUVal = params.getOrElse("CPU", "")
-
         val errorStream = new ByteArrayOutputStream()
         val pw = new PrintWriter(errorStream)
         val errorHandler = new DefaultErrorHandler(sourceText = Some(code), writer = pw)
@@ -70,7 +68,13 @@ object CodeForm {
             return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
           }
 
-          val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, if(config.Options.noCPU) "Stub"->StubComponent else "CPU"->CPU)
+          val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio) ++ (if (params.getOrElse("CPU", "") == "True") Map.empty else Map("CPU"->CPU))
+
+
+          if(params.getOrElse("tech","") == "True") config.Options(Array("-tr"))
+          if(params.getOrElse("beforeSync","") == "True") config.Options(Array("-s"))
+          if(params.getOrElse("update","") == "True") config.Options(Array("-u"))
+
 
           val checker = new SemanticAnalysis(program, components, errorHandler)
           checker.functionCallHygiene()
@@ -78,8 +82,6 @@ object CodeForm {
           if (errorHandler.errorOccurred) {
             return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
           }
-
-          config.Options.noCPU = CPUVal == "Free"
 
           val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
 
