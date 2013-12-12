@@ -44,6 +44,7 @@ import java.io.FileNotFoundException
 import java.lang.NumberFormatException
 
 import model._
+import ast.Import
 
 object ECALogic {
 
@@ -90,24 +91,53 @@ object ECALogic {
     }
   }
 
+  /* if arg is of the form name=file.ext, return (name, file.ext);
+     otherwise return (file, file.ext)
+   */
+  def getAlias(arg: String): (String,String) = {
+    val splitPos = arg.indexOf('=')
+    if(splitPos >= 0) 
+      arg.substring(0, splitPos) -> arg.substring(splitPos+1)
+    else 
+      "" -> arg
+  }
+
+  def complain(msg: String) {
+    Console.err.println(msg)
+    throw new ECAException(msg)
+  }
+
   def main_(args: Array[String]): Int = try {
     var idle = true
     val fileArgs = config.Options(args)
 
+    config.Options.aliasOverrides.foreach {
+      case bindSpec =>
+        val (alias, trueClassName) = getAlias(bindSpec)
+        if(alias.isEmpty)
+          complain(s"Missing 'alias=' override for $bindSpec")
+        val model = ComponentModel.fromImport(Import(trueClassName.split('.'), alias))
+        forceComponents = forceComponents + (alias->model)
+    }
     fileArgs.foreach {
-        case fileName if fileName.endsWith(".ecm") =>
-          val file  = new File(fileName).getAbsoluteFile
-          val name  = file.getName
-          val model = ECMModel.fromFile(file)
-          forceComponents = forceComponents + (name.substring(0,name.length-4)->model)
-        case fileName if fileName.endsWith(".eca") =>
-          val state = analyse(fileName)
-          report(fileName, state)
-          idle = false
-        case fileName =>
-          val msg = s"File not recognized: $fileName"
-          Console.err.println(msg)
-          throw new ECAException(msg)
+      case fileName if fileName.endsWith(".ecm") =>
+        val (alias, trueFileName) = getAlias(fileName)
+        val file  = new File(trueFileName).getAbsoluteFile
+        val name  = if(alias.isEmpty) file.getName.substring(0,file.getName.length-4) else alias
+        val model = ECMModel.fromFile(file)
+        forceComponents = forceComponents + (name->model)
+      case _ =>
+        /* we will complain later :) */
+    }
+    fileArgs.foreach {
+      case fileName if fileName.endsWith(".eca") =>
+        val state = analyse(fileName)
+        report(fileName, state)
+        idle = false
+      case fileName if fileName.endsWith(".ecm") =>
+        /* already handled */
+      case fileName =>
+        complain(s"File not recognized: $fileName")
     }
     if(idle)
       Console.err.println("Nothing to do! Run with --help to see usage instructions.")

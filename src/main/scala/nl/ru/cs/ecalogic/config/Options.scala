@@ -48,7 +48,11 @@ object Options {
   /* The "main" function to analyze; should change to 'main' in the future */
   var entryPoint = "program"
 
+  /* Should the output of our program be to the point or nice to read? */
   var terse = false
+
+  /* Override re-aliassing giving on the commandline */
+  var aliasOverrides = Seq.empty[String]
 
   /* NOTE: there may be some interplay between these options; also, some
      options may be unnecessary if you enable other options. */
@@ -118,6 +122,8 @@ object Options {
         => techReport = true
       case "-P" | "--fixPatience"
         => argHandler += (s => try fixPatience = s.toInt)
+      case "-I" | "--import"
+        => argHandler += (s => aliasOverrides = s+:aliasOverrides)
       case "-s0" | "--beforeSync"
         => beforeSync = true
       case "-s1" | "--afterSync"
