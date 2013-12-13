@@ -6,6 +6,6 @@
 # JAVACMD        - Java command to use (optional)
 # JAVA_OPTS      - JVM options (optional)
 
-ECALOGIC_HOME="${0%/*}"
+ECALOGIC_HOME="${0%/*}/.."
 
 "${JAVACMD:-java}" $JAVA_OPTS -Decalogic.home="$ECALOGIC_HOME" -cp "$ECALOGIC_HOME/lib/sbt-launch.jar" xsbt.boot.Boot "$@"
