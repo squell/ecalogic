@@ -2,10 +2,10 @@
 // this might not be what you expect, so read on
 import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
 
-{ expect: (Map(BUG -> 0, CPU -> 35, Radio -> 74, Sensor -> 111, Stub -> 37),37) }
-{ expect: -tr (Map(BUG -> 0, CPU -> 35, Radio -> 74, Sensor -> 111, Stub -> 37),37) }
-{ expect: -s (Map(BUG -> 0, CPU -> 35, Radio -> 74, Sensor -> 111, Stub -> 1),37) }
-{ expect: -u (Map(BUG -> 0, CPU -> 35, Radio -> 74, Sensor -> 111, Stub -> 1),37) }
+(* expect: (Map(BUG -> 0, CPU -> 35, Radio -> 74, Sensor -> 111, Stub -> 37),37) *)
+(* expect: -tr (Map(BUG -> 0, CPU -> 35, Radio -> 74, Sensor -> 111, Stub -> 37),37) *)
+(* expect: -s (Map(BUG -> 0, CPU -> 35, Radio -> 74, Sensor -> 111, Stub -> 1),37) *)
+(* expect: -u (Map(BUG -> 0, CPU -> 35, Radio -> 74, Sensor -> 111, Stub -> 1),37) *)
 function program(X)
   Stub::idle();
   if 23 < 281723817 then

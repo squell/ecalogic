@@ -24,11 +24,11 @@ Note:
 
 import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
 
-{ expect: (Map(BUG -> 0, CPU -> 1960, Radio -> 3986, Sensor -> 5979, Stub -> 11883),1993) }
-{ expect: -tr (Map(BUG -> 0, CPU -> 1960, Radio -> 3986, Sensor -> 5979, Stub -> 13445),1993) }
-{ expect: -s (Map(BUG -> 0, CPU -> 1960, Radio -> 3986, Sensor -> 5979, Stub -> 1993),1993) }
-{ expect: -u (Map(BUG -> 0, CPU -> 1960, Radio -> 3986, Sensor -> 5979, Stub -> 21796),1993) }
-{ expect: -tr -u -s (Map(BUG -> 0, CPU -> 1960, Radio -> 3986, Sensor -> 5979, Stub -> 1993),1993) }
+(* expect: (Map(BUG -> 0, CPU -> 1960, Radio -> 3986, Sensor -> 5979, Stub -> 11883),1993) *)
+(* expect: -tr (Map(BUG -> 0, CPU -> 1960, Radio -> 3986, Sensor -> 5979, Stub -> 13445),1993) *)
+(* expect: -s (Map(BUG -> 0, CPU -> 1960, Radio -> 3986, Sensor -> 5979, Stub -> 1993),1993) *)
+(* expect: -u (Map(BUG -> 0, CPU -> 1960, Radio -> 3986, Sensor -> 5979, Stub -> 21796),1993) *)
+(* expect: -tr -u -s (Map(BUG -> 0, CPU -> 1960, Radio -> 3986, Sensor -> 5979, Stub -> 1993),1993) *)
 function program(X)
   Stub::on();
 
