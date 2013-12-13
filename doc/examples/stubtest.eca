@@ -5,6 +5,9 @@ import component ecalogic.Stub
 // import component ecalogic.Sensor
 
 { expect: (Map(BUG -> 0, CPU -> 525, Radio -> 1096, Sensor -> 1644, Stub -> 0),548) }
+{ expect: -tr (Map(BUG -> 0, CPU -> 525, Radio -> 1096, Sensor -> 1644, Stub -> 0),548) }
+{ expect: -s (Map(BUG -> 0, CPU -> 525, Radio -> 1096, Sensor -> 1644, Stub -> 0),548) }
+{ expect: -u (Map(BUG -> 0, CPU -> 525, Radio -> 1096, Sensor -> 1644, Stub -> 0),548) }
 function program(X)
   Stub::idle();
   if 23 < 281723817 then

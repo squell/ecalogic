@@ -60,8 +60,10 @@ class EnergyAnalysisSpec extends FlatSpec with Matchers {
     var (token, _) = lexer.next()
     while (token != Tokens.EndOfFile) {
       token match {
-        case Tokens.Comment(c) if c.startsWith("expect:") =>
-          val comment = c.substring(8)
+        case Tokens.Comment(c) if c.startsWith("expect") =>
+          val params: String = c.substring(8, c.indexOf("("))
+
+          val comment = c.substring(c.indexOf("("))
           val errorHandler = new DefaultErrorHandler(sourceText = Some(source), sourceURI = Some(file.toURI))
 
           val parser = new Parser(source, errorHandler)
@@ -69,14 +71,18 @@ class EnergyAnalysisSpec extends FlatSpec with Matchers {
 
           val dsl_components = Map("Stub"->StubComponent, "BUG"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, "CPU"->CPU)
 
-          it should s"succeed with Scala components for ${file.getName}" in {
+          it should s"succeed with Scala components for ${file.getName} ${params}" in {
+            config.Options.reset
+            config.Options.apply(params.split(" "))
             val analyzer = new EnergyAnalysis(program, dsl_components, errorHandler)
             val result = analyzer.analyse().mapValues(_.energy)
             val resultString = (SortedMap.empty[String, Polynomial] ++ result._1, result._2).toString
             resultString should equal (comment)
           }
 
-          it should s"succeed with imported components for ${file.getName}" in {
+          it should s"succeed with imported components for ${file.getName} ${params}" in {
+            config.Options.reset
+            config.Options.apply(params.split(" "))
             val imported_components = ComponentModel.fromImports(program.imports, errorHandler)
             errorHandler.successOrElse("Error importing")
             val analyzer = new EnergyAnalysis(program, dsl_components++imported_components, errorHandler)
