@@ -24,8 +24,9 @@ echo "Compiling src/test/scala"
     if scalac /tmp/test.scala; then
 	cd src/test/scala
 	scalac `find -name "*.scala"`
+	cd -
 
-	if ! scala org.scalatest.run; then
+	if ! scala org.scalatest.tools.Runner -R src/test/scala -o; then
 	    echo "scalatests failed -- aborting compilation"
 	    exit 1
 	fi

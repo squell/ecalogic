@@ -226,6 +226,7 @@ object EnergyAnalysis {
     import scala.io.Source
 
     val fileName = config.Options(args).headOption.getOrElse("program.eca")
+    val noCPU = args.last == "nocpu"
 
     val file = new File(fileName)
     val source = Source.fromFile(file).mkString
@@ -235,7 +236,7 @@ object EnergyAnalysis {
 
     import model.examples._
     import model.examples.DemoComponents._
-    val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, if(config.Options.noCPU) "Stub"->StubComponent else "CPU"->CPU)
+    val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio) ++ (if(noCPU) Map("Stub"->StubComponent) else Map.empty)
 
     val checker = new SemanticAnalysis(program, components, errorHandler)
     checker.functionCallHygiene()

@@ -42,22 +42,6 @@ TODO: adds some code that reads cmdline flags here.
  */
 
 object Options {
-  def reset {
-    noCPU = false;
-    entryPoint = "program"
-    terse = false
-    aliasOverrides = Seq.empty[String]
-    Model.alwaysUpdate = false
-    Model.alwaysForwardTime = false
-    Analysis.beforeSync = false
-    Analysis.afterSync = false
-    Analysis.fixPatience = 10000
-    Analysis.techReport = false
-  }
-
-  /* Disable the simulated CPU; this switch should be deprecated in the future */
-  @deprecated ("this variable is ignored by everybody in the world", "0.666xyzzy")
-  var noCPU = false
 
   /* The "main" function to analyze; should change to 'main' in the future */
   var entryPoint = "program"
@@ -118,6 +102,7 @@ object Options {
 
   }
 
+  /* Call the Options object as a function; this returns the actual arguments */
   def apply(args: Array[String]): Array[String] = {
     import Analysis._
     import Model._
@@ -126,8 +111,6 @@ object Options {
     val newArgs = Array.newBuilder[String]
 
     args.foreach {
-      case "-0" | "--noCPU"
-        => noCPU = true
       case "-t" | "--terse"
         => terse = true
       case "-e" | "--entry"
@@ -163,12 +146,26 @@ object Options {
     newArgs.result()
   }
 
+  /* Reset values to their default values */
+  def reset {
+    entryPoint = "program"
+    terse = false
+    aliasOverrides = Seq.empty[String]
+    Model.alwaysUpdate = false
+    Model.alwaysForwardTime = false
+    Analysis.beforeSync = false
+    Analysis.afterSync = false
+    Analysis.fixPatience = 10000
+    Analysis.techReport = false
+  }
+
   def friendlyHelpMsg() {
     println("""
       ... blah
 """)
   }
 
+  /* For testing purposes only */
   def main(args: Array[String]) =
     println(apply(args).reduce(_+", "+_))
 
