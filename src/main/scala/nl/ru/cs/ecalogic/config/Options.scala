@@ -42,6 +42,19 @@ TODO: adds some code that reads cmdline flags here.
  */
 
 object Options {
+  def reset {
+    noCPU = false;
+    entryPoint = "program"
+    terse = false
+    aliasOverrides = Seq.empty[String]
+    Model.alwaysUpdate = false
+    Model.alwaysForwardTime = false
+    Analysis.beforeSync = false
+    Analysis.afterSync = false
+    Analysis.fixPatience = 10000
+    Analysis.techReport = false
+  }
+
   /* Disable the simulated CPU; this switch should be deprecated in the future */
   @deprecated ("this variable is ignored by everybody in the world", "0.666xyzzy")
   var noCPU = false
