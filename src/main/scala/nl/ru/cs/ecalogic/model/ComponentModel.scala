@@ -199,6 +199,6 @@ object ComponentModel {
   }
 
   def fromImports(imports: Map[String, Import], errorHandler: ErrorHandler = new DefaultErrorHandler): Map[String, ComponentModel] =
-    imports.mapValues(fromImport(_, errorHandler)).toMap
+    imports.mapValues(fromImport(_, errorHandler)).view.force
 
 }
