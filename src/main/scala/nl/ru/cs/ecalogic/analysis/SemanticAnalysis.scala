@@ -88,8 +88,12 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
       case _                            => Set.empty
     }
 
+    /* IMPORTANT: workaround for a scala 'feature'(?)
+       if you use 'mapValues' here, funCalls gets to run
+       twice (with side effects and all) */
     val calls: Map[String, Set[String]] =
-      defs.mapValues(f => funCalls(f.body)).toMap.withDefaultValue(Set.empty)
+      //defs.mapValues(f => funCalls(f.body)).toMap.withDefaultValue(Set.empty)
+      defs.transform((_,f) => funCalls(f.body)).toMap.withDefaultValue(Set.empty)
 
     def detectCycle(seen: Set[String], open: Set[String]) {
       for(next <- open)
