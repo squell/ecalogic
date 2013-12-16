@@ -241,7 +241,20 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     * @param follows follow set pattern
     * @return        statement node
     */
-  def statement(follows: Pattern) = tryParse[Statement](First.statement)(follows) {
+  def statement(follows: Pattern): Statement = tryParse[Statement](First.statement)(follows) {
+    case Tokens.LCurly =>
+      val builder = Map.newBuilder[String, Expression]
+      do {
+        advance()
+        val variable = identifier(follows | Tokens.LArrow)
+        expect(Tokens.LArrow)(follows | First.expression)
+        val value = expression(follows | Tokens.Comma | Tokens.RCurly)
+        builder += variable -> value
+      } while (current(Tokens.Comma))
+      expect(Tokens.RCurly)(follows | First.statement)
+      val stmt = if (current(First.statement)) statement(follows) else nodeWithPosition(Skip())
+
+      Annotated(builder.result(), stmt)
     case Tokens.If =>
       advance()
       val predicate = expression(follows | Tokens.Then)
@@ -348,7 +361,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     * @param follows follow set pattern
     * @return        expression node
     */
-  def primary(follows: Pattern) = tryParse[Expression](First.expression) (follows) {
+  def primary(follows: Pattern): Expression = tryParse[Expression](First.expression) (follows) {
     case Tokens.Identifier(n) if lookahead(Tokens.LParen | Tokens.ColonColon) =>
       funCall(follows)
     case Tokens.Identifier(n) =>
@@ -463,6 +476,7 @@ object Parser {
   object First {
 
     val statement =
+      Tokens.LCurly     % "<annotated statement>"  |
       Tokens.Skip       % "<skip statement>"  |
       Tokens.If         % "<if statement>"    |
       Tokens.While      % "<while statement>" |

@@ -53,6 +53,7 @@ sealed trait ASTNode extends Positional {
 }
 
 /** Dummy class representing an error during parsing. */
+@unchecked
 case class ErrorNode() extends PrimaryExpression with Statement
 
 
@@ -60,29 +61,39 @@ case class ErrorNode() extends PrimaryExpression with Statement
 case class Program(imports: Map[String, Import], functions: Map[String, FunDef]) extends ASTNode
 
 case class Import(namePath: Seq[String], alias: String) extends ASTNode {
-  def qualifiedName = namePath.mkString(".")
+  val qualifiedName = namePath.mkString(".")
 }
 
 /** Class representing a parameter in function definition. */
 case class Param(name: String) extends ASTNode
 
 sealed trait BasicFunction extends ASTNode {
-  def name: String
-  def parameters: Seq[Param]
-  def body: Statement
-  def arity = parameters.length
-  def isComponent: Boolean
+  val name: String
+  val parameters: Seq[Param]
+  val body: Statement
+  val arity = parameters.length
+  val isComponent: Boolean
 }
 
 /** Class representing a function definition. */
 case class FunDef(name: String, parameters: Seq[Param], body: Statement) extends BasicFunction {
-  def isComponent = false
+  val isComponent = false
 }
 
 
 
 /** Base sealed trait for statement nodes. */
-sealed trait Statement extends ASTNode
+sealed trait Statement extends ASTNode {
+  /** Returns the underlying unannotated statement.**/
+  val underlying: Statement = this
+  /** Collects all annotations for the underlying statement.**/
+  val annotations: Map[String, Expression] = Map.empty
+}
+
+case class Annotated(elements: Map[String, Expression], statement: Statement) extends Statement {
+  override val underlying: Statement = statement
+  override val annotations: Map[String, Expression] = elements ++ underlying.annotations
+}
 
 /** Class representing a function definition. */
 case class If(predicate: Expression, consequent: Statement, alternative: Statement) extends Statement
@@ -99,8 +110,8 @@ case class Skip() extends Statement
 
 
 sealed trait Expression extends ASTNode {
-  def arity: Int
-  def operands: Seq[Expression]
+  val arity: Int
+  val operands: Seq[Expression]
 
   def rewrite(ops: Seq[Expression]): Expression
   def transform(f: PartialFunction[Expression, Expression]): Expression =
@@ -114,8 +125,8 @@ sealed trait Expression extends ASTNode {
 
 
 sealed trait PrimaryExpression extends Expression {
-  def arity = 0
-  def operands = Seq()
+  val arity = 0
+  val operands = Seq()
 
   def rewrite(ops: Seq[Expression]) = this
 }
@@ -126,14 +137,14 @@ case class VarRef(name: String) extends PrimaryExpression
 
 
 sealed trait NAryExpression extends Expression {
-  def operatorName: String
+  val operatorName: String
 }
 
 sealed trait BinaryExpression extends NAryExpression {
-  def arity = 2
-  def left: Expression
-  def right: Expression
-  def operands = Seq(left, right)
+  val arity = 2
+  val left: Expression
+  val right: Expression
+  val operands = Seq(left, right)
   def operator: (ECAValue, ECAValue) => ECAValue
 }
 
@@ -147,14 +158,14 @@ sealed trait BinaryExpression extends NAryExpression {
 sealed trait LogicalExpression extends NAryExpression
 
 case class Or(left: Expression, right: Expression) extends BinaryExpression with LogicalExpression {
-  def operatorName = "or"
+  val operatorName = "or"
   def operator = _ || _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class And(left: Expression, right: Expression) extends BinaryExpression with LogicalExpression {
-  def operatorName = "and"
+  val operatorName = "and"
   def operator = _ && _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
@@ -164,35 +175,35 @@ case class And(left: Expression, right: Expression) extends BinaryExpression wit
 sealed trait ArithmeticExpression extends NAryExpression
 
 case class Add(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
-  def operatorName = "+"
+  val operatorName = "+"
   def operator = _ + _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class Subtract(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
-  def operatorName = "-"
+  val operatorName = "-"
   def operator = _ - _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class Multiply(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
-  def operatorName = "*"
+  val operatorName = "*"
   def operator = _ * _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class Divide(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
-  def operatorName = "/"
+  val operatorName = "/"
   def operator = _ / _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class Exponent(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
-  def operatorName = "^"
+  val operatorName = "^"
   def operator = _ ^ _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
@@ -202,58 +213,58 @@ case class Exponent(left: Expression, right: Expression) extends BinaryExpressio
 sealed trait RelationalExpression extends BinaryExpression
 
 case class EQ(left: Expression, right: Expression) extends RelationalExpression {
-  def operatorName = "="
+  val operatorName = "="
   def operator = _ == _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class NE(left: Expression, right: Expression) extends RelationalExpression {
-  def operatorName = "<>"
+  val operatorName = "<>"
   def operator = _ != _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class LT(left: Expression, right: Expression) extends RelationalExpression {
-  def operatorName = "<"
+  val operatorName = "<"
   def operator = _ < _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class LE(left: Expression, right: Expression) extends RelationalExpression {
-  def operatorName = "<="
+  val operatorName = "<="
   def operator = _ <= _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class GT(left: Expression, right: Expression) extends RelationalExpression {
-  def operatorName = ">"
+  val operatorName = ">"
   def operator = _ > _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class GE(left: Expression, right: Expression) extends RelationalExpression {
-  def operatorName = ">="
+  val operatorName = ">="
   def operator = _ >= _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
 
 case class FunName(name: String, prefix: Option[String] = None) {
-  def qualified = prefix.map(_ + "::").getOrElse("") + name
-  def isPrefixed = prefix.isDefined
+  val qualified = prefix.map(_ + "::").getOrElse("") + name
+  val isPrefixed = prefix.isDefined
 
-  override def toString = qualified
+  override val toString = qualified
 }
 
 case class FunCall(name: FunName, arguments: Seq[Expression]) extends NAryExpression with Statement {
-  def operatorName = name.qualified
-  def arity = arguments.size
-  def operands = arguments
+  val operatorName = name.qualified
+  val arity = arguments.size
+  val operands = arguments
 
   def rewrite(ops: Seq[Expression]) = copy(arguments = ops).withPosition(position)
 }
@@ -267,7 +278,7 @@ sealed trait ModelASTNode extends ASTNode
 case class Initializer(name: String, value: Literal) extends ModelASTNode
 
 case class CompVarDecl(name: String, lower: ECAValue, upper: ECAValue, initializer: Option[Initializer]) extends ModelASTNode {
-  def initialValue = initializer.map(_.value.value)
+  val initialValue = initializer.map(_.value.value)
 }
 
 case class Component(name: String,
@@ -277,5 +288,5 @@ case class Component(name: String,
                      functions: Map[String, FunDef]) extends ModelASTNode
 
 case class CompFunDef(name: String, parameters: Seq[Param], energy: ECAValue, time: ECAValue, body: Statement) extends ModelASTNode with BasicFunction {
-  def isComponent = true
+  val isComponent = true
 }
