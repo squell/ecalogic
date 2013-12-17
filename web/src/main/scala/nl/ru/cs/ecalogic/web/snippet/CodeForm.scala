@@ -41,46 +41,45 @@ import net.liftweb.http.js.JsCmd
 import net.liftweb.http.js.JsCmds.{SetHtml, Script}
 import nl.ru.cs.ecalogic.parser.Parser
 import nl.ru.cs.ecalogic.util.DefaultErrorHandler
-import nl.ru.cs.ecalogic.model.examples.{BadComponent, StubComponent}
-import nl.ru.cs.ecalogic.model.examples.DemoComponents.{CPU, Radio, Sensor}
 import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
 import nl.ru.cs.ecalogic.config
-import java.io.ByteArrayOutputStream
-import java.io.PrintWriter
+import java.io.{File, ByteArrayOutputStream, PrintWriter}
+import scala.io.Source
+import nl.ru.cs.ecalogic.model.{ECMModel, ComponentModel}
 
 object CodeForm {
 
+
+  def insertComponents = ("#code2 *" #> Source.fromFile(new File("components\\ecalogic\\CPU.ecm")).mkString) &
+    ("#code3 *" #> Source.fromFile(new File("components\\ecalogic\\Radio.ecm")).mkString) &
+    ("#code4 *" #> Source.fromFile(new File("components\\ecalogic\\Sensor.ecm")).mkString) &
+    ("#code5 *" #> Source.fromFile(new File("components\\ecalogic\\Stub.ecm")).mkString)
+
   def render =
-    "#codeForm" #> ((ns: NodeSeq) => {
-      Components = Seq("code2", "code3"); jsonForm(AnalyseServer, ns)
-    }) &
+    "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, insertComponents(ns))) &
       "#codeScript" #> Script(AnalyseServer.jsCmd)
 
-  /*&
-       "a [onclick]" #> ((sc: NodeSeq) =>
-         scala.xml.Unparsed(sc.\("@onclick").text + ";" + SHtml.ajaxCall(JsVar("tabs"), s => {
-           Components ++= Seq("code" + s)
-         }))
-         )*/
-
-  var Components = Seq("code2", "code3")
-
-  def increment(in: String): String =
-    asInt(in).map(_ + 1).map(_.toString) openOr in
-
   object AnalyseServer extends JsonHandler {
+
+
+    var components = Map.empty[String, ComponentModel]
+
+    def processComponent(s: String) {
+      // TODO: find component name
+      components = components + ("Stub" -> ECMModel.fromSource(s))
+    }
+
     def apply(in: Any): JsCmd = in match {
-      case JsonCmd("processForm", target, params: Map[String,_], all) =>
-        val code : String = params.getOrElse("code", "").toString()
+      case JsonCmd("processForm", target, params: Map[String, _], all) =>
+        val code: String = params.getOrElse("code", "").toString()
 
+        components = Map.empty[String, ComponentModel]
         params.getOrElse("comp", None) match {
-          case l : List[_] => l.foreach(s => processComponent(s.toString))
-          case s : String => {processComponent(s)}
+          case l: List[_] => l.foreach(s => processComponent(s.toString))
+          case s: String => {
+            processComponent(s)
+          }
           case _ => {}
-        }
-
-        def processComponent(s : String) {
-          // TODO: Insert component into analyse
         }
 
         config.Options.reset
@@ -98,7 +97,7 @@ object CodeForm {
             return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
           }
 
-          val components = Map("Stub" -> StubComponent, "BAD" -> BadComponent, "Sensor" -> Sensor, "Radio" -> Radio) ++ (if (params.getOrElse("CPU", "") == "True") Map.empty else Map("CPU" -> CPU))
+          //val components = Map("Stub" -> StubComponent, "BAD" -> BadComponent, "Sensor" -> Sensor, "Radio" -> Radio) ++ (if (params.getOrElse("CPU", "") == "True") Map.empty else Map("CPU" -> CPU))
           val checker = new SemanticAnalysis(program, components, errorHandler)
           checker.functionCallHygiene()
           checker.variableReferenceHygiene()
