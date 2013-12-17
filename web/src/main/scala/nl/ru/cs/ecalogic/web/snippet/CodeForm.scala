@@ -32,7 +32,7 @@
 
 package nl.ru.cs.ecalogic.web.snippet
 
-import scala.xml.NodeSeq
+import scala.xml.{Text, NodeSeq}
 import net.liftweb.util.Helpers._
 import net.liftweb.util.JsonCmd
 import net.liftweb.http.SHtml.jsonForm
@@ -51,18 +51,42 @@ import java.io.PrintWriter
 object CodeForm {
 
   def render =
-    "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, ns)) &
+    "#codeForm" #> ((ns: NodeSeq) => {
+      Components = Seq("code2", "code3"); jsonForm(AnalyseServer, ns)
+    }) &
       "#codeScript" #> Script(AnalyseServer.jsCmd)
+
+  /*&
+       "a [onclick]" #> ((sc: NodeSeq) =>
+         scala.xml.Unparsed(sc.\("@onclick").text + ";" + SHtml.ajaxCall(JsVar("tabs"), s => {
+           Components ++= Seq("code" + s)
+         }))
+         )*/
+
+  var Components = Seq("code2", "code3")
+
+  def increment(in: String): String =
+    asInt(in).map(_ + 1).map(_.toString) openOr in
 
   object AnalyseServer extends JsonHandler {
     def apply(in: Any): JsCmd = in match {
-      case JsonCmd("processForm", target, params: Map[String, String], all) =>
-        val code = params.getOrElse("code1", "")
+      case JsonCmd("processForm", target, params: Map[String,_], all) =>
+        val code : String = params.getOrElse("code", "").toString()
 
+        params.getOrElse("comp", None) match {
+          case l : List[_] => l.foreach(s => processComponent(s.toString))
+          case s : String => {processComponent(s)}
+          case _ => {}
+        }
+
+        def processComponent(s : String) {
+          // TODO: Insert component into analyse
+        }
+*/
         config.Options.reset
-        if(params.getOrElse("tech","") == "True") config.Options(Array("-tr"))
-        if(params.getOrElse("beforeSync","") == "True") config.Options(Array("-s"))
-        if(params.getOrElse("update","") == "True") config.Options(Array("-u"))
+        if (params.getOrElse("tech", "") == "True") config.Options(Array("-tr"))
+        if (params.getOrElse("beforeSync", "") == "True") config.Options(Array("-s"))
+        if (params.getOrElse("update", "") == "True") config.Options(Array("-u"))
 
         val errorStream = new ByteArrayOutputStream()
         val pw = new PrintWriter(errorStream)
@@ -74,7 +98,7 @@ object CodeForm {
             return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
           }
 
-          val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio) ++ (if (params.getOrElse("CPU", "") == "True") Map.empty else Map("CPU"->CPU))
+          val components = Map("Stub" -> StubComponent, "BAD" -> BadComponent, "Sensor" -> Sensor, "Radio" -> Radio) ++ (if (params.getOrElse("CPU", "") == "True") Map.empty else Map("CPU" -> CPU))
           val checker = new SemanticAnalysis(program, components, errorHandler)
           checker.functionCallHygiene()
           checker.variableReferenceHygiene()
