@@ -82,7 +82,7 @@ object CodeForm {
         def processComponent(s : String) {
           // TODO: Insert component into analyse
         }
-*/
+
         config.Options.reset
         if (params.getOrElse("tech", "") == "True") config.Options(Array("-tr"))
         if (params.getOrElse("beforeSync", "") == "True") config.Options(Array("-s"))
