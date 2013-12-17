@@ -42,7 +42,7 @@ import net.liftweb.http.js.JsCmds.{SetHtml, Script}
 import nl.ru.cs.ecalogic.parser.Parser
 import nl.ru.cs.ecalogic.util.DefaultErrorHandler
 import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
-import nl.ru.cs.ecalogic.config
+import nl.ru.cs.ecalogic.{ECAException, config}
 import java.io.{File, ByteArrayOutputStream, PrintWriter}
 import scala.io.Source
 import nl.ru.cs.ecalogic.model.{ECMModel, ComponentModel}
@@ -65,22 +65,19 @@ object CodeForm {
     var components = Map.empty[String, ComponentModel]
 
     def processComponent(s: String) {
-      // TODO: find component name
-      components = components + ("Stub" -> ECMModel.fromSource(s))
+      // TODO: handle errors
+      val bla = "component ([a-zA-Z0-9]+)".r.findFirstMatchIn(s)
+      if (bla.isEmpty) {
+        throw new ECAException("Cant find component name");
+      }
+      if (bla.get.groupCount > 0)
+        components = components + (bla.get.group(1) -> ECMModel.fromSource(s))
     }
 
     def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, _], all) =>
         val code: String = params.getOrElse("code", "").toString()
 
-        components = Map.empty[String, ComponentModel]
-        params.getOrElse("comp", None) match {
-          case l: List[_] => l.foreach(s => processComponent(s.toString))
-          case s: String => {
-            processComponent(s)
-          }
-          case _ => {}
-        }
 
         config.Options.reset
         if (params.getOrElse("tech", "") == "True") config.Options(Array("-tr"))
@@ -95,6 +92,15 @@ object CodeForm {
           val program = parser.program()
           if (errorHandler.errorOccurred) {
             return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
+          }
+
+          components = Map.empty[String, ComponentModel]
+          params.getOrElse("comp", None) match {
+            case l: List[_] => l.foreach(s => processComponent(s.toString))
+            case s: String => {
+              processComponent(s)
+            }
+            case _ => {}
           }
 
           //val components = Map("Stub" -> StubComponent, "BAD" -> BadComponent, "Sensor" -> Sensor, "Radio" -> Radio) ++ (if (params.getOrElse("CPU", "") == "True") Map.empty else Map("CPU" -> CPU))
