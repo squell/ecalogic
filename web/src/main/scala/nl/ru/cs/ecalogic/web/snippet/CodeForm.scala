@@ -32,7 +32,7 @@
 
 package nl.ru.cs.ecalogic.web.snippet
 
-import scala.xml.NodeSeq
+import scala.xml.{Text, NodeSeq}
 import net.liftweb.util.Helpers._
 import net.liftweb.util.JsonCmd
 import net.liftweb.http.SHtml.jsonForm
@@ -41,31 +41,47 @@ import net.liftweb.http.js.JsCmd
 import net.liftweb.http.js.JsCmds.{SetHtml, Script}
 import nl.ru.cs.ecalogic.parser.Parser
 import nl.ru.cs.ecalogic.util.DefaultErrorHandler
-import nl.ru.cs.ecalogic.model.examples.{BadComponent, StubComponent}
-import nl.ru.cs.ecalogic.model.examples.DemoComponents.{CPU, Radio, Sensor}
 import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
-import nl.ru.cs.ecalogic.config
-import java.io.ByteArrayOutputStream
-import java.io.PrintWriter
+import nl.ru.cs.ecalogic.{ECAException, config}
+import java.io.{File, ByteArrayOutputStream, PrintWriter}
+import scala.io.Source
+import nl.ru.cs.ecalogic.model.{ECMModel, ComponentModel}
 
 object CodeForm {
 
+
+  def insertComponents = ("#code2 *" #> Source.fromFile(new File("components\\ecalogic\\CPU.ecm")).mkString) &
+    ("#code3 *" #> Source.fromFile(new File("components\\ecalogic\\Radio.ecm")).mkString) &
+    ("#code4 *" #> Source.fromFile(new File("components\\ecalogic\\Sensor.ecm")).mkString) &
+    ("#code5 *" #> Source.fromFile(new File("components\\ecalogic\\Stub.ecm")).mkString)
+
   def render =
-    "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, ns)) &
+    "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, insertComponents(ns))) &
       "#codeScript" #> Script(AnalyseServer.jsCmd)
 
   object AnalyseServer extends JsonHandler {
+
+    val errorStream = new ByteArrayOutputStream()
+    val pw = new PrintWriter(errorStream)
+
+    var components = Map.empty[String, ComponentModel]
+
+    def processComponent(s: String) {
+      val errorHandler = new DefaultErrorHandler(sourceText = Some(s), writer = pw)
+      val loaded = ECMModel.fromSource(s, None, errorHandler)
+      components = components + (loaded.name -> loaded)
+    }
+
     def apply(in: Any): JsCmd = in match {
-      case JsonCmd("processForm", target, params: Map[String, String], all) =>
-        val code = params.getOrElse("code1", "")
+      case JsonCmd("processForm", target, params: Map[String, _], all) =>
+        val code: String = params.getOrElse("code", "").toString()
+
 
         config.Options.reset
-        if(params.getOrElse("tech","") == "True") config.Options(Array("-tr"))
-        if(params.getOrElse("beforeSync","") == "True") config.Options(Array("-s"))
-        if(params.getOrElse("update","") == "True") config.Options(Array("-u"))
+        if (params.getOrElse("tech", "") == "True") config.Options(Array("-tr"))
+        if (params.getOrElse("beforeSync", "") == "True") config.Options(Array("-s"))
+        if (params.getOrElse("update", "") == "True") config.Options(Array("-u"))
 
-        val errorStream = new ByteArrayOutputStream()
-        val pw = new PrintWriter(errorStream)
         val errorHandler = new DefaultErrorHandler(sourceText = Some(code), writer = pw)
         try {
           val parser = new Parser(code, errorHandler)
@@ -74,7 +90,16 @@ object CodeForm {
             return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
           }
 
-          val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio) ++ (if (params.getOrElse("CPU", "") == "True") Map.empty else Map("CPU"->CPU))
+          components = Map.empty[String, ComponentModel]
+          params.getOrElse("comp", None) match {
+            case l: List[_] => l.foreach(s => processComponent(s.toString))
+            case s: String => {
+              processComponent(s)
+            }
+            case _ => {}
+          }
+
+          //val components = Map("Stub" -> StubComponent, "BAD" -> BadComponent, "Sensor" -> Sensor, "Radio" -> Radio) ++ (if (params.getOrElse("CPU", "") == "True") Map.empty else Map("CPU" -> CPU))
           val checker = new SemanticAnalysis(program, components, errorHandler)
           checker.functionCallHygiene()
           checker.variableReferenceHygiene()

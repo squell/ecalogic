@@ -4,22 +4,29 @@
     <h1>Please insert your code:</h1>
 
     <div style="float: left;width: 700px;">
-        <a href="#"
-           onclick="createNewTab('codeForm1','Component ' + tabs,'<textarea name=&quot;newcode' + tabs + '&quot; cols=&quot;80&quot; rows=&quot;35&quot; id=&quot;newcode' + tabs +'&quot;></textarea><br>','',true);tabs=tabs+1;return false">
-            More components</a><br>
+
 
         <div data-lift="CodeForm">
+            <a href="#"
+               onclick="tabs=tabs+1;createNewTab('codeForm1','Component ' + (tabs - 1),'<textarea name=&quot;comp&quot; cols=&quot;80&quot; rows=&quot;35&quot; id=&quot;code' + tabs +'&quot;></textarea><br>','',true)">
+                More components</a><br>
             <script id="codeScript" data-lift="tail"></script>
             <div id="codeForm">
                 <div id=codeForm1>
                     <div class="dhtmlgoodies_aTab">
-                        <textarea name="code1" cols="80" rows="35" id="code1">Insert code here</textarea><br>
+                        <textarea name="code" cols="80" rows="35" id="code1">Insert code here</textarea><br>
                     </div>
                     <div class="dhtmlgoodies_aTab">
-                        <textarea name="code2" cols="80" rows="35" id="code2"></textarea><br>
+                        <textarea name="comp" cols="80" rows="35" id="code2"></textarea><br>
                     </div>
                     <div class="dhtmlgoodies_aTab">
-                        <textarea name="code3" cols="80" rows="35" id="code3"></textarea><br>
+                        <textarea name="comp" cols="80" rows="35" id="code3"></textarea><br>
+                    </div>
+                    <div class="dhtmlgoodies_aTab">
+                        <textarea name="comp" cols="80" rows="35" id="code4"></textarea><br>
+                    </div>
+                    <div class="dhtmlgoodies_aTab">
+                        <textarea name="comp" cols="80" rows="35" id="code5"></textarea><br>
                     </div>
                 </div>
                 <input type="checkbox" name="CPU" value="True">Use free CPU<br>
@@ -27,6 +34,9 @@
                 <input type="checkbox" name="beforeSync" value="True">Use Sync<br>
                 <input type="checkbox" name="update" value="True">Always update time<br>
                 <input type="submit" value="Send"/>
+                <div id="bla">
+            </div>
+
             </div>
         </div>
 
@@ -43,6 +53,6 @@
         </div>
     </div>
     <script type="text/javascript">
-        initTabs('codeForm1',Array('Code','Component 1','Component 2'),0,700,"",Array(false,true,true));
+        initTabs('codeForm1',Array('Code','CPU','Radio','Sensor','Stub'),0,700,"",Array(false,true,true,true,true));
     </script>
 </div>
