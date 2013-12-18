@@ -138,12 +138,13 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
        *
       */
       def varFlow(live: Set[String], node: ASTNode)(implicit params: Set[String]): Set[String] = node match {
-        case stm@Annotated(_, _)          => stm.annotations.foldLeft(params) {
+        case stm: Annotated               => stm.annotations.foldLeft(params) {
                                                case (params, (name, expr)) => 
                                                  checkStaticExpression(live, params, expr)
                                                  params + name
                                              }
                                              varFlow(live, stm.underlying)(params++stm.annotations.keys)
+
         case If(pred, thenPart, elsePart) => varFlow(live, pred)
                                              varFlow(live, thenPart) & varFlow(live, elsePart)
         case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, consq)
@@ -153,14 +154,12 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
         case Assignment(ident, expr)      => varFlow(live, expr)
                                              live + ident
 
-                                             /*
         case FunCall(fun, args)
           if fun.isPrefixed               => args.foreach(varFlow(live,_))
                                              live
 
         // TODO: once we have "annotations", we may be more permissive as to what we can do with function calls. this following restriction severely
         // restricts the power of our language. we could also determine which parameters may be used as loop bounds and be more permissive about those.
-        */
 
         case FunCall(fun, args)           => args.foreach(_.foreach {
                                                case _: ArithmeticExpression =>
