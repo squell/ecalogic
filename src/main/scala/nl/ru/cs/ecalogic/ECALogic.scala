@@ -53,7 +53,7 @@ object ECALogic {
   val defaultErrorHandler = new DefaultErrorHandler
 
   def report(fileName: String, state: GlobalState) {
-    state.mapValues(_.energy) match {
+    state.transform((_,st)=>st.energy) match {
       case result if Options.terse =>
         println(result)
       case (states, t) =>
@@ -76,7 +76,7 @@ object ECALogic {
     }
 
     val components = errorHandler.reportAll("One or more errors occurred while loading components.") {
-      ComponentModel.fromImports(program.imports, errorHandler)
+      ComponentModel.fromImports(program.imports)
     } ++ forceComponents
 
     errorHandler.reportAll("One or more errors occurred during semantic analysis.") {
@@ -114,11 +114,8 @@ object ECALogic {
     config.Options.aliasOverrides.foreach {
       case bindSpec =>
         val (alias, trueClassName) = getAlias(bindSpec)
-        if(alias.isEmpty)
-          // TODO: alias
-          complain(s"Missing 'alias=' override for $bindSpec")
-        // TODO: pass the error handler
-        val model = ComponentModel.fromImport(Import(trueClassName.split('.'), alias))
+        val classPath = trueClassName.split('.')
+        val model = ComponentModel.fromImport(Import(classPath, if(alias.isEmpty) classPath.last else alias))
         forceComponents = forceComponents + (alias->model)
     }
     fileArgs.foreach {

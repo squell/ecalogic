@@ -53,10 +53,10 @@ case class GlobalState(gamma: GlobalState.States, t: Polynomial) {
   }
 
   /* Synchronize all components to the global timer; time passes */
-  def sync: GlobalState = mapValues(_.forward(t))
+  def sync: GlobalState = transform((_,st)=>st.forward(t))
 
   /* Synchronize all components to the global timer; no time passes */
-  def timeshift: GlobalState = mapValues(st=>st.update(t, st.energy))
+  def timeshift: GlobalState = transform((_,st)=>st.update(t, st.energy))
 
   // Scala doesn't (and can't possibly?) know that the two EACStates are the same type.
   def max(other: GlobalState): GlobalState =
@@ -67,9 +67,6 @@ case class GlobalState(gamma: GlobalState.States, t: Polynomial) {
 
   def transform[C](fun: (String,ComponentModel#EACState)=>C): (Map[String, C], Polynomial) =
     (gamma.transform(fun), t)
-
-  def mapValues[C](fun: (ComponentModel#EACState=>C)): (Map[String, C], Polynomial) =
-    (gamma.mapValues(fun), t)
 }
 
 object GlobalState {
@@ -79,7 +76,7 @@ object GlobalState {
   type States = Map[String,ComponentModel#EACState]
 
   def initial(components: Map[String, ComponentModel]): GlobalState =
-    GlobalState(components.mapValues(_.initialEACState()), 0)
+    GlobalState(components.transform((_,st)=>st.initialEACState()), 0)
 
   implicit def tupleToGlobalState(gamma: (States, Polynomial)): GlobalState = GlobalState(gamma._1, gamma._2)
 

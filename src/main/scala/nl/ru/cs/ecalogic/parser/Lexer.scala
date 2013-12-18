@@ -57,15 +57,11 @@ class Lexer(protected var input: String) extends BaseLexer {
 
     case '(' if lookahead('*') =>
       val end = input.indexOf("*)", 2)
-      //if (end < 0) errorHandler.fatalError(new SPLException("Unterminated comment", position))
       val value = if (end >= 0) input.substring(2, end) else input.substring(2)
       (Comment(value.trim), value.length + 4)
 
-    case '{' =>
-      val end = input.indexOf("}", 1)
-      //if (end < 0) errorHandler.fatalError(new SPLException("Unterminated comment", position))
-      val value = if (end >= 0) input.substring(1, end) else input.substring(1)
-      (Comment(value.trim), value.length + 2)
+    case '{'                   => (LCurly, 1)
+    case '}'                   => (RCurly, 1)
 
     case '+'                   => (Plus, 1)
     case '-'                   => (Minus, 1)
@@ -74,6 +70,7 @@ class Lexer(protected var input: String) extends BaseLexer {
     case '/'                   => (Divide  , 1)
 
     case '='                   => (EQ, 1)
+    case '<' if lookahead('-') => (LArrow, 2)
     case '<' if lookahead('=') => (LE, 2)
     case '<' if lookahead('>') => (NE, 2)
     case '<'                   => (LT, 1)
@@ -144,6 +141,7 @@ object Lexer {
     case class Identifier(value: String) extends VariableToken[String]("identifier")
 
     case object Assign                   extends FixedToken(":=")
+    case object LArrow                   extends FixedToken("<-")
 
     case object Plus                     extends FixedToken("+")
     case object Minus                    extends FixedToken("-")
@@ -163,6 +161,9 @@ object Lexer {
 
     case object LParen                   extends FixedToken("(")
     case object RParen                   extends FixedToken(")")
+
+    case object LCurly                   extends FixedToken("{")
+    case object RCurly                   extends FixedToken("}")
 
     case object Comma                    extends FixedToken(",")
     case object Semicolon                extends FixedToken(";")

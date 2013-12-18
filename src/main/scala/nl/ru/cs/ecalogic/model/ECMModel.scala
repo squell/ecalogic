@@ -223,8 +223,10 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
 
 object ECMModel {
 
-  def fromSource(sourceText: String, sourceURI: Option[URI] = None) = {
-    val errorHandler = new DefaultErrorHandler(sourceText = Some(sourceText), sourceURI = sourceURI)
+  // FIXME TODO: doesn't creating error handlers inside these functions defeats the purpose of the errorhandler?
+  def fromSource(sourceText: String, sourceURI: Option[URI] = None, eh: ErrorHandler = null) = {
+    val errorHandler = if(eh == null) new DefaultErrorHandler(sourceText = Some(sourceText), sourceURI = sourceURI) else eh
+
     val parser = new ModelParser(sourceText, errorHandler)
     val node = parser.component()
     parser.expectEndOfFile()

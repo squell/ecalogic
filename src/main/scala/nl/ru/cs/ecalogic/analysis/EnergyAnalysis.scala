@@ -101,7 +101,7 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
     def fixPoint(init: States, expr: Expression, stm: Statement)(implicit env: Environment): States = {
       /** Throw away the temporal information (time, energy usage) and replace it with
           that of the initial state */
-      def nontemporal(st: States) = st.mapValues(_.reset)
+      def nontemporal(st: States) = st.transform((_,state)=>state.reset)
 
       /** The function we are going to iterate */
       def f(st: States) =
