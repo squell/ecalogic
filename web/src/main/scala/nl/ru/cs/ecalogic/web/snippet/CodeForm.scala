@@ -61,17 +61,15 @@ object CodeForm {
 
   object AnalyseServer extends JsonHandler {
 
+    val errorStream = new ByteArrayOutputStream()
+    val pw = new PrintWriter(errorStream)
 
     var components = Map.empty[String, ComponentModel]
 
     def processComponent(s: String) {
-      // TODO: handle errors
-      val bla = "component ([a-zA-Z0-9]+)".r.findFirstMatchIn(s)
-      if (bla.isEmpty) {
-        throw new ECAException("Cant find component name");
-      }
-      if (bla.get.groupCount > 0)
-        components = components + (bla.get.group(1) -> ECMModel.fromSource(s))
+      val errorHandler = new DefaultErrorHandler(sourceText = Some(s), writer = pw)
+      val loaded = ECMModel.fromSource(s, None, errorHandler)
+      components = components + (loaded.name -> loaded)
     }
 
     def apply(in: Any): JsCmd = in match {
@@ -84,8 +82,6 @@ object CodeForm {
         if (params.getOrElse("beforeSync", "") == "True") config.Options(Array("-s"))
         if (params.getOrElse("update", "") == "True") config.Options(Array("-u"))
 
-        val errorStream = new ByteArrayOutputStream()
-        val pw = new PrintWriter(errorStream)
         val errorHandler = new DefaultErrorHandler(sourceText = Some(code), writer = pw)
         try {
           val parser = new Parser(code, errorHandler)
