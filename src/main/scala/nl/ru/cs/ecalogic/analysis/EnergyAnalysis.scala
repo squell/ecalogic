@@ -193,8 +193,15 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
                                            val binding = funDef.parameters.map(_.name) zip resolvedArgs
                                            analyse(G, funDef.body)(env ++ binding)
 
+      case stm:Annotated                => val annotatedEnv = stm.annotations.foldLeft(env) {
+                                             case (env, (name, expr)) => env+(name->foldConstants(expr, env))
+                                           }
+                                           analyse(G, stm.underlying)(annotatedEnv)
+
       case e:NAryExpression             => e.operands.foldLeft(G)(analyse).update("CPU", "e")
       case _:PrimaryExpression          => G
+
+      case w@While(pred, None, consq)   => eh.fatalError(new ECAException("Cannot analyse boundless while-loop", node.position))
     }
 
     val initialState = GlobalState.initial(Map("CPU" -> Pentium0) ++ components)

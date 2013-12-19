@@ -70,8 +70,8 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
       case While(pred, _, consq)        => funCalls(pred) ++ funCalls(consq)
       case Composition(stms)            => stms.flatMap(funCalls).toSet
       case Assignment(_, expr)          => funCalls(expr)
+      case Annotated(_, stm)            => funCalls(stm)
       case FunCall(fun, args)           =>
-        // FIXME: rewrite this, it doesn't really work
         if (!fun.prefix.flatMap(components.get(_).map(_.hasFunctionInfo)).getOrElse(true)) {
           eh.warning(new ECAException(s"Unchecked function call because component '${fun.prefix.get}' has no function information.", node))
         } else {
@@ -105,6 +105,20 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
     detectCycle(Set.empty, calls.keys.toSet)
   }
 
+  /** Checks whether the expression can be resolved to values expressible 'at compile time'
+    */
+  def checkStaticExpression(live: Set[String], params: Set[String], node: Expression) = node.foreach {
+    case _: ArithmeticExpression =>
+    case Literal(_) =>
+    case v@VarRef(ident) =>
+      if(!params(ident))
+        eh.warning(new ECAException(s"Non-parameter '$ident' needs an annotation when used here.", v.position))
+      if(live(ident))
+        eh.error(new ECAException(s"Variable '$ident' written to before this reference.", v.position))
+    case e: Expression =>
+      eh.error(new ECAException(s"Expression not suitable for use in a ranking function.", e.position))
+  }
+
   /** Checks whether all variable references are proper;
       In particular, disallow programs for which it cannot be determined (statically) if references to it
       are preceeded by assignments. Also disallow values constructed at run-time from being used inside
@@ -114,7 +128,7 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
 
     for(fundef <- program.functions.values) {
 
-      val params = fundef.parameters.map(_.name).toSet
+      implicit val params = fundef.parameters.map(_.name).toSet
 
       /** Determine if all variable references are potentially used uninitialized.
        *
@@ -123,21 +137,18 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
        * @return updated set of live variables
        *
       */
-      def varFlow(live: Set[String], node: ASTNode): Set[String] = node match {
+      def varFlow(live: Set[String], node: ASTNode)(implicit params: Set[String]): Set[String] = node match {
+        case stm: Annotated               => stm.annotations.foldLeft(params) {
+                                               case (params, (name, expr)) => 
+                                                 checkStaticExpression(live, params, expr)
+                                                 params + name
+                                             }
+                                             varFlow(live, stm.underlying)(params++stm.annotations.keys)
+
         case If(pred, thenPart, elsePart) => varFlow(live, pred)
                                              varFlow(live, thenPart) & varFlow(live, elsePart)
-        case While(pred, Some(rf), consq) => varFlow(live, pred); varFlow(live, consq)
-                                             rf match {
-                                               case _: ArithmeticExpression =>
-                                               case Literal(_) =>
-                                               case v@VarRef(ident) =>
-                                                 if(!params(ident))
-                                                   eh.error(new ECAException(s"Non-parameter '$ident' not allowed in a bound expression.", v.position))
-                                                 if(live(ident))
-                                                   eh.warning(new ECAException(s"Variable '$ident' written to before this reference.", v.position))
-                                               case e: Expression =>
-                                                   eh.error(new ECAException(s"Expression not suitable for use in a ranking function.", e.position))
-                                             }
+        case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, consq)
+                                             rf.foreach(checkStaticExpression(live, params, _))
                                              live
         case Composition(stms)            => stms.foldLeft(live)(varFlow)
         case Assignment(ident, expr)      => varFlow(live, expr)
@@ -162,7 +173,8 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
                                                eh.warning(new ECAException(s"Variable '$ident' may be used uninitialized.", node.position))
                                              live
         case e: Expression                => e.operands.foreach(varFlow(live, _)); live
-        case _                            => live
+        case Skip()                       => live
+        case _                            => eh.fatalError(new ECAException(s"This should never happen: encountered $node"))
       }
 
       varFlow(Set.empty[String], fundef.body)
