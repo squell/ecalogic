@@ -24,10 +24,9 @@ Owner of DHTMLgoodies.com
 
 ************************************************************************************************************/
 
-    var tabs = 5;
 	var textPadding = 1; // Padding at the left of tab text - bigger value gives you wider tabs
 	var strictDocType = true;
-	var tabView_maxNumberOfTabs = 8;	// Maximum number of tabs
+	var tabView_maxNumberOfTabs = 500;	// Maximum number of tabs
 
 	/* Don't change anything below here */
 	var dhtmlgoodies_tabObj = new Array();
