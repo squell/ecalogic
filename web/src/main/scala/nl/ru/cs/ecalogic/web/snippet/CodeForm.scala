@@ -36,13 +36,13 @@ import scala.xml.{Text, NodeSeq}
 import net.liftweb.util.Helpers._
 import net.liftweb.util.JsonCmd
 import net.liftweb.http.SHtml.jsonForm
-import net.liftweb.http.JsonHandler
+import net.liftweb.http.{SHtml, JsonHandler}
 import net.liftweb.http.js.JsCmd
-import net.liftweb.http.js.JsCmds.{SetHtml, Script}
+import net.liftweb.http.js.JsCmds.{Run, SetHtml, Script}
 import nl.ru.cs.ecalogic.parser.Parser
 import nl.ru.cs.ecalogic.util.DefaultErrorHandler
 import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
-import nl.ru.cs.ecalogic.{ECAException, config}
+import nl.ru.cs.ecalogic.{config}
 import java.io.{File, ByteArrayOutputStream, PrintWriter}
 import scala.io.Source
 import nl.ru.cs.ecalogic.model.{ECMModel, ComponentModel}
@@ -56,8 +56,11 @@ object CodeForm {
     ("#code5 *" #> Source.fromFile(new File("components/ecalogic/Stub.ecm")).mkString)
 
   def render =
-    "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, insertComponents(ns))) &
-      "#codeScript" #> Script(AnalyseServer.jsCmd)
+    "#codeForm *" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, insertComponents(ns))) &
+      "#codeScript" #> Script(AnalyseServer.jsCmd) &
+        "#add [onClick]" #> SHtml.onEvent((str) => Run("tabs=tabs+1;createNewTab('codeForm1','Component ' + (tabs - 1),'<textarea name=comp cols=80 rows=35; id=code' + tabs + '></textarea><br>','',true)"))
+
+
 
   object AnalyseServer extends JsonHandler {
 
