@@ -87,8 +87,6 @@ object LoadForm {
             return SetHtml("result", scala.xml.Unparsed("%s: %s".format(xml.Utility.escape(e.toString))))
         }
     }
-
-    //def apply(in: Any): JsCmd = SetHtml("code", Text("Bla"))
   }
 
 }
