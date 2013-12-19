@@ -48,9 +48,9 @@ import java.net.{URI, URL}
 class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHandler()) extends ComponentModel {
   import ECAException._
 
-  class CState private[ECMModel](val elements: Map[String, ECAValue]) extends ComponentState {
+  class CState private[ECMModel](val elements: Map[String, Polynomial]) extends ComponentState {
 
-    protected def update(newElements: Map[String, ECAValue]) = new CState(newElements)
+    protected def update(newElements: Map[String, Polynomial]) = new CState(newElements)
 
   }
 
@@ -63,7 +63,7 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
   }
 
   val name = node.name
-  val initialState = new CState(node.variables.mapValues(_.initialValue.getOrElse(ECAValue.Zero)))
+  val initialState = new CState(node.variables.mapValues(_.initialValue.getOrElse(ECAValue.Zero).toPolynomial))
 
   private val methodCache = mutable.Map.empty[FunName, (Method, ECAValue => AnyRef)]
   private val imports     = node.imports.mapValues { i =>
@@ -81,25 +81,25 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
     }
   }
 
-  private def evalFunction(fun: BasicFunction, arguments: Seq[ECAValue], state: Map[String, ECAValue],
-                           stackTrace: StackTraceBuilder, callPosition: Option[Position]): (Map[String, ECAValue], ECAValue) = {
+  private def evalFunction(fun: BasicFunction, arguments: Seq[ECAValue], state: Map[String, Polynomial],
+                           stackTrace: StackTraceBuilder, callPosition: Option[Position]): (Map[String, Polynomial], Polynomial) = {
     if (arguments.length != fun.arity) {
       errorHandler.fatalError(new ECAException(s"Function '${fun.name}' requires ${fun.arity} arguments; given: ${arguments.length}.", stackTrace.result(callPosition)))
     }
     val (localEnv, stateEnv) = evalStatement(fun.body, fun.parameters.map(_.name).zip(arguments).toMap,
       state, fun.isComponent, stackTrace.callFunction(new FunName(fun.name, if (fun.isComponent) Some(name) else None), callPosition))
-    (stateEnv, localEnv.getOrElse(fun.name, ECAValue.Zero))
+    (stateEnv, localEnv.getOrElse(fun.name, ECAValue.Zero).toPolynomial)
   }
 
-  private def evalFunction(funName: String, arguments: Seq[ECAValue], state: Map[String, ECAValue],
-                           stackTrace: StackTraceBuilder, callPosition: Option[Position]): ECAValue =
+  private def evalFunction(funName: String, arguments: Seq[ECAValue], state: Map[String, Polynomial],
+                           stackTrace: StackTraceBuilder, callPosition: Option[Position]): Polynomial =
     node.functions.get(funName).map(evalFunction(_, arguments, state, stackTrace, callPosition)).getOrElse {
       errorHandler.fatalError(new ECAException(s"Undeclared function: '$funName'.", stackTrace.result(callPosition)))
     }._2
 
-  private def evalStatement(stmt: Statement, localEnv: Map[String, ECAValue], stateEnv: Map[String, ECAValue],
-                            mutationAllowed: Boolean, stackTrace: StackTraceBuilder): (Map[String, ECAValue], Map[String, ECAValue]) = {
-    def evalStmt(stmt: Statement): (Map[String, ECAValue], Map[String, ECAValue]) = stmt match {
+  private def evalStatement(stmt: Statement, localEnv: Map[String, ECAValue], stateEnv: Map[String, Polynomial],
+                            mutationAllowed: Boolean, stackTrace: StackTraceBuilder): (Map[String, ECAValue], Map[String, Polynomial]) = {
+    def evalStmt(stmt: Statement): (Map[String, ECAValue], Map[String, Polynomial]) = stmt match {
       case Skip() =>
         (localEnv, stateEnv)
       case Assignment(variable, expr) if node.variables.contains(variable) =>
@@ -131,7 +131,10 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
     evalStmt(stmt)
   }
 
-  private def evalExpression(expr: Expression, localEnv: Map[String, ECAValue], stateEnv: Map[String, ECAValue], stackTrace: StackTraceBuilder): ECAValue = {
+    // TODO: position in error
+  private def forceValue(poly: Polynomial): ECAValue = if(poly.isIntegral) poly.coef(Seq.empty) else errorHandler.fatalError(new ECAException(s"Cannot evaluate polynomial value '$poly'"))
+
+  private def evalExpression(expr: Expression, localEnv: Map[String, ECAValue], stateEnv: Map[String, Polynomial], stackTrace: StackTraceBuilder): ECAValue = {
     def callReflective(name: FunName, arguments: Seq[ECAValue], stackTrace: StackTraceBuilder, callPosition: Option[Position]): ECAValue = {
       val classAlias = name.prefix.get
       val methodName = name.name
@@ -168,7 +171,7 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
 
     def evalExpr(expr: Expression): ECAValue = expr match {
       case Literal(value)       => value
-      case VarRef(name)         => stateEnv.getOrElse(name, localEnv.getOrElse(name, errorHandler.fatalError(new ECAException(s"Undeclared variable: '$name'", stackTrace.result(expr)))))
+      case VarRef(name)         => stateEnv.mapValues(forceValue).getOrElse(name, localEnv.getOrElse(name, errorHandler.fatalError(new ECAException(s"Undeclared variable: '$name'", stackTrace.result(expr)))))
 
       case And(x, y)            => evalExpr(x) && evalExpr(y)
       case Or(x, y)             => evalExpr(x) || evalExpr(y)
@@ -192,7 +195,7 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
       case GE(x, y)             => evalExpr(x) >= evalExpr(y)
 
       case FunCall(qname, args) if qname.isPrefixed => callReflective(qname, args.map(evalExpr), stackTrace, Some(expr.position))
-      case FunCall(qname, args) => evalFunction(qname.name, args.map(evalExpr), stateEnv, stackTrace, Some(expr.position))
+      case FunCall(qname, args) => forceValue(evalFunction(qname.name, args.map(evalExpr), stateEnv, stackTrace, Some(expr.position)))
     }
 
     evalExpr(expr)
@@ -208,7 +211,7 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
 
   override def eval(f: String)(s: CState, a: Seq[ECAValue]) = node.componentFunctions.get(f).map { f =>
     val (stateEnv, result) = evalFunction(f, a, s.elements, newStackTraceBuilder(new FunName("eval", Some("<internal>"))), None)
-    (new CState(stateEnv), result)
+    (new CState(stateEnv), forceValue(result))
   }.getOrElse((s, ECAValue.Zero))
 
   override def phi(s: CState) = node.functions.get("phi").map { f =>

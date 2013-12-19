@@ -76,6 +76,8 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt]) extends Par
     repr.map { case (term,fac) => fac*term.map(env).reduce(_*_) }.reduce(_+_)
   }
 
+  def isIntegral = repr.keys.forall(_.isEmpty)
+
   /* Polynomials only admit a partial order; so beware of this. 
      This ordering compares polynomials under the assumption that all symbols
      are non-negative.  */
