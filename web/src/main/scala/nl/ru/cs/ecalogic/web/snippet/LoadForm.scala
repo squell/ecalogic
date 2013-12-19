@@ -53,7 +53,7 @@ object LoadForm {
       val sb = new StringBuilder
       var i = -1;
       sb.append("<select name=\"load\">\n")
-      new File("doc\\examples\\").listFiles().foreach({
+      new File("doc/examples/").listFiles().foreach({
         f => sb append (
           "<option value=\"" + {
             i += 1;
@@ -72,7 +72,7 @@ object LoadForm {
         val load = params.getOrElse("load", "")
         // TODO: Find file
         try {
-          val file = new File("doc\\examples\\").listFiles()(load.toInt)
+          val file = new File("doc/examples/").listFiles()(load.toInt)
 
           if (file.isDirectory) {
             // TODO: ?Walk directory?

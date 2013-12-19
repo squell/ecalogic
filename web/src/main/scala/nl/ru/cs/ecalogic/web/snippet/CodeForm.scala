@@ -50,10 +50,10 @@ import nl.ru.cs.ecalogic.model.{ECMModel, ComponentModel}
 object CodeForm {
 
 
-  def insertComponents = ("#code2 *" #> Source.fromFile(new File("components\\ecalogic\\CPU.ecm")).mkString) &
-    ("#code3 *" #> Source.fromFile(new File("components\\ecalogic\\Radio.ecm")).mkString) &
-    ("#code4 *" #> Source.fromFile(new File("components\\ecalogic\\Sensor.ecm")).mkString) &
-    ("#code5 *" #> Source.fromFile(new File("components\\ecalogic\\Stub.ecm")).mkString)
+  def insertComponents = ("#code2 *" #> Source.fromFile(new File("components/ecalogic/CPU.ecm")).mkString) &
+    ("#code3 *" #> Source.fromFile(new File("components/ecalogic/Radio.ecm")).mkString) &
+    ("#code4 *" #> Source.fromFile(new File("components/ecalogic/Sensor.ecm")).mkString) &
+    ("#code5 *" #> Source.fromFile(new File("components/ecalogic/Stub.ecm")).mkString)
 
   def render =
     "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, insertComponents(ns))) &
