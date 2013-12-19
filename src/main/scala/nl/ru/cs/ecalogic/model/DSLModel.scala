@@ -39,12 +39,12 @@ import scala.collection.mutable
 
 abstract class DSLModel(val name: String) extends ComponentModel with DelayedInit {
 
-  class CState private[DSLModel](val elements: Map[String, ECAValue]) extends ComponentState with Dynamic {
+  class CState private[DSLModel](val elements: Map[String, Polynomial]) extends ComponentState with Dynamic {
     import scala.language.dynamics
 
     def selectDynamic(name: String) = elements(name)
 
-    def applyDynamicNamed(name: String)(args: (String, ECAValue)*): CState = name match {
+    def applyDynamicNamed(name: String)(args: (String, Polynomial)*): CState = name match {
       case "apply" =>
         val newElements = args.toMap
         val undefined = newElements.keySet &~ elements.keySet
@@ -56,11 +56,11 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
         throw new RuntimeException(s"Undeclared method: $name.")
     }
 
-    protected def update(newElements: Map[String, ECAValue]) = new CState(elements ++ newElements)
+    protected def update(newElements: Map[String, Polynomial]) = new CState(elements ++ newElements)
 
   }
 
-  private val elements                 = mutable.Map.empty[String, ECAValue].withDefault(n => throw new ECAException(s"Undefined element: '$n'.")) // moet dit niet 0 zijn?
+  private val elements                 = mutable.Map.empty[String, Polynomial].withDefault(n => throw new ECAException(s"Undefined element: '$n'.")) // moet dit niet 0 zijn?
   private val energyConstants          = mutable.Map.empty[String, ECAValue].withDefault(super.E)
   private val timeConstants            = mutable.Map.empty[String, ECAValue].withDefault(super.T)
   private val deltaFunctions           = mutable.Map.empty[String, DFunction].withDefault(super.delta)
@@ -153,9 +153,9 @@ abstract class DSLModel(val name: String) extends ComponentModel with DelayedIni
     private[DSLModel] class VariableDeclaration(val value: ECAValue)
 
     val σ = s0
-    object s0 extends Declaration[ECAValue] {
+    object s0 extends Declaration[Polynomial] {
 
-      protected def apply(declarations: Seq[(String, ECAValue)]) {
+      protected def apply(declarations: Seq[(String, Polynomial)]) {
         checkDuplicates(declarations, "variables", true)
         elements ++= declarations.toMap
       }

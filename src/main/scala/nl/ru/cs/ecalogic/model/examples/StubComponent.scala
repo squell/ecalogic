@@ -33,14 +33,15 @@
 package nl.ru.cs.ecalogic
 package model
 package examples
+import util.Polynomial
 
 object StubComponent extends ComponentModel {
 
   val name = "Stub"
 
-  case class CState(on: Int=0)  extends ComponentState {
-    val elements: Map[String,ECAValue] = Map("active"->on)
-    def update(newElts: Map[String,ECAValue]) = CState(newElts("active"))
+  case class CState(on: Polynomial=0)  extends ComponentState {
+    val elements: Map[String,Polynomial] = Map("active"->on)
+    def update(newElts: Map[String,Polynomial]) = CState(newElts("active"))
     def apply(s: String) = elements(s)
   }
 

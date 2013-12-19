@@ -49,30 +49,30 @@ trait ComponentModel { model =>
   // Utility types
   type TDFunction  = (EACState, Polynomial) => Polynomial
   type LUBFunction = (EACState, EACState) => EACState
-  type PHIFunction = CState => ECAValue
+  type PHIFunction = CState => Polynomial
   type DFunction   = CState => CState
   type RVFunction  = (CState, Seq[ECAValue]) => ECAValue
 
   type CState <: ComponentState
   trait ComponentState extends PartiallyOrdered[CState] {
 
-    val elements: Map[String, ECAValue]
+    val elements: Map[String, Polynomial]
 
     def tryCompareTo[B >: CState <% PartiallyOrdered[B]](that: B): Option[Int] = that match {
       case that: ComponentState =>
         var sign = 0
         for (key <- elements.keys) {
-          val cmp = elements(key) compare that.elements(key)
-          if (sign* cmp < 0) return None // note: a*b<0 iff a,b have different signs
+          val cmp = elements(key) tryCompareTo that.elements(key) getOrElse(return None)
+          if (sign*cmp < 0) return None // note: a*b<0 iff a,b have different signs
           else sign |= cmp
         }
         Some(sign)
       case _ => None
     }
 
-    protected def update(newElements: Map[String, ECAValue]): CState
+    protected def update(newElements: Map[String, Polynomial]): CState
 
-    private[ComponentModel] def update(newElements: Iterable[(String, ECAValue)]): CState = update(newElements.toMap)
+    private[ComponentModel] def update(newElements: Iterable[(String, Polynomial)]): CState = update(newElements.toMap)
 
     override def equals(that: Any) = that match {
       case that: ComponentState => tryCompareTo(that) == Some(0)
@@ -122,9 +122,9 @@ trait ComponentModel { model =>
     /* checks if monotonicity of phi holds for s1 => s2 */
     def phiCheck(s1: CState, s2: CState) {
       val stOrder  = s1 tryCompareTo s2
-      val phiOrder = phi(s1) compareTo phi(s2)
+      val phiOrder = phi(s1) tryCompareTo phi(s2)
       // check if the signs of the comparisons differ
-      if(stOrder.exists(_ * phiOrder < 0))
+      if(phiOrder.exists(ord=>stOrder.exists(_ * ord < 0)))
         throw new ECAException(s"$name::phi not monotone with respect to $s1 and $s2")
     }
   }
@@ -137,7 +137,7 @@ trait ComponentModel { model =>
 
   def T(f: String) = ECAValue.Zero
 
-  def initialEACState(timestamp: ECAValue = 0, energy: ECAValue = 0) =
+  def initialEACState(timestamp: Polynomial = 0, energy: Polynomial = 0) =
     EACState(initialState, timestamp, energy)
 
   def lub(a: EACState, b: EACState): EACState = {
@@ -159,7 +159,7 @@ trait ComponentModel { model =>
 
   def delta(f: String)(s: CState) = s
 
-  def phi(s: CState) = ECAValue.Zero
+  def phi(s: CState) = Polynomial(0)
 
   protected def rv(f: String)(s: CState, a: Seq[ECAValue]) = ECAValue.Zero
 

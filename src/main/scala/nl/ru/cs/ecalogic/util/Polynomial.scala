@@ -118,6 +118,9 @@ object Polynomial {
   private def product(a: (Seq[String],BigInt), b: (Seq[String],BigInt)) =
     ((a._1++b._1).sorted, a._2*b._2)
 
+  implicit def boolToPoly(value: Boolean): Polynomial =
+    new Polynomial(Map(Seq.empty[String]->(if(value) 1 else 0)))
+    
   implicit def intToPoly(value: Int): Polynomial =
     new Polynomial(Map(Seq.empty[String]->BigInt(value)))
     
