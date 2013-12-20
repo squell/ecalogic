@@ -125,10 +125,31 @@ class PolynomialSpec extends FlatSpec with Matchers {
     val env = Seq("x"->2, "y"->3, "z"->5)
     C(env:_*) + D(env:_*) should be ((C+D)(env:_*))
     C(env:_*) * D(env:_*) should be ((C*D)(env:_*))
-    C("x"->0,"y"->0,"z"->0) should be (C.coef(Seq()))
+    //C("x"->0,"y"->0,"z"->0) should be (C.coef(Seq()))
   }
   it should "compose substitution" in {
     C("x"->A).apply("y"->B) should be (C("x"->A("y"->B), "y"->B))
+  }
+
+  it should "distribute divides" in {
+    (A+B)/"x"/3 should be ((A/"x"/3)+(B/"x"/3))
+    (A+B)/"y"/3 should be ((A/"y"/3)+(B/"y"/3))
+    (A+B)/"z"/3 should be ((A/"z"/3)+(B/"z"/3))
+  }
+  it should "interchange divides and multiplies" in {
+    (A/"x"/3) * B should be ((A*B)/"x"/3)
+    (A/3/"x") * B should be ((A*B)/"x"/3)
+    (A/3) * (B/"x") should be ((A*B)/"x"/3)
+    (A/3) * (B/"x") should be ((A*B)/"x"/3)
+  }
+  it should "divide reversibly" in {
+    (A*B)/"x" * "x" should be (A*B)
+    (A*B)/5 * 5 should be (A*B)
+  }
+  it should "split correctly" in {
+    val Z = C*D/23/"x"/"y"/"z"
+    Z.split.reduce(_+_) should be (Z)
+    Z.vars should be (Set("x","y","z"))
   }
 }
 

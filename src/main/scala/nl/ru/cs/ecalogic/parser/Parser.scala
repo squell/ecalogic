@@ -382,7 +382,7 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
   }
 
   protected def expRightExpr(follows: Pattern): Expression = literal(follows)
-  protected def divRightExpr(follows: Pattern): Expression = literal(follows)
+  protected def divRightExpr(follows: Pattern): Expression = expExpr(follows) //was: literal(follows)
 
   def expExpr(follows: Pattern): Expression = {
     @tailrec
