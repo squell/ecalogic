@@ -160,7 +160,7 @@ object Options {
   }
 
   def friendlyHelpMsg() {
-    println("""usage: eecalogic.jar [OPTIONS] file1.eca [[Alias=]file2.ecm ...]
+    println("""usage: ecalogic.jar [OPTIONS] file1.eca [[Alias=]file2.ecm ...]
 
 Functionality options:
 
