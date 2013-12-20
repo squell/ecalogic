@@ -77,8 +77,9 @@ object CodeForm {
 
     def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, _], all) =>
+        errorStream.reset()
+        
         val code: String = params.getOrElse("code", "").toString()
-
 
         config.Options.reset
         if (params.getOrElse("tech", "") == "True") config.Options(Array("-tr"))
