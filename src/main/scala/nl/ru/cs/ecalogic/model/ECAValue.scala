@@ -87,7 +87,10 @@ class ECAValue private(private val value: Either[BigInt,String]) extends ScalaNu
   def underlying  = value.left.get
 
   def toBigInt  = value.left.get
-  def toPolynomial = Polynomial(value.left.get)
+  def toPolynomial = value match { 
+    case Left(x) => Polynomial(x)
+    case Right(x) => Polynomial(x)
+  }
   def toBoolean = value.left.get != ECAValue.False
 
   override def equals(that: Any) = that match {
@@ -97,7 +100,10 @@ class ECAValue private(private val value: Either[BigInt,String]) extends ScalaNu
 
   override def hashCode = value.hashCode
 
-  override def toString = value.toString
+  override def toString = value match {
+    case Left(x) => x.toString
+    case Right(x) => x.toString
+  }
 
 }
 
@@ -115,6 +121,7 @@ object ECAValue {
   implicit def valueToInt(v: ECAValue): Int         = v.toInt
   implicit def valueToBoolean(v: ECAValue): Boolean = v.toBoolean
 
+  implicit def stringToValue(s: String): ECAValue   = new ECAValue(Right(s))
   implicit def bigIntToValue(v: BigInt): ECAValue   = new ECAValue(Left(v))
   implicit def intToValue(v: Int): ECAValue         = new ECAValue(Left(v))
   implicit def booleanToValue(v: Boolean): ECAValue = if (v) True else False

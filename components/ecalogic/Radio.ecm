@@ -1,5 +1,7 @@
 component Radio(active: 0..1)
 
+    initial active := xon
+
     component function on uses 40 time 40 energy
         active := 1
     end function
