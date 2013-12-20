@@ -1,0 +1,7 @@
+component Sensor
+
+    component function m uses 40 energy 10 time
+
+    function phi := 3
+
+end component

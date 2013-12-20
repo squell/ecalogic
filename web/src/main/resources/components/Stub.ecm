@@ -1,0 +1,44 @@
+//import class java.lang.Math
+
+component Stub(active: 0..100)
+
+    component function zap uses 1 energy
+    component function idle uses 1 time
+
+    component function on
+        active := 1
+    end function
+
+    component function off
+        active := 0
+    end function
+
+    component function raise
+        active := min(active + 1, 100)
+    end function
+
+    component function lower
+        active := max(active - 1, 0)
+    end function
+
+    function phi := active
+
+    function min(x, y)
+        if x > y then
+            min := y
+        else
+            min := x
+        end if
+    end function
+
+    //function max(x, y) := Math::max(x, y)
+    function max(x, y)
+        if x > y then
+            min := x
+        else
+            min := y
+        end if
+    end function
+
+end component
+

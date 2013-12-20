@@ -53,7 +53,7 @@ object LoadForm {
       val sb = new StringBuilder
       var i = -1;
       sb.append("<select name=\"load\">\n")
-      new File("doc/examples/").listFiles().foreach({
+      new File(LiftRules.getResource("/examples").openOrThrowException("examples").getPath).listFiles().foreach({
         f => sb append (
           "<option value=\"" + {
             i += 1;
@@ -71,7 +71,7 @@ object LoadForm {
       case JsonCmd("processForm", target, params: Map[String, String], all) =>
         val load = params.getOrElse("load", "")
         try {
-          val file = new File("doc/examples/").listFiles()(load.toInt)
+          val file = new File(LiftRules.getResource("/examples").openOrThrowException("examples").getPath).listFiles()(load.toInt)
 
           if (file.isDirectory) {
             // TODO: ?Walk directory?

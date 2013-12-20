@@ -36,25 +36,24 @@ import scala.xml.{Unparsed, NodeSeq, Utility}
 import net.liftweb.util.Helpers._
 import net.liftweb.util.JsonCmd
 import net.liftweb.http.SHtml.jsonForm
-import net.liftweb.http.{SHtml, JsonHandler}
+import net.liftweb.http.{LiftRules, SHtml, JsonHandler}
 import net.liftweb.http.js.JsCmd
 import net.liftweb.http.js.JsCmds.{Run, SetHtml, Script}
 import nl.ru.cs.ecalogic.parser.{ModelParser, Parser}
 import nl.ru.cs.ecalogic.util.DefaultErrorHandler
 import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
 import nl.ru.cs.ecalogic.{ECAException, config}
-import java.io.{File, ByteArrayOutputStream, PrintWriter}
-import scala.io.Source
+import java.io.{ByteArrayOutputStream, PrintWriter}
 import nl.ru.cs.ecalogic.model.{ECMModel, ComponentModel}
-import nl.ru.cs.ecalogic.ast.{Import, ASTNode}
 
 object CodeForm {
 
+  this.getClass.getResource("").toString
 
-  def insertComponents = ("#code2 *" #> Source.fromFile(new File("components/ecalogic/CPU.ecm")).mkString) &
-    ("#code3 *" #> Source.fromFile(new File("components/ecalogic/Radio.ecm")).mkString) &
-    ("#code4 *" #> Source.fromFile(new File("components/ecalogic/Sensor.ecm")).mkString) &
-    ("#code5 *" #> Source.fromFile(new File("components/ecalogic/Stub.ecm")).mkString)
+  def insertComponents = ("#code2 *" #> LiftRules.loadResourceAsString("/components/CPU.ecm").openOrThrowException("CPU Component not found")) &
+    ("#code3 *" #> LiftRules.loadResourceAsString("/components/Radio.ecm").openOrThrowException("Radio Component not found")) &
+    ("#code4 *" #> LiftRules.loadResourceAsString("/components/Sensor.ecm").openOrThrowException("Sensor Component not found")) &
+    ("#code5 *" #> LiftRules.loadResourceAsString("/components/Stub.ecm").openOrThrowException("Stub Component not found"))
 
   def render =
     "#codeForm *" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, insertComponents(ns))) &

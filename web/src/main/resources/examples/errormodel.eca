@@ -1,0 +1,22 @@
+(* 
+  the BUG component has state-update functions that have no fixed points
+
+  BUG consists of one counter.
+
+   ::inc()   increases the value of the counter 
+	(monotonic, but does not have a fixpoint, can be caught by limiting the algorithm)
+
+   ::neg()   negates the value of the counter
+	(non-monotonic, has a single fixpoint (0), caught by safety net)
+
+  Note that every monotonic function that works on a finite, partially ordered set has a fixed point,
+  i.e. an x such that f(x) = x
+
+ *)
+
+function program(X)
+  BUG::inc();
+  while 1 < 2 bound 5 do
+    BUG::inc()  // also try: BUG::neg() and see what happens
+  end while
+end function

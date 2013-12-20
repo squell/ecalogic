@@ -1,0 +1,21 @@
+// time usage: 100, energy usage: 100
+
+import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
+
+(* expect: (Map(BUG -> 0, CPU -> 5035, Radio -> 10270, Sensor -> 15405, Stub -> 5135),5135) *)
+function waste(X)
+  while X > 0 bound X do
+    X := X-1;
+    Stub::idle();
+  end while
+end function
+
+function program(X)
+  if 23 < 281723817 then
+    Stub::on();
+  else
+    waste(100);
+  end if;
+  // stub::on=1, stub::t=0, stub::e=0, T=100
+  // so at program completion, stub::e=100
+end function
