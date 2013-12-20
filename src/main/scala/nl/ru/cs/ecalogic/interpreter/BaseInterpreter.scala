@@ -2,7 +2,7 @@ package nl.ru.cs.ecalogic
 package interpreter
 
 import ast._
-import nl.ru.cs.ecalogic.util.{Position, ErrorHandler}
+import nl.ru.cs.ecalogic.util.{Position, ErrorHandler, Polynomial}
 import model._
 
 import scala.util.Try
@@ -109,8 +109,11 @@ trait BaseInterpreter {
         (postExprState, values :+ value)
     }
 
+
+  protected def forceValue(poly: Polynomial): ECAValue = if(poly.isIntegral) poly.coef(Seq.empty) else errorHandler.fatalError(new ECAException(s"Cannot evaluate polynomial value '$poly'"))
+
   protected def evalExpression(expr: Expression, state: IState, stackTrace: StackTraceBuilder): (IState, ECAValue) = expr match {
-    case Literal(value)       => (state, value)
+    case Literal(value)       => (state, forceValue(value))
     case VarRef(name)         => (state, state.value(name).getOrElse(errorHandler.fatalError(new ECAException(s"Undeclared variable: '$name'", stackTrace.result(expr)))))
 
     case expr: BinaryExpression =>

@@ -34,7 +34,7 @@ package nl.ru.cs.ecalogic
 package ast
 
 import model.ECAValue
-import util.{Positional, Position}
+import util.{Positional, Position, Polynomial}
 
 /** Base sealed trait for all AST nodes.
   *
@@ -131,7 +131,7 @@ sealed trait PrimaryExpression extends Expression {
   def rewrite(ops: Seq[Expression]) = this
 }
 
-case class Literal(value: ECAValue) extends PrimaryExpression
+case class Literal(value: Polynomial) extends PrimaryExpression
 
 case class VarRef(name: String) extends PrimaryExpression
 

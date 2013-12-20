@@ -103,8 +103,12 @@ class ModelParser(input: String, _errorHandler: ErrorHandler = new DefaultErrorH
     case Tokens.Initial =>
       advance()
       val name = identifier(follows | Tokens.Assign)
+      // probably a better way to do this?
       expect(Tokens.Assign)(follows | Tokens.Numeral)
-      val value = literal(follows)
+      val value = if(!current(Tokens.Numeral))
+        Literal(identifier(follows))
+      else
+        literal(follows)
 
       Initializer(name, value)
     case Tokens.Component =>
