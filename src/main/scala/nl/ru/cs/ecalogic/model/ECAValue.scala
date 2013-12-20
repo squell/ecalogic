@@ -38,17 +38,23 @@ import util.Polynomial
 import scala.math.{ScalaNumericConversions, ScalaNumber}
 import scala.collection.immutable.NumericRange
 
-class ECAValue private(private val value: BigInt) extends ScalaNumber with ScalaNumericConversions with Ordered[ECAValue] {
+class ECAValue private(private val value: Either[BigInt,String]) extends ScalaNumber with ScalaNumericConversions with Ordered[ECAValue] {
 
   def isWhole = true
 
-  def +(that: ECAValue) = new ECAValue(value + that.value)
-  def -(that: ECAValue) = new ECAValue(value - that.value)
-  def *(that: ECAValue) = new ECAValue(value * that.value)
-  def /(that: ECAValue) = new ECAValue(value / that.value)
-  def %(that: ECAValue) = new ECAValue(value % that.value)
-  def ^(that: ECAValue) = new ECAValue(value ^ that.value)
-  def unary_-           = new ECAValue(-value)
+  def lift(f: (BigInt,BigInt)=>BigInt)(that: ECAValue) = (value, that.value) match {
+    case (Left(x), Left(y)) => new ECAValue(Left(f(x,y)))
+    case (Right(x), _)      => this
+    case ( _, Right(x))     => that
+  }
+
+  def +(that: ECAValue) = lift(_+_)(that)
+  def -(that: ECAValue) = lift(_-_)(that)
+  def *(that: ECAValue) = lift(_*_)(that)
+  def /(that: ECAValue) = lift(_/_)(that)
+  def %(that: ECAValue) = lift(_%_)(that)
+  def ^(that: ECAValue) = lift(_^_)(that)
+  def unary_-           = value match { case Left(x) => new ECAValue(Left(-x)) case _ => throw new Exception("Can't negate '$value'")}
   def unary_+           = this
 
   def min(that: ECAValue) = if (this > that) that else this
@@ -62,22 +68,27 @@ class ECAValue private(private val value: BigInt) extends ScalaNumber with Scala
     // TODO: or not TODO?
   }
 
-  def compare(that: ECAValue) = value compare that.value
+  def compare(that: ECAValue) = (value, that.value) match { 
+    case (Left(x), Left(y))   => x compare y
+    case (Right(x), Right(y)) => x compare y
+    case (Left(x), Right(y))  => -1
+    case (Right(x), Left(y))  => +1
+  }
 
   def &&(that: ECAValue) = ECAValue.booleanToValue(toBoolean && that.toBoolean)
   def ||(that: ECAValue) = ECAValue.booleanToValue(toBoolean || that.toBoolean)
   def unary_!            = ECAValue.booleanToValue(!toBoolean)
 
-  def intValue    = value.intValue
-  def longValue   = value.longValue
-  def floatValue  = value.floatValue
-  def doubleValue = value.doubleValue
+  def intValue    = value.left.get.intValue
+  def longValue   = value.left.get.longValue
+  def floatValue  = value.left.get.floatValue
+  def doubleValue = value.left.get.doubleValue
 
-  def underlying  = value
+  def underlying  = value.left.get
 
-  def toBigInt  = value
-  def toPolynomial = Polynomial(value)
-  def toBoolean = value != ECAValue.False
+  def toBigInt  = value.left.get
+  def toPolynomial = Polynomial(value.left.get)
+  def toBoolean = value.left.get != ECAValue.False
 
   override def equals(that: Any) = that match {
     case that: ECAValue   => value == that.value
@@ -93,8 +104,8 @@ class ECAValue private(private val value: BigInt) extends ScalaNumber with Scala
 object ECAValue {
   import scala.language.implicitConversions
 
-  val Zero = new ECAValue(0)
-  val One  = new ECAValue(1)
+  val Zero = new ECAValue(Left(0))
+  val One  = new ECAValue(Left(1))
 
   private val True  = One
   private val False = Zero
@@ -104,8 +115,8 @@ object ECAValue {
   implicit def valueToInt(v: ECAValue): Int         = v.toInt
   implicit def valueToBoolean(v: ECAValue): Boolean = v.toBoolean
 
-  implicit def bigIntToValue(v: BigInt): ECAValue   = new ECAValue(v)
-  implicit def intToValue(v: Int): ECAValue         = new ECAValue(v)
+  implicit def bigIntToValue(v: BigInt): ECAValue   = new ECAValue(Left(v))
+  implicit def intToValue(v: Int): ECAValue         = new ECAValue(Left(v))
   implicit def booleanToValue(v: Boolean): ECAValue = if (v) True else False
 
   implicit object ECAValueIsIntegral extends Integral[ECAValue] with ECAValueOrdering  {
