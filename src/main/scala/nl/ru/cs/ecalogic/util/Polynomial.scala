@@ -95,7 +95,7 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt], val divisor
 
   def vars: Set[String] = divisor._1.toSet ++ repr.keys.flatMap(_.toSet)
 
-  def split: Seq[Polynomial] = repr.map(term=>simplify(Map(term),divisor)).toSeq
+  def split: Seq[Polynomial] = repr.map(term=>simplify(Map(term),divisor)).toSeq.filter(_ != 0)
 
   def coef(term: Seq[String] = Seq.empty): BigInt = repr.getOrElse(term.sorted, BigInt(0))
 
@@ -133,7 +133,9 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt], val divisor
     case _                => false
   }
 
-  override def toString = {
+  override def toString: String = {
+    // uncomment this line if you want to print the result "big fraction style"
+    if(repr.size > 1) return (split.map(_.toString) mkString " + ")
     def nondigit(c: Char) = !('0' to '9' contains c)
     def prepend(coef: BigInt, term: Seq[String]) = if(coef != 1 || term.isEmpty) coef+:term else term
     val str = (for((term, coef)<-repr.toSeq if coef != 0) yield prepend(coef,term) mkString "*") sortBy(-_.count(nondigit)) mkString " + "
@@ -141,7 +143,7 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt], val divisor
     if(divisor == (Seq.empty, 1)) 
       numerator 
     else 
-      numerator + " / " + (prepend(divisor._2, divisor._1) mkString "*")
+      numerator + (if(repr.size>1) " / " else "/") + (prepend(divisor._2, divisor._1) mkString "*")
   }
 }
 
@@ -159,7 +161,10 @@ object Polynomial {
       new Polynomial(repr) 
     else {
       def gcd(x:BigInt ,y: BigInt): BigInt = if(x%y==0) y else gcd(y, x%y)
-      val common = repr.foldRight(divisor) { case ((v1, n), (v2, m)) => (v1.intersect(v2), gcd(n,m)) }
+      val common = repr.foldRight(divisor) { 
+        // ignore terms with a zero coefficient
+        case ((v1, n), (v2, m)) => if(n==0) (v2,m) else (v1.intersect(v2), gcd(n,m)) 
+      }
       def divideOut(term: (Seq[String],BigInt)) = (term._1.diff(common._1).sorted, term._2/common._2)
       new Polynomial(repr.map(divideOut), divideOut(divisor))
     }
