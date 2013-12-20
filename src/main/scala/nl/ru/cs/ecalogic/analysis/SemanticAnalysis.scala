@@ -113,8 +113,8 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
     case v@VarRef(ident) =>
       if(!params(ident))
         eh.warning(new ECAException(s"Non-parameter '$ident' needs an annotation when used here.", v.position))
-      if(live(ident))
-        eh.error(new ECAException(s"Variable '$ident' written to before this reference.", v.position))
+      else if(live(ident))
+        eh.error(new ECAException(s"Variable '$ident' written to before this reference. Add an annotation.", v.position))
     case e: Expression =>
       eh.error(new ECAException(s"Expression not suitable for use in a ranking function.", e.position))
   }
@@ -138,12 +138,13 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
        *
       */
       def varFlow(live: Set[String], node: ASTNode)(implicit params: Set[String]): Set[String] = node match {
-        case stm: Annotated               => stm.annotations.foldLeft(params) {
+        case stm: Annotated               => val annotated = stm.annotations.keys.toSet
+                                             stm.annotations.foldLeft(params) {
                                                case (params, (name, expr)) => 
                                                  checkStaticExpression(live, params, expr)
                                                  params + name
                                              }
-                                             varFlow(live, stm.underlying)(params++stm.annotations.keys)
+                                             varFlow(live--annotated, stm.underlying)(params|annotated) | (live&annotated)
 
         case If(pred, thenPart, elsePart) => varFlow(live, pred)
                                              varFlow(live, thenPart) & varFlow(live, elsePart)
