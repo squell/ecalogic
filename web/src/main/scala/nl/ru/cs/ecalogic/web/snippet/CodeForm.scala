@@ -39,13 +39,14 @@ import net.liftweb.http.SHtml.jsonForm
 import net.liftweb.http.{SHtml, JsonHandler}
 import net.liftweb.http.js.JsCmd
 import net.liftweb.http.js.JsCmds.{Run, SetHtml, Script}
-import nl.ru.cs.ecalogic.parser.Parser
+import nl.ru.cs.ecalogic.parser.{ModelParser, Parser}
 import nl.ru.cs.ecalogic.util.DefaultErrorHandler
 import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
-import nl.ru.cs.ecalogic.{config}
+import nl.ru.cs.ecalogic.{ECAException, config}
 import java.io.{File, ByteArrayOutputStream, PrintWriter}
 import scala.io.Source
 import nl.ru.cs.ecalogic.model.{ECMModel, ComponentModel}
+import nl.ru.cs.ecalogic.ast.{Import, ASTNode}
 
 object CodeForm {
 
@@ -58,8 +59,7 @@ object CodeForm {
   def render =
     "#codeForm *" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, insertComponents(ns))) &
       "#codeScript" #> Script(AnalyseServer.jsCmd) &
-        "#add [onClick]" #> SHtml.onEvent((str) => Run("tabs=tabs+1;createNewTab('codeForm1','Component ' + (tabs - 1),'<textarea name=comp cols=80 rows=35; id=code' + tabs + '></textarea><br>','',true)"))
-
+      "#add [onClick]" #> SHtml.onEvent((str) => Run("tabs=tabs+1;createNewTab('codeForm1','Component ' + (tabs - 1),'<textarea name=comp cols=80 rows=35; id=code' + tabs + '></textarea><br>','',true)"))
 
 
   object AnalyseServer extends JsonHandler {
@@ -72,13 +72,15 @@ object CodeForm {
     def processComponent(s: String) {
       val errorHandler = new DefaultErrorHandler(sourceText = Some(s), writer = pw)
       val loaded = ECMModel.fromSource(s, None, errorHandler)
+      if (new ModelParser(s, errorHandler).component().imports.nonEmpty)
+        throw new ECAException(s"Import statement not allowed")
       components = components + (loaded.name -> loaded)
     }
 
     def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, _], all) =>
         errorStream.reset()
-        
+
         val code: String = params.getOrElse("code", "").toString()
 
         config.Options.reset
@@ -118,18 +120,18 @@ object CodeForm {
 
           val state = consumptionAnalyser.analyse()
           val buf = new StringBuilder
-          state.transform((_,st)=>st.energy) match {
+          state.transform((_, st) => st.energy) match {
             case (states, t) =>
               buf append f"Time:\t$t%s<br>"
-              buf append f"Energy:\t${states.values.reduce(_+_)}%s<br>"
-              for((name, e) <- states)
+              buf append f"Energy:\t${states.values.reduce(_ + _)}%s<br>"
+              for ((name, e) <- states)
                 buf append f"└ ${xml.Utility.escape(name)}%13s\t$e%s<br>"
           }
 
           SetHtml("result", Unparsed("The result is %s".format(buf.toString)))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
-            return SetHtml("result", Unparsed("Fatal error: <pre><code>%s</pre></code>".format(Utility.escape(errorStream.toString))))
+            return SetHtml("result", Unparsed(s"Fatal error: <pre><code>${Utility.escape(errorStream.toString)} ${e.getMessage}</code></pre>"))
         }
     }
   }
