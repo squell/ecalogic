@@ -66,7 +66,7 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt], val divisor
   // would be nice to use a partialfunction here, but Scala doesn't allow that for operators?
   def /(that: Polynomial): Polynomial = {
     if(that.repr.size != 1 || that.divisor != (Seq.empty, 1))
-      throw new Exception("Attempt to divide Polynomial by '$that'.")
+      throw new Exception(s"Attempt to divide Polynomial by '$that'.")
     val term = that.repr.head
     simplify(
       repr,
@@ -133,22 +133,33 @@ class Polynomial private (private val repr: Map[Seq[String],BigInt], val divisor
     case _                => false
   }
 
-  override def toString: String = {
-    // uncomment this line if you want to print the result "big fraction style"
-    if(repr.size > 1) return (split.map(_.toString) mkString " + ")
+  override def toString = {
+    val str = split.map(_.toFractionalString) mkString " + "
+    if(str.nonEmpty) str else "0"
+  }
+
+  def toFractionalString = {
     def nondigit(c: Char) = !('0' to '9' contains c)
     def prepend(coef: BigInt, term: Seq[String]) = if(coef != 1 || term.isEmpty) coef+:term else term
+
     val str = (for((term, coef)<-repr.toSeq if coef != 0) yield prepend(coef,term) mkString "*") sortBy(-_.count(nondigit)) mkString " + "
-    val numerator = if(str.isEmpty) "0" else str
+
+    val numerator   = if(str.nonEmpty) str else "0"
+    val denominator = prepend(divisor._2, divisor._1) match { case Seq(term) => term case terms => "(" + (terms mkString "*") + ")"  }
+
     if(divisor == (Seq.empty, 1)) 
       numerator 
+    else if(repr.size<=1)
+      numerator + "/" + denominator
     else 
-      numerator + (if(repr.size>1) " / " else "/") + (prepend(divisor._2, divisor._1) mkString "*")
+      "(" + numerator + ") / " + denominator
   }
 }
 
 object Polynomial {
   import scala.language.implicitConversions
+
+  private def optimize(a: Map[Seq[String],BigInt]) = a.filter(_._2 != 0)
 
   private def combine(a: Map[Seq[String],BigInt], b: Map[Seq[String],BigInt]) =
     a.repr ++ b.transform(a.getOrElse(_, BigInt(0))+_)
@@ -160,7 +171,7 @@ object Polynomial {
     if(divisor == (Seq.empty, 1) || repr.forall(_._2 == 0))
       new Polynomial(repr) 
     else {
-      def gcd(x:BigInt ,y: BigInt): BigInt = if(x%y==0) y else gcd(y, x%y)
+      def gcd(x:BigInt, y: BigInt): BigInt = if(x%y==0) y else gcd(y, x%y)
       val common = repr.foldRight(divisor) { 
         // ignore terms with a zero coefficient
         case ((v1, n), (v2, m)) => if(n==0) (v2,m) else (v1.intersect(v2), gcd(n,m)) 
@@ -186,7 +197,8 @@ object Polynomial {
     val x = (Polynomial(5) * "x" + 0) * (Polynomial(2)+"x")
     println(x + 2*Polynomial("x") - Polynomial("x") - Polynomial("x")  )
     println(Polynomial(0))
-    println((Polynomial(5)*"x")**2 /5 /"x")
+    println(((Polynomial(5)*"x")**2 /5 + 7) /"x"/"x")
+    println(Polynomial(0)*"x")
   }
 }
 

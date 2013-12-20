@@ -134,13 +134,15 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
       case Multiply(l, r) => resolve(l) * resolve(r)
       case Divide(l, r) => 
         val rhs = resolve(r)
-        if(rhs.split.length != 1 && rhs.divisor != (Seq.empty, 1))
-          eh.error(new ECAException("Cannot divide a Polynomial by a Polynomial.", r.position))
-        resolve(l) / rhs
+        if(rhs.split.length != 1 || rhs.divisor != (Seq.empty, 1)) {
+          eh.error(new ECAException(s"Cannot divide by this expression.", r.position))
+          resolve(l)
+        } else
+          resolve(l) / rhs
       case Exponent(l, r) => 
         val rhs = resolve(r)
         if(!rhs.vars.isEmpty) eh.error(new ECAException("Integer required as an exponent.", r.position))
-        resolve(l) / rhs.coef()
+        resolve(l) ** rhs.coef().toInt
       case _ => eh.error(new ECAException("Could not resolve this value.", expr.position)); 0
     }
 
