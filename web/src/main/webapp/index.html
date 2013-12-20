@@ -38,11 +38,13 @@
                             <textarea name="comp" cols="80" rows="35" id="code5"></textarea><br>
                         </div>
                     </div>
-                    <input type="checkbox" name="tech" value="True">Use techreport while<br>
-                    <input type="checkbox" name="beforeSync" value="True">Use Sync<br>
-                    <input type="checkbox" name="update" value="True">Always update time<br>
                     <input type="submit" value="Send"/>
-
+                    <button onclick="document.getElementById('advanced').style.display='block';this.style.display='none';return false;">Advanced</button>
+                    <div style="display: none;" id="advanced">
+                        <input type="checkbox" name="tech" value="True">Use techreport while<br>
+                        <input type="checkbox" name="beforeSync" value="True">Use Sync<br>
+                        <input type="checkbox" name="update" value="True">Always update time<br>
+                    </div>
                     <div id="bla">
                     </div>
 
