@@ -128,7 +128,7 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
 
     for(fundef <- program.functions.values) {
 
-      implicit val params = fundef.parameters.map(_.name).toSet
+      implicit val params = fundef.parameters.toSet
 
       /** Determine if all variable references are potentially used uninitialized.
        *
@@ -140,7 +140,7 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
       def varFlow(live: Set[String], node: ASTNode)(implicit params: Set[String]): Set[String] = node match {
         case stm: Annotated               => val annotated = stm.annotations.keys.toSet
                                              stm.annotations.foldLeft(params) {
-                                               case (params, (name, expr)) => 
+                                               case (params, (name, expr)) =>
                                                  checkStaticExpression(live, params, expr)
                                                  params + name
                                              }

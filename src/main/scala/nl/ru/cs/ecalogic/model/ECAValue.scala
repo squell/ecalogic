@@ -42,14 +42,14 @@ class ECAValue private(private val value: BigInt) extends ScalaNumber with Scala
 
   def isWhole = true
 
-  def +(that: ECAValue) = new ECAValue(value + that.value)
-  def -(that: ECAValue) = new ECAValue(value - that.value)
-  def *(that: ECAValue) = new ECAValue(value * that.value)
-  def /(that: ECAValue) = new ECAValue(value / that.value)
-  def %(that: ECAValue) = new ECAValue(value % that.value)
-  def ^(that: ECAValue) = new ECAValue(value ^ that.value)
-  def unary_-           = new ECAValue(-value)
-  def unary_+           = this
+  def +(that: ECAValue)  = new ECAValue(value + that.value)
+  def -(that: ECAValue)  = new ECAValue(value - that.value)
+  def *(that: ECAValue)  = new ECAValue(value * that.value)
+  def /(that: ECAValue)  = new ECAValue(value / that.value)
+  def %(that: ECAValue)  = new ECAValue(value % that.value)
+  def **(that: Int)      = new ECAValue(value pow that)
+  def unary_-            = new ECAValue(-value)
+  def unary_+            = this
 
   def min(that: ECAValue) = if (this > that) that else this
   def max(that: ECAValue) = if (this > that) this else that
@@ -75,9 +75,9 @@ class ECAValue private(private val value: BigInt) extends ScalaNumber with Scala
 
   def underlying  = value
 
-  def toBigInt  = value
+  def toBigInt     = value
   def toPolynomial = Polynomial(value)
-  def toBoolean = value != ECAValue.False
+  def toBoolean    = this != ECAValue.False
 
   override def equals(that: Any) = that match {
     case that: ECAValue   => value == that.value

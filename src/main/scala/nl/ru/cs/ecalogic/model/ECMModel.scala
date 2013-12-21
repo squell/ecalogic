@@ -34,6 +34,7 @@ package nl.ru.cs.ecalogic
 package model
 
 import ast._
+import interpreter.BaseInterpreter
 import parser.ModelParser
 import util._
 
@@ -45,12 +46,35 @@ import java.io.File
 import java.lang.reflect.Method
 import java.net.{URI, URL}
 
-class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHandler()) extends ComponentModel {
+class ECMModel(node: Component, protected val errorHandler: ErrorHandler = new DefaultErrorHandler()) extends ComponentModel with BaseInterpreter {
   import ECAException._
 
   class CState private[ECMModel](val elements: Map[String, ECAValue]) extends ComponentState {
 
     protected def update(newElements: Map[String, ECAValue]) = new CState(newElements)
+
+  }
+
+  protected case class IState(locals: Map[String, ECAValue], component: Map[String, ECAValue], mutation: Boolean) extends BaseInterpreterState {
+
+    def value(name: String) = component.get(name) orElse locals.get(name)
+
+    def substitute(name: String, value: ECAValue, stackTrace: StackTrace) = {
+      if (node.variables.contains(name)) {
+        if (!mutation) {
+          errorHandler.fatalError(new ECAException(s"Mutation of state variable '$name' is not allowed in this context.", stackTrace))
+        }
+        checkBoundaries(node.variables(name), value, Right(stackTrace))
+
+        IState(locals, component.updated(name, value), mutation)
+      } else
+        IState(locals.updated(name, value), component, mutation)
+    }
+
+    def enterFunction(name: String, arguments: Map[String, ECAValue])(block: IState => IState) = {
+      val postFunState = block(IState(arguments, component, mutation))
+      (IState(locals, postFunState.component, mutation), postFunState.locals.get(name))
+    }
 
   }
 
@@ -81,121 +105,47 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
     }
   }
 
-  private def evalFunction(fun: BasicFunction, arguments: Seq[ECAValue], state: Map[String, ECAValue],
-                           stackTrace: StackTraceBuilder, callPosition: Option[Position]): (Map[String, ECAValue], ECAValue) = {
-    if (arguments.length != fun.arity) {
-      errorHandler.fatalError(new ECAException(s"Function '${fun.name}' requires ${fun.arity} arguments; given: ${arguments.length}.", stackTrace.result(callPosition)))
+  protected override val componentName = Some(name)
+  protected val functions = node.functions
+
+  private def callReflective(call: FunCall, arguments: Seq[ECAValue], stackTrace: StackTraceBuilder): ECAValue = {
+    val classAlias = call.name.prefix.get
+    val methodName = call.name.name
+    val clazz = imports.getOrElse(classAlias, errorHandler.fatalError(new ECAException(s"Undeclared class: '$classAlias'.", stackTrace.result(call))))
+
+    val (method, converter) = methodCache.getOrElseUpdate(call.name, {
+      Try((clazz.getMethod(methodName, Seq.fill(arguments.length)(classOf[ECAValue]):_*), (v: ECAValue) => v))                       orElse
+      Try((clazz.getMethod(methodName, Seq.fill(arguments.length)(classOf[BigInt]):_*)  , (v: ECAValue) => v.toBigInt))              orElse
+      //Try((clazz.getMethod(methodName, Seq.fill(arguments.length)(classOf[Long]):_*)    , (v: ECAValue) => Long.box(v.toLong)))      orElse
+      Try((clazz.getMethod(methodName, Seq.fill(arguments.length)(classOf[Int]):_*)     , (v: ECAValue) => Int.box(v.toInt)))        getOrElse {
+        errorHandler.fatalError(new ECAException(s"Method '$name' could not be found.", stackTrace.result(call)))
+      }
+    })
+
+    val newStackTrace = stackTrace.callFunction(new FunName(methodName, Some(s"<external:${clazz.getName}>")), Some(call.position))
+    val result = try {
+      method.invoke(null, arguments.map(converter):_*)
+    } catch {
+      case e: Exception =>
+        val trace = newStackTrace.result()
+        errorHandler.fatalError(new ECAException(s"Exception while calling '$name': $e", trace.headOption.flatMap(_._2), Some(e), trace))
     }
-    val (localEnv, stateEnv) = evalStatement(fun.body, fun.parameters.map(_.name).zip(arguments).toMap,
-      state, fun.isComponent, stackTrace.callFunction(new FunName(fun.name, if (fun.isComponent) Some(name) else None), callPosition))
-    (stateEnv, localEnv.getOrElse(fun.name, ECAValue.Zero))
+
+    result match {
+      case v: ECAValue => v
+      case v: BigInt   => ECAValue.bigIntToValue(v)
+      //case v: Long     => ECAValue.bigIntToValue(v)
+      case v: Integer  => ECAValue.intToValue(v)
+      case v           =>
+        errorHandler.fatalError(new ECAException(s"Method '$name' returned an unsupported result of type: '${v.getClass.getSimpleName}'.", newStackTrace.result()))
+    }
   }
 
-  private def evalFunction(funName: String, arguments: Seq[ECAValue], state: Map[String, ECAValue],
-                           stackTrace: StackTraceBuilder, callPosition: Option[Position]): ECAValue =
-    node.functions.get(funName).map(evalFunction(_, arguments, state, stackTrace, callPosition)).getOrElse {
-      errorHandler.fatalError(new ECAException(s"Undeclared function: '$funName'.", stackTrace.result(callPosition)))
-    }._2
-
-  private def evalStatement(stmt: Statement, localEnv: Map[String, ECAValue], stateEnv: Map[String, ECAValue],
-                            mutationAllowed: Boolean, stackTrace: StackTraceBuilder): (Map[String, ECAValue], Map[String, ECAValue]) = {
-    def evalStmt(stmt: Statement): (Map[String, ECAValue], Map[String, ECAValue]) = stmt match {
-      case Skip() =>
-        (localEnv, stateEnv)
-      case Assignment(variable, expr) if node.variables.contains(variable) =>
-        if (!mutationAllowed) {
-          errorHandler.fatalError(new ECAException(s"Mutation of state variable '$variable' is not allowed in this context.", stackTrace.result(stmt)))
-        }
-        val value = evalExpression(expr, localEnv, stateEnv, stackTrace)
-        checkBoundaries(node.variables(variable), value, Right(stackTrace.result(expr)))
-        (localEnv, stateEnv.updated(variable, value))
-      case Assignment(variable, expr) =>
-        (localEnv.updated(variable, evalExpression(expr, localEnv, stateEnv, stackTrace)), stateEnv)
-      case f: FunCall =>
-        evalExpression(f, localEnv, stateEnv, stackTrace) // throw away the result
-        (localEnv, stateEnv)
-      case If(predicate, consequent, alternative) if evalExpression(predicate, localEnv, stateEnv, stackTrace) =>
-        evalStmt(consequent)
-      case If(predicate, consequent, alternative) =>
-        evalStmt(alternative)
-      case While(predicate, _, consequent) if evalExpression(predicate, localEnv, stateEnv, stackTrace) =>
-        evalStmt(Composition(Seq(consequent, stmt)))
-      case While(_, _, _) =>
-        (localEnv, stateEnv)
-      case Composition(statements) =>
-        statements.foldLeft((localEnv, stateEnv)) {
-          case ((localEnv, stateEnv), stmt) => evalStatement(stmt, localEnv, stateEnv, mutationAllowed, stackTrace)
-        }
-    }
-
-    evalStmt(stmt)
-  }
-
-  private def evalExpression(expr: Expression, localEnv: Map[String, ECAValue], stateEnv: Map[String, ECAValue], stackTrace: StackTraceBuilder): ECAValue = {
-    def callReflective(name: FunName, arguments: Seq[ECAValue], stackTrace: StackTraceBuilder, callPosition: Option[Position]): ECAValue = {
-      val classAlias = name.prefix.get
-      val methodName = name.name
-      val clazz = imports.getOrElse(classAlias, errorHandler.fatalError(new ECAException(s"Undeclared class: '$classAlias'.", stackTrace.result(expr))))
-
-      val (method, converter) = methodCache.getOrElseUpdate(name, {
-        Try((clazz.getMethod(methodName, Seq.fill(arguments.length)(classOf[ECAValue]):_*), (v: ECAValue) => v))                       orElse
-        //Try((clazz.getMethod(methodName, Seq.fill(arguments.length)(classOf[BigInteger]):_*), (v: ECAValue) => v.toBigInt.underlying())) orElse
-        Try((clazz.getMethod(methodName, Seq.fill(arguments.length)(classOf[BigInt]):_*)  , (v: ECAValue) => v.toBigInt))              orElse
-        //Try((clazz.getMethod(methodName, Seq.fill(arguments.length)(classOf[Long]):_*)    , (v: ECAValue) => Long.box(v.toLong)))      orElse
-        Try((clazz.getMethod(methodName, Seq.fill(arguments.length)(classOf[Int]):_*)     , (v: ECAValue) => Int.box(v.toInt)))        getOrElse {
-          errorHandler.fatalError(new ECAException(s"Method '$name' could not be found.", stackTrace.result(expr)))
-        }
-      })
-
-      val newStackTrace = stackTrace.callFunction(new FunName(methodName, Some(s"<external:${clazz.getName}>")), callPosition)
-      val result = try {
-        method.invoke(null, arguments.map(converter):_*)
-      } catch {
-        case e: Exception =>
-          val trace = newStackTrace.result()
-          errorHandler.fatalError(new ECAException(s"Exception while calling '$name': $e", trace.headOption.flatMap(_._2), Some(e), trace))
-      }
-
-      result match {
-        case v: ECAValue => v
-        case v: BigInt   => ECAValue.bigIntToValue(v)
-        //case v: Long     => ECAValue.bigIntToValue(v)
-        case v: Integer  => ECAValue.intToValue(v)
-        case v           =>
-          errorHandler.fatalError(new ECAException(s"Method '$name' returned an unsupported result of type: '${v.getClass.getSimpleName}'.", newStackTrace.result()))
-      }
-    }
-
-    def evalExpr(expr: Expression): ECAValue = expr match {
-      case Literal(value)       => value
-      case VarRef(name)         => stateEnv.getOrElse(name, localEnv.getOrElse(name, errorHandler.fatalError(new ECAException(s"Undeclared variable: '$name'", stackTrace.result(expr)))))
-
-      case And(x, y)            => evalExpr(x) && evalExpr(y)
-      case Or(x, y)             => evalExpr(x) || evalExpr(y)
-
-      case Add(x, y)            => evalExpr(x) + evalExpr(y)
-      case Subtract(x, y)       => evalExpr(x) - evalExpr(y)
-      case Multiply(x, y)       => evalExpr(x) * evalExpr(y)
-      case Divide(x, y)         =>
-        val valueY = evalExpr(y)
-        if (valueY == ECAValue.Zero) {
-          errorHandler.fatalError(new ECAException(s"Division by zero.", stackTrace.result(y)))
-        }
-        evalExpr(x) / valueY
-      case Exponent(x, y)       => evalExpr(x) ^ evalExpr(y)
-
-      case EQ(x, y)             => evalExpr(x) == evalExpr(y)
-      case NE(x, y)             => evalExpr(x) != evalExpr(y)
-      case LT(x, y)             => evalExpr(x) < evalExpr(y)
-      case LE(x, y)             => evalExpr(x) <= evalExpr(y)
-      case GT(x, y)             => evalExpr(x) > evalExpr(y)
-      case GE(x, y)             => evalExpr(x) >= evalExpr(y)
-
-      case FunCall(qname, args) if qname.isPrefixed => callReflective(qname, args.map(evalExpr), stackTrace, Some(expr.position))
-      case FunCall(qname, args) => evalFunction(qname.name, args.map(evalExpr), stateEnv, stackTrace, Some(expr.position))
-    }
-
-    evalExpr(expr)
+  override protected def evalExpression(expr: Expression, state: IState, stackTrace: StackTraceBuilder): (IState, ECAValue) = expr match {
+    case call @ FunCall(qname, args) if qname.isPrefixed =>
+      val (postArgsState, values) = evalExprList(args, state, stackTrace)
+      (postArgsState, callReflective(call, values, stackTrace))
+    case _ => super.evalExpression(expr, state, stackTrace)
   }
 
   override def E(f: String) = node.componentFunctions.get(f).map(_.energy).getOrElse(ECAValue.Zero)
@@ -203,16 +153,18 @@ class ECMModel(node: Component, errorHandler: ErrorHandler = new DefaultErrorHan
   override def T(f: String) = node.componentFunctions.get(f).map(_.time).getOrElse(ECAValue.Zero)
 
   override def delta(f: String)(s: CState) = node.componentFunctions.get(f).map { f =>
-    new CState(evalFunction(f, Seq.fill(f.arity)(ECAValue.Zero), s.elements, newStackTraceBuilder(new FunName("delta", Some("<internal>"))), None)._1)
+    new CState(evalFunction(f, Seq.fill(f.arity)(ECAValue.Zero), IState(Map.empty, s.elements, true),
+      newStackTraceBuilder(new FunName("delta", Some("<internal>"))), None)._1.component)
   }.getOrElse(s)
 
   override def eval(f: String)(s: CState, a: Seq[ECAValue]) = node.componentFunctions.get(f).map { f =>
-    val (stateEnv, result) = evalFunction(f, a, s.elements, newStackTraceBuilder(new FunName("eval", Some("<internal>"))), None)
-    (new CState(stateEnv), result)
+    val (stateEnv, result) = evalFunction(f, a, IState(Map.empty, s.elements, true),
+      newStackTraceBuilder(new FunName("eval", Some("<internal>"))), None)
+    (new CState(stateEnv.component), result)
   }.getOrElse((s, ECAValue.Zero))
 
   override def phi(s: CState) = node.functions.get("phi").map { f =>
-    evalFunction(f, Seq.empty, s.elements, newStackTraceBuilder(new FunName("phi", Some("<internal>"))), None)._2
+    evalFunction(f, Seq.empty, IState(Map.empty, s.elements, false), newStackTraceBuilder(new FunName("phi", Some("<internal>"))), None)._2
   }.getOrElse(super.phi(s))
 
   override def functionArity(f: String) = node.componentFunctions.get(f).map(_.arity)

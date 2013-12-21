@@ -132,14 +132,14 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
       case Add(l, r) => resolve(l) + resolve(r)
       case Subtract(l, r) => resolve(l) - resolve(r)
       case Multiply(l, r) => resolve(l) * resolve(r)
-      case Divide(l, r) => 
+      case Divide(l, r) =>
         val rhs = resolve(r)
         if(rhs.split.length != 1 || rhs.divisor != (Seq.empty, 1)) {
           eh.error(new ECAException(s"Cannot divide by this expression.", r.position))
           resolve(l)
         } else
           resolve(l) / rhs
-      case Exponent(l, r) => 
+      case Exponent(l, r) =>
         val rhs = resolve(r)
         if(!rhs.vars.isEmpty) eh.error(new ECAException("Integer required as an exponent.", r.position))
         resolve(l) ** rhs.coef().toInt
@@ -201,7 +201,7 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
 
       case FunCall(fun, args)           => val funDef = program.functions(fun.name)
                                            val resolvedArgs = args.map(foldConstants(_, env))
-                                           val binding = funDef.parameters.map(_.name) zip resolvedArgs
+                                           val binding = funDef.parameters zip resolvedArgs
                                            analyse(G, funDef.body)(env ++ binding)
 
       case stm:Annotated                => val annotatedEnv = stm.annotations.foldLeft(env) {

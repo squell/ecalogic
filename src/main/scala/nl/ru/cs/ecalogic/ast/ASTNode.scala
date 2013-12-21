@@ -64,19 +64,16 @@ case class Import(namePath: Seq[String], alias: String) extends ASTNode {
   val qualifiedName = namePath.mkString(".")
 }
 
-/** Class representing a parameter in function definition. */
-case class Param(name: String) extends ASTNode
-
 sealed trait BasicFunction extends ASTNode {
   val name: String
-  val parameters: Seq[Param]
+  val parameters: Seq[String]
   val body: Statement
   val arity = parameters.length
   val isComponent: Boolean
 }
 
 /** Class representing a function definition. */
-case class FunDef(name: String, parameters: Seq[Param], body: Statement) extends BasicFunction {
+case class FunDef(name: String, parameters: Seq[String], body: Statement) extends BasicFunction {
   val isComponent = false
 }
 
@@ -204,7 +201,7 @@ case class Divide(left: Expression, right: Expression) extends BinaryExpression 
 
 case class Exponent(left: Expression, right: Expression) extends BinaryExpression with ArithmeticExpression {
   val operatorName = "^"
-  def operator = _ ^ _
+  def operator = _ ** _
 
   def rewrite(ops: Seq[Expression]) = copy(left = ops(0), right = ops(1)).withPosition(position)
 }
@@ -287,6 +284,6 @@ case class Component(name: String,
                      componentFunctions: Map[String, CompFunDef],
                      functions: Map[String, FunDef]) extends ModelASTNode
 
-case class CompFunDef(name: String, parameters: Seq[Param], energy: ECAValue, time: ECAValue, body: Statement) extends ModelASTNode with BasicFunction {
+case class CompFunDef(name: String, parameters: Seq[String], energy: ECAValue, time: ECAValue, body: Statement) extends ModelASTNode with BasicFunction {
   val isComponent = true
 }

@@ -180,17 +180,14 @@ class Parser(input: String, protected val errorHandler: ErrorHandler = new Defau
     FunDef(name, params, body)
   }
 
-  def parameters(follows: Pattern): Seq[Param] = {
-    val params = Seq.newBuilder[Param]
+  def parameters(follows: Pattern): Seq[String] = {
+    val params = Seq.newBuilder[String]
     if (current(Tokens.LParen)) {
       advance()
       if (!current(Tokens.RParen)) {
         var halt = false
         do {
-          params += nodeWithPosition {
-            Param(identifier(follows | Tokens.Comma | Tokens.RParen))
-          }
-
+          params += identifier(follows | Tokens.Comma | Tokens.RParen)
           if (current(Tokens.Comma)) advance()
           else halt = true
         } while (!halt)
@@ -477,10 +474,10 @@ object Parser {
 
     val statement =
       Tokens.LCurly     % "<annotated statement>"  |
-      Tokens.Skip       % "<skip statement>"  |
-      Tokens.If         % "<if statement>"    |
-      Tokens.While      % "<while statement>" |
-      Tokens.Identifier % "<assignment>"      |
+      Tokens.Skip       % "<skip statement>"       |
+      Tokens.If         % "<if statement>"         |
+      Tokens.While      % "<while statement>"      |
+      Tokens.Identifier % "<assignment>"           |
       Tokens.Identifier % "<function call>"
 
     val expression =
