@@ -175,39 +175,34 @@ class ECMModel(node: Component, protected val errorHandler: ErrorHandler = new D
 
 object ECMModel {
 
-  // FIXME TODO: doesn't creating error handlers inside these functions defeats the purpose of the errorhandler?
-  def fromSource(sourceText: String, sourceURI: Option[URI] = None, eh: ErrorHandler = null) = {
-    val errorHandler = if(eh == null) new DefaultErrorHandler(sourceText = Some(sourceText), sourceURI = sourceURI) else eh
+  def fromSource(sourceText: String, sourceURI: Option[URI] = None, errorHandler: Option[ErrorHandler] = None) = {
+    val eh = errorHandler.getOrElse(new DefaultErrorHandler(sourceText = Some(sourceText), sourceURI = sourceURI))
 
-    val parser = new ModelParser(sourceText, errorHandler)
+    val parser = new ModelParser(sourceText, eh)
     val node = parser.component()
     parser.expectEndOfFile()
-    errorHandler.successOrElse(s"Parsing${sourceURI.fold(" ")(u => s" '$u' ")}'failed.")
+    eh.successOrElse(s"Parsing${sourceURI.fold(" ")(u => s" '$u' ")}'failed.")
 
     sourceURI.foreach { uri =>
       val path = uri.getPath
       val fileName = path.substring(path.lastIndexOf('/') + 1, path.length)
       if (fileName != node.name + ".ecm") {
-        errorHandler.fatalError(new ECAException(s"File name does not match component name '${node.name}'."))
+        eh.fatalError(new ECAException(s"File name does not match component name '${node.name}'."))
       }
     }
 
-    errorHandler.reset()
-    new ECMModel(node, errorHandler)
+    eh.reset()
+    new ECMModel(node, eh)
   }
 
-  def fromFile(file: String): ECMModel = fromFile(new File(file))
-
-  def fromFile(file: File): ECMModel = {
+  def fromFile(file: File, errorHandler: Option[ErrorHandler] = None): ECMModel = {
     val source = Source.fromFile(file).mkString
-    fromSource(source, Some(file.toURI))
+    fromSource(source, Some(file.toURI), errorHandler)
   }
 
-  def fromURL(url: String): ECMModel = fromURL(new URL(url))
-
-  def fromURL(url: URL): ECMModel = {
+  def fromURL(url: URL, errorHandler: Option[ErrorHandler] = None): ECMModel = {
     val source = Source.fromURL(url).mkString
-    fromSource(source, Some(url.toURI))
+    fromSource(source, Some(url.toURI), errorHandler)
   }
 
 }

@@ -93,7 +93,7 @@ object CompForm {
           val errorStream = new ByteArrayOutputStream()
           val pw = new PrintWriter(errorStream)
           val errorHandler = new DefaultErrorHandler(sourceText = Some(source), writer = pw)
-          val loaded = ECMModel.fromSource(source, None, errorHandler)
+          val loaded = ECMModel.fromSource(source, None, Some(errorHandler))
           if (errorHandler.errorOccurred) {
             return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
           }

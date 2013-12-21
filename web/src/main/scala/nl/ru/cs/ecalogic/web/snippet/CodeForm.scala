@@ -46,6 +46,8 @@ import nl.ru.cs.ecalogic.{ECAException, config}
 import java.io.{ByteArrayOutputStream, PrintWriter}
 import nl.ru.cs.ecalogic.model.{ECMModel, ComponentModel}
 
+import java.net.URI
+
 object CodeForm {
 
   this.getClass.getResource("").toString
@@ -69,8 +71,9 @@ object CodeForm {
     var components = Map.empty[String, ComponentModel]
 
     def processComponent(s: String) {
-      val errorHandler = new DefaultErrorHandler(sourceText = Some(s), writer = pw)
-      val loaded = ECMModel.fromSource(s, None, errorHandler)
+      val uri = new URI(s"component:$s")
+      val errorHandler = new DefaultErrorHandler(sourceText = Some(s), sourceURI = Some(uri), writer = pw)
+      val loaded = ECMModel.fromSource(s, Some(uri), Some(errorHandler))
       if (new ModelParser(s, errorHandler).component().imports.nonEmpty)
         throw new ECAException(s"Import statement not allowed")
       components = components + (loaded.name -> loaded)
@@ -80,7 +83,7 @@ object CodeForm {
       case JsonCmd("processForm", target, params: Map[String, _], all) =>
         errorStream.reset()
 
-        val code: String = params.getOrElse("code", "").toString()
+        val code: String = params.getOrElse("code", "").toString
 
         config.Options.reset
         if (params.getOrElse("tech", "") == "True") config.Options(Array("-tr"))
