@@ -187,7 +187,7 @@ object ECMModel {
       val path = uri.getPath
       val fileName = path.substring(path.lastIndexOf('/') + 1, path.length)
       if (fileName != node.name + ".ecm") {
-        eh.fatalError(new ECAException(s"File name does not match component name '${node.name}'."))
+        eh.warning(new ECAException(s"File name does not match component name '${node.name}'.", node))
       }
     }
 
