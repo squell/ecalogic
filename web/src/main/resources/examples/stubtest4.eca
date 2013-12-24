@@ -1,7 +1,5 @@
 // time usage: 2, energy usage: 1
 // lesson: sometimes you need to force a state change
-import component ecalogic.Stub
-//import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
 
 (* expect: (Map(BUG -> 0, CPU -> 35, Radio -> 74, Sensor -> 111, Stub -> 1),37) *)
 function program(X)

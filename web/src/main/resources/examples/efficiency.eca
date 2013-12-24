@@ -1,6 +1,3 @@
-
-import component ecalogic.Radio
-
 function program ()
   Radio::send()
   Radio::send()

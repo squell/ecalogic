@@ -80,7 +80,7 @@ object CodeForm {
       case JsonCmd("processForm", target, params: Map[String, _], all) =>
         errorStream.reset()
 
-        val code: String = params.getOrElse("code", "").toString
+        val code = params.getOrElse("code", "").toString
 
         config.Options.reset
         if (params.getOrElse("tech", "") == "True") config.Options(Array("-tr"))
@@ -91,6 +91,8 @@ object CodeForm {
         try {
           val parser = new Parser(code, errorHandler)
           val program = parser.program()
+          if (program.imports.nonEmpty)
+            throw new ECAException(s"Import statement not allowed")
           if (errorHandler.errorOccurred) {
             return SetHtml("result", Unparsed("Parse error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
           }

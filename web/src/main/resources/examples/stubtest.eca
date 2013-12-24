@@ -1,8 +1,4 @@
 // time usage: 23, energy usage: 0
-import component ecalogic.Stub
-// import component ecalogic.CPU
-// import component ecalogic.Radio
-// import component ecalogic.Sensor
 
 (* expect: (Map(BUG -> 0, CPU -> 525, Radio -> 1096, Sensor -> 1644, Stub -> 0),548) *)
 (* expect: -tr (Map(BUG -> 0, CPU -> 525, Radio -> 1096, Sensor -> 1644, Stub -> 0),548) *)
