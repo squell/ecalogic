@@ -49,7 +49,8 @@ object ECALogicBuild extends Build {
     version        := "0.1-SNAPSHOT",
     scalaVersion   := "2.10.3",
     crossPaths     := false,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8"),
+    exportJars     := true
   )
 
   lazy val main = project in file(".") aggregate LocalProject("web") settings (proguardSettings: _*) settings (launcherSettings: _*) settings (
