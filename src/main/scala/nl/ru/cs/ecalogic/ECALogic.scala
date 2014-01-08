@@ -92,14 +92,16 @@ object ECALogic {
   }
 
   /* if arg is of the form name=file.ext, return (name, file.ext);
-     otherwise return (file, file.ext)
+     otherwise return (null, file.ext)
    */
   def getAlias(arg: String): (String,String) = {
     val splitPos = arg.indexOf('=')
-    if(splitPos >= 0) 
-      arg.substring(0, splitPos) -> arg.substring(splitPos+1)
-    else 
-      "" -> arg
+    if(splitPos >= 0) {
+      val alias = arg.substring(0, splitPos)
+      if(!alias.matches("[A-Za-z][A-Za-z0-9_]*")) complain(s"Invalid alias override: '$arg'")
+      (alias, arg.substring(splitPos+1))
+    } else 
+      (null, arg)
   }
 
   def complain(msg: String) {
@@ -118,14 +120,14 @@ object ECALogic {
       case bindSpec =>
         val (alias, trueClassName) = getAlias(bindSpec)
         val classPath = trueClassName.split('.')
-        val model = ComponentModel.fromImport(Import(classPath, if(alias.isEmpty) classPath.last else alias))
-        forceComponents = forceComponents + (alias->model)
+        val specifier = Import(classPath, if(alias == null) classPath.last else alias)
+        forceComponents = forceComponents + (specifier.alias->ComponentModel.fromImport(specifier))
     }
     fileArgs.foreach {
       case fileName if fileName.endsWith(".ecm") =>
         val (alias, trueFileName) = getAlias(fileName)
         val file  = new File(trueFileName).getAbsoluteFile
-        val name  = if(alias.isEmpty) file.getName.substring(0,file.getName.length-4) else alias
+        val name  = if(alias == null) file.getName.substring(0,file.getName.length-4) else alias
         val model = ECMModel.fromFile(file)
         forceComponents = forceComponents + (name->model)
       case _ =>
