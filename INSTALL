@@ -3,17 +3,18 @@ BUILD INSTRUCTIONS
 
 NOTE: You need to use a recent version of Scala (at least 2.10.2) to compile ECALogic. Your Linux distribution may ship with an older version, so beware of this. When using sbt, it solves this problem for you by installing the correct version of Scala in a local folder.
 
-There are various ways to deploy this project to your users:
+The recommended way to distribute the command-line application to your users is by using Proguard.
 
 ==================
-1) Create a "fat .jar" 
+1) Create a "fat .jar" using Proguard.
 
-When using plain old "sbt package", a .jar file is created that does not contain the Scala library, forcing users to install the correct version of Scala (2.10.2 or better) to run it. It is not a good way to distribute the project to your users. Instead, use sbt to create a proguarded .jar as follows:
+When using plain "sbt package", a .jar file is created that does not contain the Scala library, forcing users to install the correct version of Scala (2.10.2 or better) to run it. This is not a good way to distribute the project to end-users. Instead, use sbt to create a proguarded .jar as follows:
 
-// TODO EDIT ME
-> whatever:wheeeee "proguard" MAKEJAR --fat
+From within sbt, run:
 
-The .jar file created will be quite large, since it contains large parts of the Scala default library.
+> proguard:proguard
+
+The standalone .jar file created can be executed by using java -jar.
 
 ==================
 2) Creating a sbt-launch application.
@@ -31,3 +32,13 @@ In case ECALogic is not available through the public Maven repository, you need 
 The advantage of this is that users will always have a recent version; the disadvantage is a slightly slower startup time of the program.
 
 ==================
+3) Running a web-interface
+
+This is ideal for letting end-users experiment with the tool without actually having to install it. Note that some features may be disabled in the web-interfaace.
+
+To build the webinterface as a .war file, from within sbt, run:
+
+> Dorus: TODO TODO TODO
+
+TODO: hoe deploy je zo'n war file? Misschien met'n voorbeeld naar die website waar je ze kon uploaden?
+
