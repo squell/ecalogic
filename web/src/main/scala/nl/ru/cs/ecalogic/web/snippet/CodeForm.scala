@@ -32,32 +32,34 @@
 
 package nl.ru.cs.ecalogic.web.snippet
 
-import scala.xml.{Text, NodeSeq}
+import scala.xml.{Unparsed, NodeSeq, Utility}
 import net.liftweb.util.Helpers._
 import net.liftweb.util.JsonCmd
 import net.liftweb.http.SHtml.jsonForm
-import net.liftweb.http.JsonHandler
+import net.liftweb.http.{LiftRules, SHtml, JsonHandler}
 import net.liftweb.http.js.JsCmd
-import net.liftweb.http.js.JsCmds.{SetHtml, Script}
-import nl.ru.cs.ecalogic.parser.Parser
+import net.liftweb.http.js.JsCmds.{Run, SetHtml, Script}
+import nl.ru.cs.ecalogic.parser.{ModelParser, Parser}
 import nl.ru.cs.ecalogic.util.DefaultErrorHandler
 import nl.ru.cs.ecalogic.analysis.{EnergyAnalysis, SemanticAnalysis}
 import nl.ru.cs.ecalogic.{ECAException, config}
-import java.io.{File, ByteArrayOutputStream, PrintWriter}
-import scala.io.Source
+import java.io.{ByteArrayOutputStream, PrintWriter}
 import nl.ru.cs.ecalogic.model.{ECMModel, ComponentModel}
 
 object CodeForm {
 
+  this.getClass.getResource("").toString
 
-  def insertComponents = ("#code2 *" #> Source.fromFile(new File("components\\ecalogic\\CPU.ecm")).mkString) &
-    ("#code3 *" #> Source.fromFile(new File("components\\ecalogic\\Radio.ecm")).mkString) &
-    ("#code4 *" #> Source.fromFile(new File("components\\ecalogic\\Sensor.ecm")).mkString) &
-    ("#code5 *" #> Source.fromFile(new File("components\\ecalogic\\Stub.ecm")).mkString)
+  def insertComponents = ("#code2 *" #> LiftRules.loadResourceAsString("/components/CPU.ecm").openOrThrowException("CPU Component not found")) &
+    ("#code3 *" #> LiftRules.loadResourceAsString("/components/Radio.ecm").openOrThrowException("Radio Component not found")) &
+    ("#code4 *" #> LiftRules.loadResourceAsString("/components/Sensor.ecm").openOrThrowException("Sensor Component not found")) &
+    ("#code5 *" #> LiftRules.loadResourceAsString("/components/Stub.ecm").openOrThrowException("Stub Component not found"))
 
   def render =
-    "#codeForm" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, insertComponents(ns))) &
-      "#codeScript" #> Script(AnalyseServer.jsCmd)
+    "#codeForm *" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, insertComponents(ns))) &
+      "#codeScript" #> Script(AnalyseServer.jsCmd) &
+      "#add [onClick]" #> SHtml.onEvent((str) => Run("tabs=tabs+1;createNewTab('codeForm1','Component ' + (tabs - 1),'<textarea name=comp cols=80 rows=35; id=code' + tabs + '></textarea><br>','',true)"))
+
 
   object AnalyseServer extends JsonHandler {
 
@@ -68,14 +70,17 @@ object CodeForm {
 
     def processComponent(s: String) {
       val errorHandler = new DefaultErrorHandler(sourceText = Some(s), writer = pw)
-      val loaded = ECMModel.fromSource(s, None, errorHandler)
+      val loaded = ECMModel.fromSource(s, None, Some(errorHandler))
+      if (new ModelParser(s, errorHandler).component().imports.nonEmpty)
+        throw new ECAException(s"Import statement not allowed")
       components = components + (loaded.name -> loaded)
     }
 
     def apply(in: Any): JsCmd = in match {
       case JsonCmd("processForm", target, params: Map[String, _], all) =>
-        val code: String = params.getOrElse("code", "").toString()
+        errorStream.reset()
 
+        val code = params.getOrElse("code", "").toString
 
         config.Options.reset
         if (params.getOrElse("tech", "") == "True") config.Options(Array("-tr"))
@@ -86,8 +91,10 @@ object CodeForm {
         try {
           val parser = new Parser(code, errorHandler)
           val program = parser.program()
+          if (program.imports.nonEmpty)
+            throw new ECAException(s"Import statement not allowed")
           if (errorHandler.errorOccurred) {
-            return SetHtml("result", scala.xml.Unparsed("Parse error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
+            return SetHtml("result", Unparsed("Parse error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
           }
 
           components = Map.empty[String, ComponentModel]
@@ -99,23 +106,33 @@ object CodeForm {
             case _ => {}
           }
 
-          //val components = Map("Stub" -> StubComponent, "BAD" -> BadComponent, "Sensor" -> Sensor, "Radio" -> Radio) ++ (if (params.getOrElse("CPU", "") == "True") Map.empty else Map("CPU" -> CPU))
           val checker = new SemanticAnalysis(program, components, errorHandler)
           checker.functionCallHygiene()
           checker.variableReferenceHygiene()
           if (errorHandler.errorOccurred) {
-            return SetHtml("result", scala.xml.Unparsed("Semantic error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
+            return SetHtml("result", Unparsed("Semantic error: <pre><code>%s</pre></code>".format(Utility.escape(errorStream.toString))))
           }
 
           val consumptionAnalyser = new EnergyAnalysis(program, components, errorHandler)
 
           if (errorHandler.errorOccurred) {
-            return SetHtml("result", scala.xml.Unparsed("Analyse error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
+            return SetHtml("result", Unparsed("Analyse error: <pre><code>%s</pre></code>".format(Utility.escape(errorStream.toString))))
           }
-          SetHtml("result", scala.xml.Unparsed("The result is %s".format(xml.Utility.escape(consumptionAnalyser.analyse().toString))))
+
+          val state = consumptionAnalyser.analyse()
+          val buf = new StringBuilder
+          state.transform((_, st) => st.energy) match {
+            case (states, t) =>
+              buf append f"Time:\t$t%s<br>"
+              buf append f"Energy:\t${states.values.reduce(_ + _)}%s<br>"
+              for ((name, e) <- states)
+                buf append f"└ ${xml.Utility.escape(name)}%13s\t$e%s<br>"
+          }
+
+          SetHtml("result", Unparsed("The result is %s".format(buf.toString)))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
-            return SetHtml("result", scala.xml.Unparsed("Fatal error: <pre><code>%s</pre></code>".format(xml.Utility.escape(errorStream.toString))))
+            return SetHtml("result", Unparsed(s"Fatal error: <pre><code>${Utility.escape(errorStream.toString)} ${e.getMessage}</code></pre>"))
         }
     }
   }

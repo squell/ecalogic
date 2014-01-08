@@ -28,14 +28,13 @@ trait BaseInterpreter {
   import ECAException._
 
   protected type IState <: BaseInterpreterState
-
   protected trait BaseInterpreterState {
 
     def value(name: String): Option[ECAValue]
 
-    def substitute(name: String, value: ECAValue): IState
+    def substitute(name: String, value: ECAValue, stackTrace: StackTrace): IState
 
-    def withFreshLocal(block: IState => IState): IState
+    def enterFunction(name: String, arguments: Map[String, ECAValue])(block: IState => IState): (IState, Option[ECAValue])
 
   }
 
@@ -49,8 +48,9 @@ trait BaseInterpreter {
       errorHandler.fatalError(new ECAException(s"Function '${fun.name}' requires ${fun.arity} arguments; given: ${arguments.length}.", stackTrace.result(callPosition)))
     }
     val funName = new FunName(fun.name, if (fun.isComponent) componentName else None)
-    val postFunState = state.withFreshLocal(evalStatement(fun.body, _, stackTrace.callFunction(funName, callPosition)))
-    (postFunState, postFunState.value(fun.name).getOrElse(ECAValue.Zero))
+    val args = fun.parameters.zip(arguments).toMap
+    val (postFunState, result) = state.enterFunction(fun.name, args)(evalStatement(fun.body, _, stackTrace.callFunction(funName, callPosition)))
+    (postFunState, result.getOrElse(ECAValue.Zero))
   }
 
   protected def evalFunction(funName: String, arguments: Seq[ECAValue], state: IState,
@@ -59,12 +59,12 @@ trait BaseInterpreter {
     evalFunction(fun, arguments, state, stackTrace, callPosition)
   }
 
-  protected def evalStatement(stmt: Statement, state: IState, stackTrace: StackTraceBuilder): IState = stmt match {
+  protected def evalStatement(stmt: Statement, state: IState, stackTrace: StackTraceBuilder): IState = stmt.underlying match {
     case Skip() =>
       state
     case Assignment(variable, expr) =>
       val (postExprState, value) = evalExpression(expr, state, stackTrace)
-      postExprState.substitute(variable, value)
+      postExprState.substitute(variable, value, stackTrace.result(stmt))
     case f: FunCall =>
       val (postCallState, _) = evalExpression(f, state, stackTrace) // throw away the result
       postCallState
@@ -91,15 +91,13 @@ trait BaseInterpreter {
             condition = c
         }
       }
-      state
+      postCondState
     case Composition(statements) =>
       statements.foldLeft(state) {
         case (state, stmt) => evalStatement(stmt, state, stackTrace)
       }
     case Annotated(_, stmt) =>
       evalStatement(stmt, state, stackTrace)
-    case ErrorNode() =>
-      throw new Exception("This can never happen.")
   }
 
   protected def evalExprList(exprs: Seq[Expression], state: IState, stackTrace: StackTraceBuilder) =

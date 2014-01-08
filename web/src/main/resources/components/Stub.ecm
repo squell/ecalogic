@@ -34,9 +34,9 @@ component Stub(active: 0..100)
     //function max(x, y) := Math::max(x, y)
     function max(x, y)
         if x > y then
-            max := x
+            min := x
         else
-            max := y
+            min := y
         end if
     end function
 

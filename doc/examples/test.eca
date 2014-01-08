@@ -1,8 +1,9 @@
-function phi()
-    phi := 2
-    X   := 0
-    while X < queue bound 6 do
-        phi := phi * 2
-        X   := X + 1
+import component ecalogic.Stub
+
+function main(X)
+    while X > 0 bound X do
+        Stub::raise()
+        X := X - 1
     end while
+    Stub::lower()
 end function

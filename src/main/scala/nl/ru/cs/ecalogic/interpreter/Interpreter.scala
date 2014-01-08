@@ -13,51 +13,72 @@ import java.io.File
 
 class Interpreter(program: Program, components: Map[String, ComponentModel], protected val errorHandler: ErrorHandler = new DefaultErrorHandler) extends BaseInterpreter {
 
-  protected type IState = InterpreterState
+  import ECAException._
+  import Interpreter.CStates
 
-  protected class InterpreterState(val state: GlobalState, locals: Map[String, ECAValue] = Map.empty) extends BaseInterpreterState {
+  protected case class IState(locals: Map[String, ECAValue], cstates: CStates) extends BaseInterpreterState {
 
     def value(name: String) = locals.get(name)
 
-    def substitute(name: String, value: ECAValue) = new InterpreterState(state, locals.updated(name, value))
+    def substitute(name: String, value: ECAValue, stackTrace: StackTrace) = IState(locals.updated(name, value), cstates)
 
-    def withFreshLocal(block: IState => IState) = {
-      block(this)
-      this
+    def enterFunction(name: String, arguments: Map[String, ECAValue])(block: IState => IState) = {
+      val postFunState = block(IState(arguments, cstates))
+      (IState(locals, postFunState.cstates), postFunState.locals.get(name))
     }
 
   }
 
   protected val functions = program.functions
 
-  def run(funName: String, arguments: Seq[ECAValue], state: GlobalState = GlobalState.initial(components)): (GlobalState, ECAValue) = {
-    val (intState, result) = evalFunction(funName, arguments, new InterpreterState(state), ECAException.newStackTraceBuilder(new FunName("interpret", Some("<internal>"))), None)
-    (intState.state, result)
+  def run(funName: String, arguments: Seq[ECAValue], cstates: CStates = Map.empty): (CStates, ECAValue) = {
+    val (intState, result) = evalFunction(funName, arguments, new IState(Map.empty, cstates),
+      ECAException.newStackTraceBuilder(new FunName("interpret", Some("<internal>"))), None)
+    (intState.cstates, result)
+  }
+
+  private def callComponentFunction(call: FunCall, arguments: Seq[ECAValue], state: IState, stackTrace: StackTraceBuilder): (IState, ECAValue) = {
+    val compAlias = call.name.prefix.get
+    val funName = call.name.name
+    val comp = components.getOrElse(compAlias, errorHandler.fatalError(new ECAException(s"Undeclared component: '$compAlias'.", stackTrace.result(call))))
+    val (cstate, result) = comp.eval(funName)(state.cstates.getOrElse(compAlias, comp.initialState).asInstanceOf[comp.CState], arguments)
+    (IState(state.locals, state.cstates.updated(compAlias, cstate)), result)
+  }
+
+  override protected def evalExpression(expr: Expression, state: IState, stackTrace: StackTraceBuilder) = expr match {
+    case call @ FunCall(qname, args) if qname.isPrefixed =>
+      val (postArgsState, values) = evalExprList(args, state, stackTrace)
+      callComponentFunction(call, values, postArgsState, stackTrace)
+    case _ => super.evalExpression(expr, state, stackTrace)
   }
 
 }
 
-object Interpreter extends App {
+object Interpreter {
 
-  val fileName = config.Options(args).headOption.getOrElse("program.eca")
-  val noCPU = args.last == "nocpu"
+  type CStates = Map[String, ComponentModel#ComponentState]
 
-  val file = new File(fileName)
-  val source = Source.fromFile(file).mkString
-  val errorHandler = new DefaultErrorHandler()//source = Some(source), file = Some(file))
-  val program = new Parser(source, errorHandler).program()
-  errorHandler.successOrElse("Parse errors encountered.")
+  def main(args: Array[String]) {
+    val fileName = args.headOption.getOrElse(sys.error("Missing file name."))
+    val funName = args.tail.headOption.getOrElse("program")
+    val progArgs = args.drop(2).map(a => ECAValue.bigIntToValue(BigInt(a))).toSeq
 
-  import model.examples._
-  import model.examples.DemoComponents._
-  val components = Map("Stub"->StubComponent, "BAD"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, if(noCPU) "Stub"->StubComponent else "CPU"->CPU)
+    val file = new File(fileName)
+    val source = Source.fromFile(file).mkString
+    val errorHandler = new DefaultErrorHandler()//source = Some(source), file = Some(file))
+    val program = new Parser(source, errorHandler).program()
+    errorHandler.successOrElse("Parse errors encountered.")
 
-  val checker = new SemanticAnalysis(program, components, errorHandler)
-  checker.functionCallHygiene()
-  checker.variableReferenceHygiene()
-  errorHandler.successOrElse("Semantic errors; please fix these.")
+    val components = ComponentModel.fromImports(program.imports, errorHandler)
+    errorHandler.successOrElse("Errors loading components.")
 
-  val interpreter = new Interpreter(program, components, errorHandler)
-  println(interpreter.run("program", Seq(ECAValue.Zero)))
+    val checker = new SemanticAnalysis(program, components, errorHandler)
+    checker.functionCallHygiene()
+    checker.variableReferenceHygiene()
+    errorHandler.successOrElse("Semantic errors; please fix these.")
+
+    val interpreter = new Interpreter(program, components, errorHandler)
+    println(interpreter.run(funName, progArgs))
+  }
 
 }

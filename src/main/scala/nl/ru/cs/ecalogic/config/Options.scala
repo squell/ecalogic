@@ -160,8 +160,27 @@ object Options {
   }
 
   def friendlyHelpMsg() {
-    println("""
-      ... blah
+    println("""usage: ecalogic.jar [OPTIONS] file1.eca [[Alias=]file2.ecm ...]
+
+Functionality options:
+
+  -t --terse             Give only brief output of analysis
+  -I --import [W=]<uri>  Load a component from the Java classpath as W
+  -h --help              This friendly help message
+  -P --fixPatience <N>   Num iters for finding fixpoints (def=10000)
+  -e --entry <main>      Perform analyss in the given function (def=program)
+
+If no Alias= is provided for an explicitly loaded component, it is determined
+from the classpath/filename instead.
+
+Options controlling analysis:
+
+  -tr --techReport       Use while loop as specified in Tech Report
+  -s  --sync             Synchronize all components to the global time
+  -u  --update           Update component timestamps, even when no change
+
+The options -s or -u should give stricter bounds. -u is probably
+subsumed by -s, but since this is a research tool, more analysis is needed.
 """)
   }
 

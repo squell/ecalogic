@@ -1,53 +1,59 @@
 <div id="main" data-lift="surround?with=default;at=content">
     <script src="/classpath/jlift.js" data-lift="tail"></script>
     <script type="text/javascript" src="/ajax_request/liftAjax.js"></script>
-    <h1>Please insert your code:</h1>
+    <h1>Ecalogic energy consumption analyse demonstration</h1>
 
-    <div style="float: left;width: 700px;">
-
-
-        <div data-lift="CodeForm">
-            <a href="#"
-               onclick="tabs=tabs+1;createNewTab('codeForm1','Component ' + (tabs - 1),'<textarea name=&quot;comp&quot; cols=&quot;80&quot; rows=&quot;35&quot; id=&quot;code' + tabs +'&quot;></textarea><br>','',true)">
-                More components</a><br>
-            <script id="codeScript" data-lift="tail"></script>
-            <div id="codeForm">
-                <div id=codeForm1>
-                    <div class="dhtmlgoodies_aTab">
-                        <textarea name="code" cols="80" rows="35" id="code1">Insert code here</textarea><br>
-                    </div>
-                    <div class="dhtmlgoodies_aTab">
-                        <textarea name="comp" cols="80" rows="35" id="code2"></textarea><br>
-                    </div>
-                    <div class="dhtmlgoodies_aTab">
-                        <textarea name="comp" cols="80" rows="35" id="code3"></textarea><br>
-                    </div>
-                    <div class="dhtmlgoodies_aTab">
-                        <textarea name="comp" cols="80" rows="35" id="code4"></textarea><br>
-                    </div>
-                    <div class="dhtmlgoodies_aTab">
-                        <textarea name="comp" cols="80" rows="35" id="code5"></textarea><br>
-                    </div>
+    <div>
+        <div style="display: inline; float: left">
+            <div data-lift="LoadForm">
+                <script id="loadScript" data-lift="tail"></script>
+                <div id="loadForm">
                 </div>
-                <input type="checkbox" name="tech" value="True">Use techreport while<br>
-                <input type="checkbox" name="beforeSync" value="True">Use Sync<br>
-                <input type="checkbox" name="update" value="True">Always update time<br>
-                <input type="submit" value="Send"/>
-                <div id="bla">
-            </div>
-
             </div>
         </div>
+        <div style="display: inline; float: left">
+            <div data-lift="CompForm">
+                <script id="compScript" data-lift="tail"></script>
+                <div id="compForm"></div>
+            </div>
+        </div>
+        <div style="width: 700px;">
+            <div data-lift="CodeForm">
+                <script id="codeScript" data-lift="tail"></script>
+                <div id="codeForm" style="float: left; margin-top: 15px">
+                    <div id=codeForm1>
+                        <div class="dhtmlgoodies_aTab">
+                            <textarea name="code" cols="80" rows="35" id="code1">Insert code here</textarea><br>
+                        </div>
+                        <div class="dhtmlgoodies_aTab">
+                            <textarea name="comp" cols="80" rows="35" id="code2"></textarea><br>
+                        </div>
+                        <div class="dhtmlgoodies_aTab">
+                            <textarea name="comp" cols="80" rows="35" id="code3"></textarea><br>
+                        </div>
+                        <div class="dhtmlgoodies_aTab">
+                            <textarea name="comp" cols="80" rows="35" id="code4"></textarea><br>
+                        </div>
+                        <div class="dhtmlgoodies_aTab">
+                            <textarea name="comp" cols="80" rows="35" id="code5"></textarea><br>
+                        </div>
+                    </div>
+                    <input type="submit" value="Send"/>
+                    <button onclick="document.getElementById('advanced').style.display='block';this.style.display='none';return false;">Advanced</button>
+                    <div style="display: none;" id="advanced">
+                        <input type="checkbox" name="tech" value="True">Use techreport while<br>
+                        <input type="checkbox" name="beforeSync" value="True">Use Sync<br>
+                        <input type="checkbox" name="update" value="True">Always update time<br>
+                    </div>
+                    <div id="bla">
+                    </div>
 
-        <div id="result">
-        </div>
-        <div id="result2">
-        </div>
-    </div>
-    <div style="float: left; margin: 10px">
-        <div data-lift="LoadForm">
-            <script id="loadScript" data-lift="tail"></script>
-            <div id="loadForm">
+                </div>
+            </div>
+
+            <div id="result" style="clear: left;">
+            </div>
+            <div id="result2">
             </div>
         </div>
     </div>

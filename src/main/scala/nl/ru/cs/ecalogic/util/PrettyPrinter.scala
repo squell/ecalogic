@@ -102,11 +102,10 @@ class PrettyPrinter(program: Program, eh: ErrorHandler = new DefaultErrorHandler
 //          e.operands.foreach(printPart(_, depth))
         case FunDef(name, params, body) =>
           print("function " + name)
-          printParams(params)
+          print(params.mkString("(", ", ", ")"))
           printDepthln()
           printPart(body, depth)
           println("\nend function\n")
-        case Param(name) => print(name)
         case Literal(value) => print(value)
           // TODO Comments
         case _ =>

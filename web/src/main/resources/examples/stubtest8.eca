@@ -1,0 +1,19 @@
+(* expect: (Map(BUG -> 0, CPU -> 5035, Radio -> 10270, Sensor -> 15405, Stub -> 10235),5135) *)
+function waste(X)
+  while X > 0 bound X do
+    X := X-1;
+    Stub::idle();
+  end while
+end function
+
+function program(X)
+  if 23 < 281723817 then
+    Stub::on();
+    waste(100);
+    Stub::off();
+    Stub::on();
+  else
+    skip;
+  end if;
+  Stub::off();
+end function
