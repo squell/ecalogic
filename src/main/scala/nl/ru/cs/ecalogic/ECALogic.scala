@@ -104,12 +104,15 @@ object ECALogic {
 
   def complain(msg: String) {
     Console.err.println(msg)
-    throw new ECAException(msg)
+    throw new ECAException(msg, reported=true)
   }
 
   def main_(args: Array[String]): Int = try {
-    var idle = true
-    val fileArgs = config.Options(args)
+    val fileArgs = try config.Options(args) catch {
+      case e: ECAException =>
+        Console.err.println(s"${e.message}! Run with --help to see usage instructions.")
+        return 1
+    }
 
     config.Options.aliasOverrides.foreach {
       case bindSpec =>
@@ -128,6 +131,7 @@ object ECALogic {
       case _ =>
         /* we will complain later :) */
     }
+    var idle = true
     fileArgs.foreach {
       case fileName if fileName.endsWith(".eca") =>
         val state = analyse(fileName)
@@ -143,7 +147,8 @@ object ECALogic {
 
     0
   } catch {
-    case _: ECAException          =>
+    case e: ECAException          =>
+      if(!e.reported) Console.err.println(e.message)
       Console.err.println("Aborted.")
       1
     case e: NumberFormatException =>
