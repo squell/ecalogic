@@ -55,8 +55,8 @@ object CompForm {
     val sb = new StringBuilder
     var i = -1;
     sb.append("<select name=\"load\">\n")
-    new File(LiftRules.getResource("/components").openOrThrowException("components").getPath).listFiles().foreach({
-        f => sb append (
+    Option(new File(LiftRules.getResource("/components").openOrThrowException("components").getPath).listFiles()).getOrElse(Array[File]()).foreach({
+      f => sb append (
         "<option value=\"" + {
           i += 1;
           i
