@@ -49,8 +49,7 @@ object ECALogicBuild extends Build {
     version        := "0.1-SNAPSHOT",
     scalaVersion   := "2.10.3",
     crossPaths     := false,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8"),
-    exportJars     := true
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
   )
 
   lazy val main = project in file(".") aggregate LocalProject("web") settings (proguardSettings: _*) settings (launcherSettings: _*) settings (
@@ -58,6 +57,7 @@ object ECALogicBuild extends Build {
     mainClass in (Compile, packageBin) := Some("nl.ru.cs.ecalogic.ECALogic"),
     mainClass in Launcher              := Some("nl.ru.cs.ecalogic.util.SBTMain"),
     libraryDependencies                += "org.scalatest" %% "scalatest" % "2.0" % "test",
+    exportJars                         := true,
 
     mappings in Launcher              ++= Seq (
       baseDirectory.value / "LICENSE"   -> "LICENSE",
