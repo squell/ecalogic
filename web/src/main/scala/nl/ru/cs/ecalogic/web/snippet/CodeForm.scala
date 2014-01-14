@@ -129,7 +129,7 @@ object CodeForm {
                 buf append f"└ ${xml.Utility.escape(name)}%13s\t$e%s<br>"
           }
 
-          SetHtml("result", Unparsed("The result is %s".format(buf.toString)))
+          SetHtml("result", Unparsed("The result is:<br>%s".format(buf.toString)))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
             return SetHtml("result", Unparsed(s"Fatal error: <pre><code>${Utility.escape(errorStream.toString)} ${e.getMessage}</code></pre>"))
