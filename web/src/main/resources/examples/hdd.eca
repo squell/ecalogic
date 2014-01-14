@@ -1,0 +1,142 @@
+function program (N, T)
+  alwaysOn(N, T)
+  // onDemand(N, T)
+end function
+
+function get_data(T)
+  while controller::peek() = 0 bound T do 
+    skip 
+  end while
+  get_data := controller::read()
+end function
+
+function alwaysOn(N, T)
+  hdd::on()
+  while controller::engaged() > 0 bound N do
+    X := get_data(T)
+    hdd::write(X)
+  end while
+  hdd::off()
+end function
+
+function onDemand(N, T)
+  while controller::engaged() > 0 bound N do
+    X := get_data(T)
+    hdd::on()
+    hdd::write(X)
+    hdd::off()
+  end while
+end function
+
+
+(* the following demonstrates that our analysis is heavily dependent loop factorization *)
+
+function caching(N, T, B)
+  while controller::engaged() > 0 bound N do
+    X := get_data(T)
+    Q := controller::queue(X)
+    if Q >= B then
+      hdd::on()
+      while Q > 0 bound B do
+        X := controller::pop()
+        hdd::write(X)
+        Q := Q-1
+      end while
+      hdd::off()
+    else
+      skip
+    end if
+  end while
+end function
+
+function caching2(NB, T, B)
+  while controller::engaged() > 0 bound NB do
+    Q := 0
+    while controller::engaged() > 0 bound B do
+      X := get_data(T)
+      Q := controller::queue(X)
+    end while
+
+    hdd::on()
+    while Q > 0 bound B do
+      X := controller::pop()
+      hdd::write(X)
+      Q := Q-1
+    end while
+    hdd::off()
+  end while
+end function
+
+function caching3(N, T, B)
+  while controller::engaged() > 0 bound N/B do
+    Q := 0
+    while controller::engaged() > 0 bound B do
+      X := get_data(T)
+      Q := controller::queue(X)
+    end while
+
+    hdd::on()
+    while Q > 0 bound B do
+      X := controller::pop()
+      hdd::write(X)
+      Q := Q-1
+    end while
+    hdd::off()
+  end while
+end function
+  
+
+(*
+
+Nice results:
+
+$ scala nl.ru.cs.ecalogic.ECALogic -e onDemand hdd.eca
+hdd.eca:
+Time:   1*N*T + 106*N
+Energy: 115*N
+└           CPU 0
+└    controller 0
+└           hdd 115*N
+$ scala nl.ru.cs.ecalogic.ECALogic -e alwaysOn hdd.eca
+hdd.eca:
+Time:   N*T + 6*N + 100
+Energy: N*T + 11*N + 105
+└           CPU 0
+└    controller 0
+└           hdd N*T + 11*N + 105
+
+Less nice (since it appears to be outperformed):
+
+$ scala nl.ru.cs.ecalogic.ECALogic -e caching hdd.eca
+Time:   6*B*N + N*T + 102*N
+Energy: 12*B*N + 106*N
+└           CPU 0
+└           hdd 11*B*N + 105*N
+└    controller B*N + N
+
+
+$ scala nl.ru.cs.ecalogic.ECALogic -e caching2 hdd.eca
+hdd.eca:
+Time:   B*NB*T + 8*B*NB + 100*NB
+Energy: 13*B*NB + 105*NB
+└           CPU 0
+└           hdd 11*B*NB + 105*NB
+└    controller 2*B*NB
+
+And since B*NB = N, we get:
+
+Time:   N*T + 8*N + 100*NB
+Energy: 13*N + 105*NB
+
+$ scala nl.ru.cs.ecalogic.ECALogic -e caching3 hdd.eca
+
+Time:   B*N*T + 8*B*N + 100*N / B
+Energy: 13*B*N + 105*N / B
+└           CPU 0 / B
+└    controller 2*B*N / B
+└           hdd 11*B*N + 105*N / B
+
+
+*)
+
+
