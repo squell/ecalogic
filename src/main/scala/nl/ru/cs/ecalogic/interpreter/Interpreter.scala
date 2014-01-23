@@ -60,7 +60,7 @@ object Interpreter {
 
   def main(args: Array[String]) {
     val fileName = args.headOption.getOrElse(sys.error("Missing file name."))
-    val funName = args.tail.headOption.getOrElse("program")
+    val funName = args.tail.headOption.getOrElse("main")
     val progArgs = args.drop(2).map(a => ECAValue.bigIntToValue(BigInt(a))).toSeq
 
     val file = new File(fileName)

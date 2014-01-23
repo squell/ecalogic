@@ -44,7 +44,7 @@ TODO: adds some code that reads cmdline flags here.
 object Options {
 
   /* The "main" function to analyze; should change to 'main' in the future */
-  var entryPoint = "program"
+  var entryPoint = "main"
 
   /* Should the output of our program be to the point or nice to read? */
   var terse = false
@@ -147,8 +147,8 @@ object Options {
   }
 
   /* Reset values to their default values */
-  def reset {
-    entryPoint = "program"
+  def reset() {
+    entryPoint = "main"
     terse = false
     aliasOverrides = Seq.empty[String]
     Model.alwaysUpdate = false

@@ -9,7 +9,7 @@
 *)
 
 (* expect: (Map(BUG -> 0, CPU -> 38500, Radio -> 77200, Sensor -> 115800, Stub -> 350716400),38600) *)
-function program ()
+function main ()
   while 1 < 0 bound 1000 do
     Stub::raise();
   end while;
