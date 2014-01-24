@@ -90,6 +90,7 @@ object CodeForm {
         try {
           val parser = new Parser(code, errorHandler)
           val program = parser.program()
+          parser.expectEndOfFile()
           if (program.imports.nonEmpty)
             throw new ECAException(s"Import statement not allowed")
           if (errorHandler.errorOccurred) {

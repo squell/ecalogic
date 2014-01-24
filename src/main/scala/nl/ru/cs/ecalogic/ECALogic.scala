@@ -72,7 +72,9 @@ object ECALogic {
 
     val program = errorHandler.reportAll("One or more errors occurred during parsing.") {
       val parser = new Parser(source, errorHandler)
-      parser.program()
+      val program = parser.program()
+      parser.expectEndOfFile()
+      program
     }
 
     val components = errorHandler.reportAll("One or more errors occurred while loading components.") {
@@ -100,7 +102,7 @@ object ECALogic {
       val alias = arg.substring(0, splitPos)
       if(!alias.matches("[A-Za-z][A-Za-z0-9_]*")) complain(s"Invalid alias override: '$arg'")
       (alias, arg.substring(splitPos+1))
-    } else 
+    } else
       (null, arg)
   }
 
