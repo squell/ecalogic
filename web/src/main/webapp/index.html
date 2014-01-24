@@ -1,17 +1,19 @@
-<div id="main" data-lift="surround?with=default;at=content">
+<div id="main" data-lift="surround?with=default;at=content" style="margin: 20px;">
     <script src="/classpath/jlift.js" data-lift="tail"></script>
     <script type="text/javascript" src="/ajax_request/liftAjax.js"></script>
-    <h1>Ecalogic energy consumption analyse demonstration</h1>
+    <h1>ECAlogic energy consumption analysis demonstrator</h1>
 
     <div>
         <div style="display: inline; float: left">
+          Load example program:
             <div data-lift="LoadForm">
                 <script id="loadScript" data-lift="tail"></script>
                 <div id="loadForm">
                 </div>
             </div>
         </div>
-        <div style="display: inline; float: left">
+        <div style="display: inline; float: left; margin-left: 80px;">
+          Load additional component model:
             <div data-lift="CompForm">
                 <script id="compScript" data-lift="tail"></script>
                 <div id="compForm"></div>
@@ -23,7 +25,7 @@
                 <div id="codeForm" style="float: left; margin-top: 15px">
                     <div id=codeForm1>
                         <div class="dhtmlgoodies_aTab">
-                            <textarea name="code" cols="80" rows="35" id="code1">Insert code here</textarea><br>
+                            <textarea name="code" cols="80" rows="35" id="code1">Write code here or load example...</textarea><br>
                         </div>
                         <div class="dhtmlgoodies_aTab">
                             <textarea name="comp" cols="80" rows="35" id="code2"></textarea><br>
@@ -38,7 +40,7 @@
                             <textarea name="comp" cols="80" rows="35" id="code5"></textarea><br>
                         </div>
                     </div>
-                    <input type="submit" value="Send"/>
+                    <input type="submit" value="Analyse" style="margin-top: 10px;"/>
                     <button onclick="document.getElementById('advanced').style.display='block';this.style.display='none';return false;">Advanced</button>
                     <div style="display: none;" id="advanced">
                         <input type="checkbox" name="tech" value="True">Use techreport while<br>
