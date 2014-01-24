@@ -4,7 +4,7 @@ function foo(X)
   end while
 end function
 
-function program (X)
+function main (X)
   foo(5);
   foo(X);
 end function

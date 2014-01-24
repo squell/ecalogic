@@ -4,7 +4,7 @@ import component ecalogic.Stub
 //import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
 
 (* expect: (Map(BUG -> 0, CPU -> 35, Radio -> 74, Sensor -> 111, Stub -> 1),37) *)
-function program(X)
+function main(X)
   Stub::idle();
   if 23 < 281723817 then
     Stub::on();           // now active, so timestamp set to 'Stub::t=1'

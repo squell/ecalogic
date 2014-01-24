@@ -5,7 +5,7 @@ import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
 (* expect: -tr (Map(BUG -> 0, CPU -> 525, Radio -> 1050, Sensor -> 1575, Stub -> 23),525) *)
 (* expect: -s (Map(BUG -> 0, CPU -> 525, Radio -> 1050, Sensor -> 1575, Stub -> 23),525) *)
 (* expect: -u (Map(BUG -> 0, CPU -> 525, Radio -> 1050, Sensor -> 1575, Stub -> 23),525) *)
-function program(X)
+function main(X)
   Stub::zap();
   if 23 < 281723817 then
     skip

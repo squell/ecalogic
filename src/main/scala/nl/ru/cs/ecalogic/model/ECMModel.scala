@@ -46,7 +46,7 @@ import java.io.File
 import java.lang.reflect.Method
 import java.net.{URI, URL}
 
-class ECMModel(node: Component, protected val errorHandler: ErrorHandler = new DefaultErrorHandler()) extends ComponentModel with BaseInterpreter {
+class ECMModel(val node: Component, protected val errorHandler: ErrorHandler = new DefaultErrorHandler()) extends ComponentModel with BaseInterpreter {
   import ECAException._
 
   class CState private[ECMModel](val elements: Map[String, ECAValue]) extends ComponentState {
