@@ -52,8 +52,7 @@ object CodeForm {
 
   def insertComponents = ("#code2 *" #> LiftRules.loadResourceAsString("/components/CPU.ecm").openOrThrowException("CPU Component not found")) &
     ("#code3 *" #> LiftRules.loadResourceAsString("/components/Radio.ecm").openOrThrowException("Radio Component not found")) &
-    ("#code4 *" #> LiftRules.loadResourceAsString("/components/Sensor.ecm").openOrThrowException("Sensor Component not found")) &
-    ("#code5 *" #> LiftRules.loadResourceAsString("/components/Stub.ecm").openOrThrowException("Stub Component not found"))
+    ("#code4 *" #> LiftRules.loadResourceAsString("/components/Sensor.ecm").openOrThrowException("Sensor Component not found"))
 
   def render =
     "#codeForm *" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, insertComponents(ns))) &

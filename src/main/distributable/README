@@ -1,4 +1,4 @@
- _____ ____    _    _                _
+  _____ ____    _    _                _
  | ____/ ___|  / \  | |    ___   __ _(_) ___
  |  _|| |     / _ \ | |   / _ \ / _` | |/ __|
  | |__| |___ / ___ \| |__| (_) | (_| | | (__
@@ -11,7 +11,7 @@ ecalogic: a tool for performing energy consumption analysis.
 
 usage summary:
 
-ecalogic.jar [OPTIONS] file1.eca [[Alias=]file2.ecm ...]
+./bin/ecalogic [OPTIONS] file1.eca [[Alias=]file2.ecm ...]
 
 Functionality options:
 
@@ -43,7 +43,7 @@ statements in the .eca file.
 If you supply -u, there are two changes that deviate from the paper:
 
  1) A delta function always updates its timestamp, even if the state did not change
- 2) A delta function also takes into account the amount if time the component-function itself 
+ 2) A delta function also takes into account the amount if time the component-function itself
     takes while calculating the new energy-aware component state
 
 This should usually result in tighter bounds, but might (in some cases) also do the reverse.
@@ -61,7 +61,7 @@ If you supply -tr, the While-analysis as specified in the technical report is pe
 the first iteration of each While-loop is analyzed separately.
 
 =============================================
- _
+  _
  | | __ _ _ __   __ _ _   _  __ _  __ _  ___
  | |/ _` | '_ \ / _` | | | |/ _` |/ _` |/ _ \
  | | (_| | | | | (_| | |_| | (_| | (_| |  __/
@@ -69,7 +69,7 @@ the first iteration of each While-loop is analyzed separately.
                 |___/             |___/
 
 
-Programs to be analyzer have to written as .eca files. This is a simple WHILE-like language 
+Programs to be analyzer have to written as .eca files. This is a simple WHILE-like language
 with arithmetic expression, restricted while loops and simple Hoare-annotations:
 
     function DoSomething(X,Y,Z)
@@ -87,7 +87,7 @@ with arithmetic expression, restricted while loops and simple Hoare-annotations:
 
     end function
 
-Functions can call eachother, but recursion is not allowed. 
+Functions can call eachother, but recursion is not allowed.
 
 Variables in ranking functions used in while-loop must always refer to function parameters, constants,
 or be accompanied by an annotation.
@@ -127,7 +127,7 @@ An example of a component is shown below:
 
 A component function is visible to the user of your component, and is considered in
 the energy analysis. Other functions are internal to the component. Every component
-needs to have a 'phi' function specifying the energy consumption. 
+needs to have a 'phi' function specifying the energy consumption.
 
 Component state variables (such as 'active' above) need to be specified in the component header.
 Initial values for these are optional.

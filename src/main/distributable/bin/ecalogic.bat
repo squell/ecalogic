@@ -21,18 +21,7 @@ if "%_JAVACMD%"=="" (
 
 if "%_JAVACMD%"=="" set _JAVACMD=java
 
-:run
-
-"%_JAVACMD%" %JAVA_OPTS% "-Decalogic.home=%ECALOGIC_HOME%" -cp "%ECALOGIC_HOME%\lib\sbt-launch.jar" xsbt.boot.Boot %*
-rem fixme
-if ERRORLEVEL 1 goto error
-goto end
-
-:error
-set ERROR_CODE=1
-
-:end
-
+"%_JAVACMD%" %JAVA_OPTS% "-Decalogic.home=%ECALOGIC_HOME%" -cp "%ECALOGIC_HOME%\lib\ecalogic.jar" nl.ru.cs.ecalogic.ECALogic %*
 @endlocal
 
-exit /B %ERROR_CODE%
+@%COMSPEC% /C exit %errorlevel% > nul
