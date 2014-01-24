@@ -79,7 +79,7 @@ class ECMModel(val node: Component, protected val errorHandler: ErrorHandler = n
   }
 
   node.variables.values.foreach { v =>
-    checkBoundaries(v, v.initialValue.getOrElse(ECAValue.Zero), Left(v.initializer.map(_.value).getOrElse(v).position))
+    checkBoundaries(v, v.initialValue.getOrElse(v.upper), Left(v.initializer.map(_.value).getOrElse(v).position))
   }
 
   node.functions.get("phi").filterNot(_.arity == 0).foreach { f =>
@@ -87,7 +87,7 @@ class ECMModel(val node: Component, protected val errorHandler: ErrorHandler = n
   }
 
   val name = node.name
-  val initialState = new CState(node.variables.mapValues(_.initialValue.getOrElse(ECAValue.Zero)))
+  val initialState = new CState(node.variables.map { case (k, v) => k -> v.initialValue.getOrElse(v.upper) })
 
   private val methodCache = mutable.Map.empty[FunName, (Method, ECAValue => AnyRef)]
   private val imports     = node.imports.mapValues { i =>
