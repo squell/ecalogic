@@ -8,4 +8,4 @@
 
 ECALOGIC_HOME="${0%/*}/.."
 
-"${JAVACMD:-java}" $JAVA_OPTS -Decalogic.home="$ECALOGIC_HOME" -cp "$ECALOGIC_HOME/lib/ecalogic.jar" nl.ru.cs.ecalogic.ECALogic "$@"
+"${JAVACMD:-java}" $JAVA_OPTS -Decalogic.home="$ECALOGIC_HOME" -jar "$ECALOGIC_HOME/lib/ecalogic.jar" "$@"
