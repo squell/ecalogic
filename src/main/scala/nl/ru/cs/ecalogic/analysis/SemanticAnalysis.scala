@@ -150,7 +150,7 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
                                              varFlow(live, thenPart) & varFlow(live, elsePart)
         case While(pred, rf, consq)       => varFlow(live, pred)
                                              rf.foreach(checkStaticExpression(live, params, _))
-                                             varFlow(live, consq)
+                                             varFlow(varFlow(live, consq), consq)
         case Composition(stms)            => stms.foldLeft(live)(varFlow)
         case Assignment(ident, expr)      => varFlow(live, expr)
                                              live + ident
