@@ -58,10 +58,10 @@ object ECALogic {
         println(result)
       case (states, t) =>
         println(s"$fileName:")
-        println(f"Time:              $t%s")
-        println(f"Energy:            ${states.values.reduce(_+_)}%s")
+        println(f"Time:             $t%s")
+        println(f"Energy:           ${states.values.reduce(_+_)}%s")
         for((name, e) <- states)
-          println(f"└ $name%-13s   $e%s")
+          println(f"- $name%-13s   $e%s")
     }
   }
 
