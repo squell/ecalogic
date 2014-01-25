@@ -148,9 +148,9 @@ class SemanticAnalysis(program: Program, components: Map[String, ComponentModel]
 
         case If(pred, thenPart, elsePart) => varFlow(live, pred)
                                              varFlow(live, thenPart) & varFlow(live, elsePart)
-        case While(pred, rf, consq)       => varFlow(live, pred); varFlow(live, consq)
+        case While(pred, rf, consq)       => varFlow(live, pred)
                                              rf.foreach(checkStaticExpression(live, params, _))
-                                             live
+                                             varFlow(live, consq)
         case Composition(stms)            => stms.foldLeft(live)(varFlow)
         case Assignment(ident, expr)      => varFlow(live, expr)
                                              live + ident
