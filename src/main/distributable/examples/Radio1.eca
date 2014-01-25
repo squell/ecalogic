@@ -1,0 +1,18 @@
+import component ecalogic.examples.CPU
+import component ecalogic.examples.Radio
+import component ecalogic.examples.Sensor
+
+function alwaysOn(N)
+  Radio::on()
+  while N > 0 bound N do
+    Value := Sensor::measure()
+    Radio::queue(Value)
+    Radio::send()
+    N := N-1
+  end while
+  Radio::off()
+end function
+
+function main(N)
+  alwaysOn(N)
+end function

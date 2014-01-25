@@ -7,58 +7,54 @@
 
 =============================================
 
-ecalogic: a tool for performing energy consumption analysis.
+ECALogic: a tool for performing energy consumption analysis.
 
-usage summary:
+Usage:
 
-./bin/ecalogic [OPTIONS] file1.eca [[Alias=]file2.ecm ...]
+  ecalogic [OPTIONS] file1.eca [[<alias>=]file2.ecm ...]
 
 Functionality options:
 
-  -t --terse             Give only brief output of analysis
-  -I --import [W=]<uri>  Load a component from the Java classpath as W
-  -h --help              This friendly help message
-  -P --fixPatience <N>   Num iters for finding fixpoints (def=10000)
-  -e --entry <main>      Perform analyss in the given function (def=program)
+  -t --terse                Give only a brief output of the analysis
+  -I --import [<a>=]<qname> Load a component from the component classpath with optional alias.
+  -h --help                 This friendly and extremely useful help message
+  -P --fixPatience <n>      Number of iterations for finding fix-points (default: 10000)
+  -e --entry <main>         Perform analysis on the given function (default: main)
 
-If no Alias= is provided for an explicitly loaded component, it is determined
-from the classpath/filename instead.
+If "<alias>=" is omitted for an explicitly loaded component, it is determined from the filename or class name instead.
 
 Options controlling analysis:
 
-  -tr --techReport       Use while loop as specified in Tech Report
-  -s  --sync             Synchronize all components to the global time
-  -u  --update           Update component timestamps, even when no change
+  -tr --techReport          Use while loop as specified in the technical report
+  -s  --sync                Synchronize all components to the global time
+  -u  --update              Update component timestamps, even when the state did not change
 
-The options -s or -u should give stricter bounds. -u is probably
-subsumed by -s, but since this is a research tool, more analysis is needed.
+The options -s or -u should give stricter bounds. -u is probably subsumed by -s, but since this is a research tool,
+more analysis is needed.
 
 =============================================
 In detail:
 
-If you specify components to be loaded on the commandline, they override import
-statements in the .eca file.
+If you specify components to be loaded on the commandline, they override import statements in the .eca file.
 
 
 If you supply -u, there are two changes that deviate from the paper:
 
- 1) A delta function always updates its timestamp, even if the state did not change
- 2) A delta function also takes into account the amount if time the component-function itself
-    takes while calculating the new energy-aware component state
+ 1) A delta function always updates its timestamp, even if the state did not change.
+ 2) A delta function also takes into account the amount if time the component-function itself takes while calculating
+    the new energy-aware component state.
 
-This should usually result in tighter bounds, but might (in some cases) also do the reverse.
+This should usually result in tighter bounds, but might (in some cases) also do the opposite.
 
 
 If you supply -s, the follow changes are applied:
 
- 1) Before and after each control structure in your program, all components are updated to the
-    new timestamp. This should produce much tighter bounds. We have not analyzed whether
-    -u -s has different behaviour from just -s
-  }
+ 1) Before and after each control structure in your program, all components are updated to the new timestamp. This
+    should produce much tighter bounds. We have not analysed whether -u -s has different behaviour from just -s.
 
 
-If you supply -tr, the While-analysis as specified in the technical report is performed, i.e.
-the first iteration of each While-loop is analyzed separately.
+If you supply -tr, the while-analysis as specified in the technical report is performed,
+i.e. the first iteration of each While-loop is analysed separately.
 
 =============================================
   _
@@ -69,42 +65,45 @@ the first iteration of each While-loop is analyzed separately.
                 |___/             |___/
 
 
-Programs to be analyzer have to written as .eca files. This is a simple WHILE-like language
-with arithmetic expression, restricted while loops and simple Hoare-annotations:
+Programs to be analyser have to written as .eca files. This is a simple WHILE-like language with arithmetic
+expression, restricted while loops and simple Hoare-annotations:
 
-    function DoSomething(X,Y,Z)
+    function doSomething(X, Y, Z)
 
-      if X < Y+3 then
+      if X < Y + 3 or Y = Z then
         skip
       else
-        skip
+        X := X * 10
       end if
 
       SomeComponent::doSomething(Z)
 
       { T <- Z }               // annotation
       while X < 23 bound T do  // bound while loop
+        X := X + 1
+      end while
 
     end function
 
-Functions can call eachother, but recursion is not allowed.
+Functions can call each other, but recursion is not allowed.
 
 Variables in ranking functions used in while-loop must always refer to function parameters, constants,
 or be accompanied by an annotation.
 
-.eca programs can import components using a 'import component' followed by a class-identifier, which
-is looked up in the Java classpath.
+eca-programs can import components using a 'import component' followed by a qualified component name,
+which is looked up in the Java classpath.
 
 =============================================
+                                                  _
   ___ ___  _ __ ___  _ __   ___  _ __   ___ _ __ | |_
  / __/ _ \| '_ ` _ \| '_ \ / _ \| '_ \ / _ \ '_ \| __|
 | (_| (_) | | | | | | |_) | (_) | | | |  __/ | | | |_
  \___\___/|_| |_| |_| .__/ \___/|_| |_|\___|_| |_|\__|
                     |_|
 
-Components can be specified in .icm files.
+Component models can be specified in .ecm files.
 
-An example of a component is shown below:
+An example of an ecm component model is shown below:
 
     component Radio(active: 0..1)
 
@@ -125,16 +124,15 @@ An example of a component is shown below:
 
     end component
 
-A component function is visible to the user of your component, and is considered in
-the energy analysis. Other functions are internal to the component. Every component
-needs to have a 'phi' function specifying the energy consumption.
+A component function is visible to the user of your component and is considered in the energy analysis. Other
+functions are internal to the component. Every component needs to have a 'phi' function specifying the energy
+consumption over time.
 
-Component state variables (such as 'active' above) need to be specified in the component header.
-Initial values for these are optional.
+Component state variables (such as 'active' above) need to be specified in the component header. Initial values for
+these are optional.
 
+Alternatively, component models can be specified in Scala directly by inheriting from
+nl.ru.cs.ecalogic.model.DSLModel or directly from the base class nl.ru.cs.ecalogic.model.ComponentModel.
 
-* Using DSLModel.scala:
-
-Alternatively, components can be specified using Scala.
-See the source code distribution for examples.
-
+DSLModel provides a small DSL in Scala to easily write component models without much knowledge of Scala. The
+ComponentModel class can be inherited using raw turtle power.
