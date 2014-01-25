@@ -21,7 +21,7 @@ if "%_JAVACMD%"=="" (
 
 if "%_JAVACMD%"=="" set _JAVACMD=java
 
-"%_JAVACMD%" %JAVA_OPTS% "-Decalogic.home=%ECALOGIC_HOME%" -jar "%ECALOGIC_HOME%\lib\ecalogic.jar" %*
+"%_JAVACMD%" %JAVA_OPTS% "-Decalogic.home=%ECALOGIC_HOME%" -jar "%ECALOGIC_HOME%\bin\ecalogic.jar" %*
 @endlocal
 
 @%COMSPEC% /C exit %errorlevel% > nul
