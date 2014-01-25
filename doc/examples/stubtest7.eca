@@ -10,7 +10,7 @@ function waste(X)
   end while
 end function
 
-function program(X)
+function main(X)
   if 23 < 281723817 then
     Stub::on();
   else

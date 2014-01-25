@@ -52,8 +52,7 @@ object CodeForm {
 
   def insertComponents = ("#code2 *" #> LiftRules.loadResourceAsString("/components/CPU.ecm").openOrThrowException("CPU Component not found")) &
     ("#code3 *" #> LiftRules.loadResourceAsString("/components/Radio.ecm").openOrThrowException("Radio Component not found")) &
-    ("#code4 *" #> LiftRules.loadResourceAsString("/components/Sensor.ecm").openOrThrowException("Sensor Component not found")) &
-    ("#code5 *" #> LiftRules.loadResourceAsString("/components/Stub.ecm").openOrThrowException("Stub Component not found"))
+    ("#code4 *" #> LiftRules.loadResourceAsString("/components/Sensor.ecm").openOrThrowException("Sensor Component not found"))
 
   def render =
     "#codeForm *" #> ((ns: NodeSeq) => jsonForm(AnalyseServer, insertComponents(ns))) &
@@ -91,6 +90,7 @@ object CodeForm {
         try {
           val parser = new Parser(code, errorHandler)
           val program = parser.program()
+          parser.expectEndOfFile()
           if (program.imports.nonEmpty)
             throw new ECAException(s"Import statement not allowed")
           if (errorHandler.errorOccurred) {
@@ -129,7 +129,7 @@ object CodeForm {
                 buf append f"└ ${xml.Utility.escape(name)}%13s\t$e%s<br>"
           }
 
-          SetHtml("result", Unparsed("The result is %s".format(buf.toString)))
+          SetHtml("result", Unparsed("The result is:<br>%s".format(buf.toString)))
         } catch {
           case e: nl.ru.cs.ecalogic.ECAException =>
             return SetHtml("result", Unparsed(s"Fatal error: <pre><code>${Utility.escape(errorStream.toString)} ${e.getMessage}</code></pre>"))

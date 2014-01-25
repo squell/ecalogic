@@ -90,7 +90,7 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
     * @param entryPoint the function to analyse
     * @return The resulting global state after analysing the program
     */
-  def analyse(entryPoint: String = "program"): GlobalState = {
+  def analyse(entryPoint: String = "main"): GlobalState = {
     /** Compute fixed points of componentstates within a while-loop
      *
      * @param init set-of-componentstates (without global time)

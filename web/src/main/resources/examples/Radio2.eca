@@ -1,0 +1,19 @@
+function buffering(N, B)
+  while N > 0 bound N/B do
+    K := B
+    {K <- B}
+    while K > 0 bound K do
+      Value := Sensor::measure()
+      Radio::queue(Value)
+      K := K - 1
+      N := N - 1
+    end while
+    Radio::on()
+    Radio::send()
+    Radio::off()
+  end while
+end function
+
+function main(N, B)
+  buffering(N, B)
+end function

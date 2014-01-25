@@ -45,6 +45,7 @@ import net.liftweb.http.SHtml._
 import net.liftweb.util.JsonCmd
 import net.liftweb.http.js.JsCmds.SetHtml
 import java.lang.NumberFormatException
+import scala.Option
 
 object LoadForm {
 
@@ -53,7 +54,7 @@ object LoadForm {
       val sb = new StringBuilder
       var i = -1;
       sb.append("<select name=\"load\">\n")
-      new File(LiftRules.getResource("/examples").openOrThrowException("examples").getPath).listFiles().foreach({
+      Option((new File(LiftRules.getResource("/examples").openOrThrowException("examples").getPath).listFiles())).getOrElse(Array[File]()).foreach({
         f => sb append (
           "<option value=\"" + {
             i += 1;
@@ -83,7 +84,7 @@ object LoadForm {
           SetHtml("code1", Text(source))
         } catch {
           case e @ (_ : NumberFormatException | _ : FileNotFoundException | _ : ArrayIndexOutOfBoundsException) =>
-            return SetHtml("result", scala.xml.Unparsed("%s: %s".format(xml.Utility.escape(e.toString))))
+            return SetHtml("result", scala.xml.Unparsed("%s".format(xml.Utility.escape(e.toString))))
         }
     }
   }
