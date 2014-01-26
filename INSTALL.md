@@ -43,16 +43,20 @@ Running the application
 To run the console application from within sbt:
 
 	> run <args>
-	or
+	
+or
+
 	> run-main <main-class> <args>
 
 The main class for the console application is `nl.ru.cs.ecalogic.ECALogic`. The other main classes
 are used for quick and dirty testing and may or may not function properly.
 
-To start and stop a local web server containing the web application, from within sbt:
+To start a local web server containing the web application, from within sbt:
 
 	> container:start
-	and
+	
+To stop the web server:
+
 	> container:stop
 
 By default the web server can be accessed on port 8080 of the local machine.
