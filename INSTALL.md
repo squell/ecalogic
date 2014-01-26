@@ -16,14 +16,14 @@ Scala does not have to be installed, unless you want to build the software manua
 Build from source
 -----------------
 
-Build artifacts for the console application and web interface go into the target/ and web/target/
+Build artifacts for the console application and web interface go into the `target/` and `web/target/`
 folders respectively.
 
-1. Get the source code.
+1. Get the source code:
 
 		$ git clone https://github.com/squell/ecalogic.git
 		$ cd ecalogic
-        $ sbt
+		$ sbt
 
 2. To build the console application and web interface as jar and war-files respectively:
 
@@ -35,7 +35,7 @@ folders respectively.
 
 3. To create binary release archives of the console application:
 
-        > distribute
+		> distribute
 
 Running the application
 -----------------------
@@ -46,14 +46,14 @@ To run the console application from within sbt:
 	or
 	> run-main <main-class> <args>
 
-The main class for the console application is "nl.ru.cs.ecalogic.ECALogic". The other main classes
+The main class for the console application is `nl.ru.cs.ecalogic.ECALogic`. The other main classes
 are used for quick and dirty testing and may or may not function properly.
 
 To start and stop a local web server containing the web application, from within sbt:
 
-    > container:start
-    and
-    > container:stop
+	> container:start
+	and
+	> container:stop
 
 By default the web server can be accessed on port 8080 of the local machine.
 
