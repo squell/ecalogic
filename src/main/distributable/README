@@ -135,4 +135,4 @@ Alternatively, component models can be specified in Scala directly by inheriting
 nl.ru.cs.ecalogic.model.DSLModel or directly from the base class nl.ru.cs.ecalogic.model.ComponentModel.
 
 DSLModel provides a small DSL in Scala to easily write component models without much knowledge of Scala. The
-ComponentModel class can be inherited using raw turtle power.
+ComponentModel class can be inherited for full control over the process.
