@@ -9,6 +9,11 @@
 
 ECALogic: a tool for performing energy consumption analysis.
 
+Installation:
+
+- Extract the binary distribution zip or tar archive.  
+- Add <installation-folder>/bin to your PATH environment variable. (optional)
+
 Usage:
 
   ecalogic [OPTIONS] file1.eca [[<alias>=]file2.ecm ...]
