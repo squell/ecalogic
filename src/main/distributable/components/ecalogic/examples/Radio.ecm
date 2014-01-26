@@ -2,11 +2,11 @@ component Radio(active: 0..1)
 
     initial active := 0
 
-    component function on uses 40 time 40 energy
+    component function on uses 400 time 400 energy
         active := 1
     end function
 
-    component function off uses 20 time 20 energy
+    component function off uses 200 time 200 energy
         active := 0
     end function
 
