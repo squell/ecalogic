@@ -181,6 +181,8 @@ object ComponentModel {
 
   lazy val ComponentLoader = new URLClassLoader(ComponentPath.map(_.getAbsoluteFile.toURI.toURL).toArray, getClass.getClassLoader)
 
+  val ImplicitName = "Implicit"
+
   def fromImport(imprt: Import, errorHandler: ErrorHandler = new DefaultErrorHandler): ComponentModel = {
     val name = imprt.qualifiedName
     val ecmURL = Option(ComponentLoader.getResource(s"${name.replace('.', '/')}.ecm"))

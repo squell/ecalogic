@@ -1,6 +1,6 @@
 (* Author: Bram Arends *)
 
-import component ecalogic.examples.CPU
+import component ecalogic.examples.Implicit
 import component ecalogic.examples.HDD
 import component ecalogic.examples.SSD
 

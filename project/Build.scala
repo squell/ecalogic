@@ -55,7 +55,7 @@ object Build extends sbt.Build {
 
   override lazy val settings = super.settings ++ Seq (
     organization   := "nl.ru.cs.ecalogic",
-    version        := "0.1",
+    version        := "0.1a-SNAPSHOT",
     scalaVersion   := "2.10.3",
     crossPaths     := false,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")

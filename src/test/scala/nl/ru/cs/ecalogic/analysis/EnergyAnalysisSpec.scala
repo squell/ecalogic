@@ -46,7 +46,7 @@ import util._
 import scala.collection.immutable.SortedMap
 
 /**
- * @Author: Dorus Peelen
+ * @author Dorus Peelen
  */
 class EnergyAnalysisSpec extends FlatSpec with Matchers {
 
@@ -69,10 +69,10 @@ class EnergyAnalysisSpec extends FlatSpec with Matchers {
           val parser = new Parser(source, errorHandler)
           val program = parser.program()
 
-          val dsl_components = Map("Stub"->StubComponent, "BUG"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, "CPU"->CPU)
+          val dsl_components = Map("Stub"->StubComponent, "BUG"->BadComponent, "Sensor"->Sensor, "Radio"->Radio, ComponentModel.ImplicitName->Implicit)
 
-          it should s"succeed with Scala components for ${file.getName} ${params}" in {
-            config.Options.reset
+          it should s"succeed with Scala components for ${file.getName} $params" in {
+            config.Options.reset()
             config.Options.apply(params.split(" "))
             val analyzer = new EnergyAnalysis(program, dsl_components, errorHandler)
             val result = analyzer.analyse().transform((_,st)=>st.energy)
@@ -80,8 +80,8 @@ class EnergyAnalysisSpec extends FlatSpec with Matchers {
             resultString should equal (comment)
           }
 
-          it should s"succeed with imported components for ${file.getName} ${params}" in {
-            config.Options.reset
+          it should s"succeed with imported components for ${file.getName} $params" in {
+            config.Options.reset()
             config.Options.apply(params.split(" "))
             val imported_components = ComponentModel.fromImports(program.imports, errorHandler)
             errorHandler.successOrElse("Error importing")

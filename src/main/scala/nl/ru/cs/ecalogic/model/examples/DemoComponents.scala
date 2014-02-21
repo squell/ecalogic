@@ -36,7 +36,7 @@ package examples
 
 object DemoComponents {
 
-  object CPU extends DSLModel("CPU") {
+  object Implicit extends DSLModel("implicit") {
 
     define T (e = 10, a = 5, w = 25, ite = 25)
     define E (e = 10, a = 5, w = 25, ite = 25)

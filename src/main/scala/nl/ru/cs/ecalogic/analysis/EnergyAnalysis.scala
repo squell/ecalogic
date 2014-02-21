@@ -158,7 +158,7 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
       case FunDef(name, parms, body)    => analyse(G,body)
       case Skip()                       => G
       case If(pred, thenPart, elsePart) => val Gpre = if (Config.beforeSync) G.sync else G
-                                           val G2 = analyse(Gpre,pred).update("CPU","ite")
+                                           val G2 = analyse(Gpre,pred).update(ComponentModel.ImplicitName, "ite")
                                            val G3 = analyse(G2,thenPart)
                                            val G4 = analyse(G2,elsePart)
                                            if(Config.afterSync)
@@ -168,10 +168,10 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
 
       case While(pred, Some(rf), consq)
         if Config.techReport            => val Gpre = if (Config.beforeSync) G.sync else G
-                                           val G2 = analyse(Gpre,pred).update("CPU","w")
+                                           val G2 = analyse(Gpre,pred).update(ComponentModel.ImplicitName, "w")
                                            val G3 = analyse(G2,consq)
                                            val G3fix = (fixPoint(G3.gamma, pred, consq), G3.t)
-                                           val G4 = analyse(analyse(G3fix, pred).update("CPU","w"), consq)
+                                           val G4 = analyse(analyse(G3fix, pred).update(ComponentModel.ImplicitName, "w"), consq)
                                          //val G4 = analyse(analyse(G3fix, pred), consq) // this is bug-compatible with the TR
                                            val iters = resolve(foldConstants(rf, env))
                                            if(Config.afterSync)
@@ -181,7 +181,7 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
 
       case While(pred, Some(rf), consq) => val Gpre = if (Config.beforeSync) G.sync else G
                                            val Gfix = (fixPoint(Gpre.gamma, pred, consq), Gpre.t)
-                                           val G2 = analyse(Gfix,pred).update("CPU","w")
+                                           val G2 = analyse(Gfix,pred).update(ComponentModel.ImplicitName, "w")
                                            val G3 = analyse(G2,consq)
                                            val iters = resolve(foldConstants(rf, env))
                                            if(Config.afterSync)
@@ -190,7 +190,7 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
                                              computeEnergyBound(G3, Gpre, iters)
 
       case Composition(stms)            => stms.foldLeft(G)(analyse)
-      case Assignment(_, expr)          => analyse(G,expr).update("CPU","a")
+      case Assignment(_, expr)          => analyse(G,expr).update(ComponentModel.ImplicitName,"a")
 
       case FunCall(fun, args)
         if fun.isPrefixed               => val component = fun.prefix.get
@@ -209,13 +209,13 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
                                            }
                                            analyse(G, stm.underlying)(annotatedEnv)
 
-      case e:NAryExpression             => e.operands.foldLeft(G)(analyse).update("CPU", "e")
+      case e:NAryExpression             => e.operands.foldLeft(G)(analyse).update(ComponentModel.ImplicitName, "e")
       case _:PrimaryExpression          => G
 
       case w@While(pred, None, consq)   => eh.fatalError(new ECAException("Cannot analyse boundless while-loop", node.position))
     }
 
-    val initialState = GlobalState.initial(Map("CPU" -> Pentium0) ++ components)
+    val initialState = GlobalState.initial(Map(ComponentModel.ImplicitName -> Pentium0) ++ components)
     val root         = program.functions.getOrElse(entryPoint, throw new ECAException(s"No $entryPoint function to analyse."))
     val finalState   = analyse(initialState, root)(Map.empty)
     finalState.sync
@@ -228,7 +228,7 @@ object EnergyAnalysis {
     * instantly and consumes no power. (You know you want one!)
     */
 
-  object Pentium0 extends DSLModel("CPU") {
+  object Pentium0 extends DSLModel(ComponentModel.ImplicitName) {
     define T (e = 0, a = 0, w = 0, ite = 0)
     define E (e = 0, a = 0, w = 0, ite = 0)
   }

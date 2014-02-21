@@ -50,7 +50,7 @@ object CodeForm {
 
   this.getClass.getResource("").toString
 
-  def insertComponents = ("#code2 *" #> LiftRules.loadResourceAsString("/components/CPU.ecm").openOrThrowException("CPU Component not found")) &
+  def insertComponents = ("#code2 *" #> LiftRules.loadResourceAsString("/components/Implicit.ecm").openOrThrowException("Implicit Component not found")) &
     ("#code3 *" #> LiftRules.loadResourceAsString("/components/Radio.ecm").openOrThrowException("Radio Component not found")) &
     ("#code4 *" #> LiftRules.loadResourceAsString("/components/Sensor.ecm").openOrThrowException("Sensor Component not found"))
 

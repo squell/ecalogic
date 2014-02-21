@@ -1,4 +1,4 @@
-import component ecalogic.examples.CPU
+import component ecalogic.examples.Implicit
 import component ecalogic.examples.Radio
 import component ecalogic.examples.Sensor
 
