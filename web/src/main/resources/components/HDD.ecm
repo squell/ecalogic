@@ -1,0 +1,32 @@
+(* Author: Bram Arends *)
+
+component HDD(active: 0..3)
+    initial active := 0
+
+    component function write(X) uses 10 energy 10 time
+
+    component function spinup uses 50 energy 5 time
+        active := 3
+    end function
+
+    component function spindown uses 5 energy 5 time
+        active := 0
+    end function
+
+    component function read(X) uses 10 time 10 energy
+
+    component function standby uses 5 energy 5 time
+        active := 1
+    end function
+
+    component function on uses 5 energy 5 time
+        active := 3
+    end function
+
+    component function remove(X) uses 5 energy 5 time
+
+    function phi := active * 3
+
+end component
+
+

@@ -1,0 +1,22 @@
+(* Author: Bram Arends *)
+
+component SSD(active: 0..1)
+    initial active := 0
+
+    component function write(X) uses 5 energy 5 time
+
+    component function on uses 5 energy 1 time
+        active := 1
+    end function
+
+    component function off uses 5 energy 1 time
+        active := 0
+    end function
+
+    component function read(X) uses 5 time 5 energy
+
+    component function remove(X) uses 5 energy 1 time
+
+    function phi := active * 2
+
+end component

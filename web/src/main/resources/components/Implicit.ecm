@@ -1,4 +1,4 @@
-component CPU
+component Implicit
 
     component function e   uses 10 energy 10 time
     component function a   uses 5  energy 5  time

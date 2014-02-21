@@ -2,7 +2,7 @@ function buffering(N, B)
   while N > 0 bound N/B do
     K := B
     {K <- B}
-    while K > 0 bound K do
+    while K > 0 and N > 0 bound K do
       Value := Sensor::measure()
       Radio::queue(Value)
       K := K - 1

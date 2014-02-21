@@ -9,6 +9,11 @@
 
 ECALogic: a tool for performing energy consumption analysis.
 
+Installation:
+
+- Extract the binary distribution zip or tar archive.  
+- Add <installation-folder>/bin to your PATH environment variable. (optional)
+
 Usage:
 
   ecalogic [OPTIONS] file1.eca [[<alias>=]file2.ecm ...]
@@ -135,4 +140,4 @@ Alternatively, component models can be specified in Scala directly by inheriting
 nl.ru.cs.ecalogic.model.DSLModel or directly from the base class nl.ru.cs.ecalogic.model.ComponentModel.
 
 DSLModel provides a small DSL in Scala to easily write component models without much knowledge of Scala. The
-ComponentModel class can be inherited using raw turtle power.
+ComponentModel class can be inherited for full control over the process.

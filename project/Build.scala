@@ -30,6 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+import org.apache.commons.compress.archivers.tar.{TarArchiveOutputStream, TarArchiveEntry}
+import org.apache.commons.compress.archivers.{ArchiveOutputStream, ArchiveEntry}
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import sbt._
 import sbt.Keys._
 
@@ -38,15 +41,21 @@ import ProguardKeys._
 
 //import com.earldouglas.xsbtwebplugin.WebPlugin
 
+import java.io.{FileOutputStream, OutputStream, FileInputStream}
+import org.apache.commons.compress.archivers.zip.{ZipArchiveEntry, ZipArchiveOutputStream}
+
 object Build extends sbt.Build {
 
+  private val FileAccessNormal  = Integer.parseInt("644", 8)
+  private val FileAccessExecute = Integer.parseInt("755", 8)
+
   lazy val standalone                    = taskKey[File]("Creates a stand-alone jar.")
-  lazy val distribute                    = taskKey[File]("Creates a distributable zip.")
+  lazy val distribute                    = taskKey[Seq[File]]("Creates distributable archives.")
   lazy val distributionResourceDirectory = settingKey[File]("Directory which contains distributable files.")
 
   override lazy val settings = super.settings ++ Seq (
     organization   := "nl.ru.cs.ecalogic",
-    version        := "0.1-SNAPSHOT",
+    version        := "0.1a-SNAPSHOT",
     scalaVersion   := "2.10.3",
     crossPaths     := false,
     scalacOptions ++= Seq("-deprecation", "-unchecked", "-encoding", "UTF8")
@@ -71,19 +80,41 @@ object Build extends sbt.Build {
 
     distribute                        <<= (artifactPath in (Compile, packageBin), standalone, distributionResourceDirectory, streams) map {
       (artifactPath, standalone, distDirectory, s) =>
-        def collectFiles(s: TaskStreams)(f: File, n: Option[String] = None): Iterable[(File, String)] = f match {
-          case f if f.isDirectory => f.listFiles.flatMap(f => collectFiles(s)(f, Some(n.fold("")(_ + "/") + f.getName)))
-          case f                  => Seq(f -> n.getOrElse(f.getName))
+        val resources = PathFinder(distDirectory).descendantsExcept(AllPassFilter, NothingFilter)
+          .filter(!_.isDirectory).pair(Path.relativeTo(distDirectory), false) map {
+          case (from, to) => from -> to.replace('\\', '/')
         }
+        val files = Seq(standalone -> "bin/ecalogic.jar") ++ resources
 
         s.log.info("Building distributable zip file ...")
-        val targetFile = artifactPath.getParentFile / artifactPath.getName.replace(".jar", ".zip")
-        val files = Seq(standalone -> "lib/ecalogic.jar") ++ collectFiles(s)(distDirectory)
-        files.foreach(f => s.log.info(s"  Added ${f._2}"))
-        IO.zip(files, targetFile)
+        val zipFile = artifactPath.getParentFile / artifactPath.getName.replace(".jar", ".zip")
+        val zip = new ZipArchiveOutputStream(zipFile)
+        try {
+          files.foreach { case (from, to) =>
+            val entry = new ZipArchiveEntry(from, to)
+            entry.setUnixMode(if (to == "bin/ecalogic") FileAccessExecute else FileAccessNormal)
+            addEntry(entry, from, zip, s)
+          }
+        } finally {
+          zip.close()
+        }
         s.log.info("Done.")
 
-        targetFile
+        s.log.info("Building distributable tar file ...")
+        val tarFile = artifactPath.getParentFile / artifactPath.getName.replace(".jar", ".tar.gz")
+        val tar = new TarArchiveOutputStream(new GzipCompressorOutputStream(new FileOutputStream(tarFile)))
+        try {
+          files.foreach { case (from, to) =>
+            val entry = new TarArchiveEntry(from, to)
+            entry.setMode(if (to == "bin/ecalogic") FileAccessExecute else FileAccessNormal)
+            addEntry(entry, from, tar, s)
+          }
+        } finally {
+          tar.close()
+        }
+        s.log.info("Done.")
+
+        Seq(zipFile, tarFile)
     }
   )
 
@@ -103,8 +134,27 @@ object Build extends sbt.Build {
         */
       )
     },
-    distribute          <<= Keys.`package` in Compile
+    distribute           <<= (Keys.`package` in Compile) map (Seq(_))
     // unmanagedResourceDirectories in Test <++= PluginKeys.webappResources in Compile
   )
+
+  def addEntry(entry: ArchiveEntry, file: File, archive: ArchiveOutputStream, s: TaskStreams) {
+    archive.putArchiveEntry(entry)
+
+    val stream = new FileInputStream(file)
+    try {
+      val buf = Array.ofDim[Byte](8192)
+      var len = stream.read(buf)
+      while (len > 0) {
+        archive.write(buf, 0, len)
+        len = stream.read(buf)
+      }
+    } finally {
+      stream.close()
+    }
+
+    archive.closeArchiveEntry()
+    s.log.info(s"  Added ${entry.getName}")
+  }
 
 }

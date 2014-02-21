@@ -57,9 +57,9 @@ Which is exactly what ECA tells us
 
 import component ecalogic.Radio
 import component ecalogic.Sensor
-import component ecalogic.CPU
+import component ecalogic.Implicit
 
-(* expect: (Map(BUG -> 0, CPU -> 550, Radio -> 403380, Sensor -> 6430, Stub -> 0),2010) *)
+(* expect: (Map(BUG -> 0, Implicit -> 550, Radio -> 403380, Sensor -> 6430, Stub -> 0),2010) *)
 function algorithm1(Xn)
   Radio::on()
   while Xn > 0 bound Xn do

@@ -1,0 +1,41 @@
+(* Author: Bram Arends *)
+
+import component ecalogic.examples.Implicit
+import component ecalogic.examples.HDD
+import component ecalogic.examples.SSD
+
+function testHDD(X)
+  Y := 0
+  HDD::spinup()
+  HDD::write(X)
+  HDD::read(X)
+  HDD::standby()
+
+  while Y < X bound X do
+	Y := Y + 1
+  end while
+
+  HDD::on()
+  HDD::write(X)
+  HDD::spindown()
+end function
+
+function testSSD(X)
+  Y := 0
+  SSD::on()
+  SSD::write(X)
+  SSD::read(X)
+
+  while Y < X bound X do
+	Y := Y + 1
+  end while
+
+  SSD::write(X)
+  SSD::off()
+end function
+
+function main(X)
+  testHDD(X)
+  testSSD(X)
+end function
+
