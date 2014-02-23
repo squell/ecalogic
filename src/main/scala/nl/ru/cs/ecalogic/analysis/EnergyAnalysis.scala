@@ -65,10 +65,17 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
     * @return A new set of component states with updated time and energy information
     */
 
-  def computeEnergyBound(out: GlobalState, in: GlobalState, rf: Polynomial): GlobalState = (
-    out.gamma.transform((comp,g) => g.update(g.timestamp min in.t, in(comp).energy + (out(comp).energy - in(comp).energy) * rf)),
-    in.t + (out.t-in.t)*rf
-  )
+  def computeEnergyBound(out: GlobalState, in: GlobalState, ib: Polynomial): GlobalState = {
+    val updEnergy =
+      (_:States).transform((comp,g) => g.update(g.timestamp min in.t, in(comp).energy + (out(comp).energy - in(comp).energy) * ib))
+    val updTime =
+      in.t + (out.t - in.t)*ib
+
+    if(Config.revision>=2) 
+      (updEnergy((in max out).gamma), updTime)
+    else
+      (updEnergy(out.gamma), updTime)
+  }
 
   /** Performs the functions of both "r()" and "e()" in the *Technical Report*
     *
@@ -167,7 +174,7 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
                                              G3 max G4
 
       case While(pred, Some(rf), consq)
-        if Config.techReport            => val Gpre = if (Config.beforeSync) G.sync else G
+        if Config.revision == 0         => val Gpre = if (Config.beforeSync) G.sync else G
                                            val G2 = analyse(Gpre,pred).update(ComponentModel.ImplicitName, "w")
                                            val G3 = analyse(G2,consq)
                                            val G3fix = (fixPoint(G3.gamma, pred, consq), G3.t)
@@ -179,7 +186,7 @@ class EnergyAnalysis(program: Program, components: Map[String, ComponentModel], 
                                            else
                                              computeEnergyBound_TR(G4, G3, Gpre, iters)
 
-      case While(pred, Some(rf), consq) => val Gpre = if (Config.beforeSync) G.sync else G
+      case While(pred, Some(rf), consq) => val Gpre = if (Config.beforeSync || Config.revision==2) G.sync else G
                                            val Gfix = (fixPoint(Gpre.gamma, pred, consq), Gpre.t)
                                            val G2 = analyse(Gfix,pred).update(ComponentModel.ImplicitName, "w")
                                            val G3 = analyse(G2,consq)

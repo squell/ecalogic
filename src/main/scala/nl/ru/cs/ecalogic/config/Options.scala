@@ -94,11 +94,14 @@ object Options {
     /* How long should we attempt to find fixpoint? Note that 10000 is a high setting */
     var fixPatience = 10000
 
-    /* Should we use the while-rule mentioned in the tech-report, or the simplified one
-       mentioned in the paper?
+    /* What analysis-version to use? This pertains to the while-rule.
+       0 - Original techReport (2013)
+       1 - Use the simplified while-rule from the FOPARA'14 pre-print
+       2 - Use the bug-fixed while-rule from the FOPARA'14 final version
+       mentioned in the paper? 
 
-       Technical report: true */
-    var techReport = false
+       Note that version 2 implies 'beforeSync' on while-rules. */
+    var revision = 2
 
   }
 
@@ -115,8 +118,15 @@ object Options {
         => terse = true
       case "-e" | "--entry"
         => argHandler += (s => entryPoint = s)
+      // these next two have become hidden options; "users" don't need these.
       case "-tr" | "--techReport"
-        => techReport = true
+        => revision=0
+      case "--sdr" 
+        => revision=1
+      case "--fopara" 
+        => revision=2
+      case "--revision" 
+        => argHandler += (s => revision = s.toInt)
       case "-P" | "--fixPatience"
         => argHandler += (s => try fixPatience = s.toInt)
       case "-I" | "--import"
@@ -156,7 +166,7 @@ object Options {
     Analysis.beforeSync = false
     Analysis.afterSync = false
     Analysis.fixPatience = 10000
-    Analysis.techReport = false
+    Analysis.revision = 2
   }
 
   def friendlyHelpMsg() {
@@ -175,7 +185,6 @@ from the classpath/filename instead.
 
 Options controlling analysis:
 
-  -tr --techReport       Use while loop as specified in Tech Report
   -s  --sync             Synchronize all components to the global time
   -u  --update           Update component timestamps, even when no change
 
