@@ -119,9 +119,10 @@ object Options {
       case "-e" | "--entry"
         => argHandler += (s => entryPoint = s)
       // these next two have become hidden options; "users" don't need these.
+      // but some of our testcases were written for earlier versions
       case "-tr" | "--techReport"
         => revision=0
-      case "--sdr" 
+      case "-sdr" | "--draft-fopara"
         => revision=1
       case "--fopara" 
         => revision=2

@@ -1,7 +1,7 @@
 import component nl.ru.cs.ecalogic.model.examples.StubComponent as Stub
 
 // time usage: 23, energy usage: 0
-(* expect: (Map(BUG -> 0, Implicit -> 1610, Radio -> 3266, Sensor -> 4899, Stub -> 0),1633) *)
+(* expect: -sdr (Map(BUG -> 0, Implicit -> 1610, Radio -> 3266, Sensor -> 4899, Stub -> 0),1633) *)
 function main(X)
   Stub::idle();
   if 23 < 281723817 then

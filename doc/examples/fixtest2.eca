@@ -5,11 +5,13 @@
 
   so, fixpoint calculation means this program consumed no power.
 
+  NOTE: -sdr -s produces different results from -s; so this test-case is worth updating.
+
 *)
-(* expect: (Map(BUG -> 0, Implicit -> 3535, Radio -> 7072, Sensor -> 10608, Stub -> 1046599),3536) *)
+(* expect: -sdr (Map(BUG -> 0, Implicit -> 3535, Radio -> 7072, Sensor -> 10608, Stub -> 1046599),3536) *)
 (* expect: -tr (Map(BUG -> 0, Implicit -> 3535, Radio -> 7072, Sensor -> 10608, Stub -> 693133),3536) *)
-(* expect: -s (Map(BUG -> 0, Implicit -> 3535, Radio -> 7072, Sensor -> 10608, Stub -> 353599),3536) *)
-(* expect: -u (Map(BUG -> 0, Implicit -> 3535, Radio -> 7072, Sensor -> 10608, Stub -> 1050099),3536) *)
+(* expect: -sdr -s (Map(BUG -> 0, Implicit -> 3535, Radio -> 7072, Sensor -> 10608, Stub -> 353599),3536) *)
+(* expect: -sdr -u (Map(BUG -> 0, Implicit -> 3535, Radio -> 7072, Sensor -> 10608, Stub -> 1050099),3536) *)
 function main ()
   while 1 < 0 bound 1 do
     Stub::raise();
